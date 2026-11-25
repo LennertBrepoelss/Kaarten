@@ -27,6 +27,10 @@
   --p1: #b68cff;
   --p2: #5ef0c0;
   --p3: #ff86c0;
+  --p4: #7fe0ff;
+  --p5: #ffa46b;
+  --p6: #c6f36b;
+  --p7: #f28bff;
   --f-serif: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
   --f-ui: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
   --ease: cubic-bezier(.22, .8, .2, 1);
@@ -489,6 +493,21 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 .tile.cur { outline: 2px solid rgba(255,255,255,.75); outline-offset: 3px; }
 .g-troef { --tg: linear-gradient(150deg, #c39bff, #7b4fe0 70%, #5a35b8); --tglow: #7b4fe0; }
 .g-wiez { --tg: linear-gradient(150deg, #7fe6ff, #1fa8e0 70%, #1279b5); --tglow: #1fa8e0; }
+.g-pietjes { --tg: linear-gradient(150deg, #ffe08a, #f5a623 70%, #d97a0b); --tglow: #f5a623; }
+.tile.off { filter: grayscale(1); opacity: .32; box-shadow: none; }
+.tile.off .tstat { background: rgba(0,0,0,.45); }
+.np { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.pjs { display: flex; flex-wrap: wrap; gap: 5px; }
+.pjs i { width: 5px; height: 20px; border-radius: 3px; background: var(--pc); box-shadow: 0 0 8px color-mix(in srgb, var(--pc) 60%, transparent); }
+.pjs i.off { opacity: .12; box-shadow: none; }
+.krow { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 12px; align-items: baseline; padding: 11px 0; border-bottom: 1px solid var(--hair); }
+.krow:last-child { border-bottom: 0; }
+.krow .kn { font: italic 600 20px/1 var(--f-serif); color: var(--gold); }
+.krow:first-child .kn { font-size: 26px; }
+.krow .kname { font: 600 20px/1.15 var(--f-serif); min-width: 0; }
+.krow .kname small, .krow .kpaid small { display: block; font: 500 12px/1.35 var(--f-ui); color: var(--dim); margin-top: 3px; }
+.krow .kpaid { font: 600 15px var(--f-ui); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+textarea.input { resize: vertical; font-size: 12px; }
 .g-hart { --tg: linear-gradient(150deg, #ff9fcd, #f0508f 70%, #c22e6a); --tglow: #f0508f; }
 .tile.soon { --tg: transparent; background: transparent; border: 1.5px dashed var(--hair-2); color: var(--dim); box-shadow: none; justify-content: center; align-items: center; text-align: center; }
 .tile.soon::after { display: none; }
@@ -778,7 +797,20 @@ if (typeof module !== 'undefined') module.exports = Logic;
     { n: 'Twee laatsten betalen', v: [0, 0, 40, 60] },
     { n: 'Laatste betaalt alles', v: [0, 0, 0, 100] },
   ];
-  const ORD = ['1ste', '2de', '3de', '4de'];
+  const ORD = ['1ste', '2de', '3de', '4de', '5de', '6de', '7de', '8ste'];
+  // Voorstellen voor n spelers (bij 4 de vaste voorstellen hierboven).
+  function presetsFor(n) {
+    if (n === 4) return PCT_PRESETS;
+    const norm = (w) => { const t = w.reduce((a, b) => a + b, 0); const r = w.map((x) => Math.round(x * 100 / t)); r[r.length - 1] += 100 - r.reduce((a, b) => a + b, 0); return r; };
+    const idx = [...Array(n).keys()];
+    const list = [
+      { n: 'Winnaar betaalt niets', v: norm(idx) },
+      { n: 'Iedereen betaalt mee', v: norm(idx.map((i) => i + 1)) },
+      n >= 3 ? { n: 'Twee laatsten betalen', v: [...Array(n - 2).fill(0), 40, 60] } : null,
+      { n: 'Laatste betaalt alles', v: [...Array(n - 1).fill(0), 100] },
+    ].filter(Boolean);
+    return list.filter((x, i) => list.findIndex((y) => y.v.join() === x.v.join()) === i);
+  }
   const wbid = (k) => WBIDS.find((b) => b.k === k);
   const wpts = (k) => (S.wz.pts[k] ?? wbid(k).p);
   function wValue(k, made, diff) {
@@ -795,12 +827,13 @@ if (typeof module !== 'undefined') module.exports = Logic;
   const wTot = (r) => (r ? r.games : []).reduce((t, g) => t.map((x, i) => x + g.d[i]), [0, 0, 0, 0]);
   // Plaats en percentage per speler. Gelijke punten delen het gemiddelde van hun plaatsen.
   function wPayPct(tot, pct) {
-    const order = [0, 1, 2, 3].sort((a, b) => tot[b] - tot[a]);
-    const out = [0, 0, 0, 0], place = [0, 0, 0, 0], tied = [false, false, false, false];
+    const n = tot.length;
+    const order = tot.map((_, i) => i).sort((a, b) => tot[b] - tot[a]);
+    const out = Array(n).fill(0), place = Array(n).fill(0), tied = Array(n).fill(false);
     let i = 0;
-    while (i < 4) {
+    while (i < n) {
       let j = i;
-      while (j + 1 < 4 && tot[order[j + 1]] === tot[order[i]]) j++;
+      while (j + 1 < n && tot[order[j + 1]] === tot[order[i]]) j++;
       const avg = pct.slice(i, j + 1).reduce((a, b) => a + b, 0) / (j - i + 1);
       for (let k = i; k <= j; k++) { out[order[k]] = avg; place[order[k]] = i; tied[order[k]] = j > i; }
       i = j + 1;
@@ -822,6 +855,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (!s.hj) s.hj = freshHj();
     if (!Array.isArray(s.hj.rondjes)) s.hj.rondjes = [];
     delete s.hj.hands;
+    if (!s.pj) s.pj = freshPj();
+    if (!Array.isArray(s.pj.rondjes)) s.pj.rondjes = [];
     if (!Array.isArray(s.history)) s.history = historyFromArchive(s);
     return s;
   }
@@ -839,22 +874,40 @@ if (typeof module !== 'undefined') module.exports = Logic;
     return R.p.map((v, i) => v + (R.q === i ? 13 : 0));
   }
 
+  // ---------- Pietjesbak ----------
+  // Iedereen begint met 7 of 9 streepjes. Wie de beurt wint, veegt streepjes weg: gewone worp 1, zand (3 gelijke) 2,
+  // 69 (6-5-4) 3, drie azen alles. 2-2-3 of een dobbelsteen van tafel: streepje erbij. Wie eerst niets meer heeft, wint.
+  const PJ_TYPES = [['1', 'Gewone worp', '−1'], ['2', 'Zand', '−2'], ['3', '69', '−3'], ['all', 'Drie azen', 'alles weg']];
+  function freshPj(prev) { return { pct: prev && prev.pct ? prev.pct : null, boom: prev && prev.boom ? prev.boom : 9, rondjes: [] }; }
+  function pTot(r) {
+    let t = Array(S.players.length).fill(r ? r.boom : 9);
+    (r ? r.beurten : []).forEach((b) => {
+      t = t.map((x, i) => (i === b.w ? (b.t === 'all' ? 0 : Math.max(0, x - +b.t)) : x) + (b.plus.includes(i) ? 1 : 0));
+    });
+    return t;
+  }
+  const pDone = (r) => !!r && r.beurten.length > 0 && pTot(r).some((v) => v <= 0);
+
   // Spellen die afrekenen met percentages per plaats
   const PG = {
     wiezen: { title: 'Wiezen', st: () => S.wz, tot: wTot },
     harten: { title: 'Hartenjagen', st: () => S.hj, tot: hTot },
+    pietjes: { title: 'Pietjesbak', st: () => S.pj, tot: pTot, rank: (r) => pTot(r).map((v) => -v) },
   };
+  const PG_KEYS = ['wiezen', 'harten', 'pietjes'];
+  const rankOf = (g, r) => (PG[g].rank ? PG[g].rank(r) : PG[g].tot(r));
+  const openAny = () => current() || openOf(S.wz) || openOf(S.hj) || openOf(S.pj);
   const pg = () => PG[S.game] || PG.wiezen;
   const lastOf = (st) => st.rondjes[st.rondjes.length - 1] || null;
   const openOf = (st) => { const r = lastOf(st); return r && !r.end ? r : null; };
   const gCur = () => openOf(pg().st());
-  const ptsLabel = (g, v) => (g === 'harten' ? `${v < 0 ? '−' + Math.abs(v) : v} over` : `${sign(v)} ptn`);
+  const ptsLabel = (g, v) => (g === 'harten' ? `${v < 0 ? '−' + Math.abs(v) : v} over` : g === 'pietjes' ? `${v} streepje${v === 1 ? '' : 's'}` : `${sign(v)} ptn`);
   // Wat elke speler betaalt voor de uitgespeelde rondjes van één spel (in cent)
   function gameOwed(g) {
-    const owed = [0, 0, 0, 0]; let total = 0, n = 0;
+    const owed = Array(S.players.length).fill(0); let total = 0, n = 0;
     PG[g].st().rondjes.forEach((r) => {
       if (!r.end || !r.price) return;
-      const { out } = wPayPct(PG[g].tot(r), r.pct);
+      const { out } = wPayPct(rankOf(g, r), r.pct);
       out.forEach((p, i) => { owed[i] += r.price * p / 100; });
       total += r.price; n++;
     });
@@ -863,16 +916,17 @@ if (typeof module !== 'undefined') module.exports = Logic;
   // Alle spellen van de avond samen: troeven + wiezen + hartenjagen
   function owedAll() {
     const t = Logic.shares(S).owed, done = finished(), tTotal = done.reduce((a, r) => a + r.price, 0);
-    const w = gameOwed('wiezen'), h = gameOwed('harten');
-    return { owed: [0, 1, 2, 3].map((i) => t[i] + w.owed[i] + h.owed[i]), total: tTotal + w.total + h.total, n: done.length + w.n + h.n,
-      parts: [['Troeven', done.length, tTotal], ['Wiezen', w.n, w.total], ['Hartenjagen', h.n, h.total]] };
+    const gs = PG_KEYS.map((g) => [g, gameOwed(g)]);
+    return { owed: S.players.map((_, i) => (t[i] || 0) + gs.reduce((a, [, o]) => a + (o.owed[i] || 0), 0)),
+      total: tTotal + gs.reduce((a, [, o]) => a + o.total, 0), n: done.length + gs.reduce((a, [, o]) => a + o.n, 0),
+      parts: [['Troeven', done.length, tTotal], ...gs.map(([g, o]) => [PG[g].title, o.n, o.total])] };
   }
   // Einde avond: payer betaalde de rekening. Verschil met de rondjes wordt gelijk verdeeld.
   function settleAll(payer, bill) {
     const A = owedAll();
     const total = bill === null || bill === undefined ? A.total : bill;
     const diff = total - A.total;
-    const per = A.owed.map((c) => c + diff / 4);
+    const per = A.owed.map((c) => c + diff / S.players.length);
     const transfers = [];
     per.forEach((c, i) => {
       if (i === payer) return;
@@ -898,7 +952,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     return out;
   }
 
-  function fresh(players) { return { v: 1, players: players || [...DEFAULT_PLAYERS], rounds: [], lastPrice: null, updatedAt: 0, game: null, ready: false, wz: freshWz(), hj: freshHj() }; }
+  function fresh(players) { return { v: 1, players: players || [...DEFAULT_PLAYERS], rounds: [], lastPrice: null, updatedAt: 0, game: null, ready: false, wz: freshWz(), hj: freshHj(), pj: freshPj() }; }
   function loadLocal() {
     try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 1 && Array.isArray(s.rounds)) return normalize(s); } catch (e) {}
     return null;
@@ -967,6 +1021,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (r) return r.price == null ? 'price' : 'game';
     if (openOf(S.wz)) return ui.view === 'wround' && ui.wr ? 'wround' : 'wgame';
     if (openOf(S.hj)) return ui.view === 'hround' && ui.hr ? 'hround' : 'hgame';
+    if (openOf(S.pj)) return ui.view === 'pround' && ui.pr ? 'pround' : 'pgame';
+    if (ui.result === 'pietjes' && lastOf(S.pj)) return 'pgame';
     if (ui.result === 'wiezen' && lastOf(S.wz)) return 'wgame';
     if (ui.result === 'harten' && lastOf(S.hj)) return 'hgame';
     return 'hub';
@@ -1010,19 +1066,19 @@ if (typeof module !== 'undefined') module.exports = Logic;
       starts.push(done[0].start || done[0].id);
     }
     // Wiezen en hartenjagen: per uitgespeeld rondje telt de 1ste als gewonnen, wie het meest betaalt als verloren.
-    [['w', 'wiezen'], ['h', 'harten']].forEach(([key, g]) => {
+    [['w', 'wiezen'], ['h', 'harten'], ['p', 'pietjes']].forEach(([key, g]) => {
       const rs = PG[g].st().rondjes.filter((r) => r.end && r.price);
       if (!rs.length) return;
-      const won = [0, 0, 0, 0], lost = [0, 0, 0, 0];
+      const won = S.players.map(() => 0), lost = S.players.map(() => 0);
       rs.forEach((r) => {
-        const { out, place } = wPayPct(PG[g].tot(r), r.pct);
+        const { out, place } = wPayPct(rankOf(g, r), r.pct);
         const mx = Math.max(...out);
-        [0, 1, 2, 3].forEach((i) => { if (place[i] === 0) won[i]++; if (out[i] === mx && mx > 0) lost[i]++; });
+        out.forEach((o, i) => { if (place[i] === 0) won[i]++; if (o === mx && mx > 0) lost[i]++; });
       });
       rec[key] = { n: rs.length, r: rs.length, won, lost };
       starts.push(rs[0].start);
     });
-    if (!rec.t && !rec.w && !rec.h) return null;
+    if (!rec.t && !rec.w && !rec.h && !rec.p) return null;
     rec.paid = settleAll(0, Logic.parsePrice(ui.bill)).per.map((c) => Math.round(c));
     if (starts.filter(Boolean).length) rec.date = Math.min(...starts.filter(Boolean));
     return rec;
@@ -1030,15 +1086,17 @@ if (typeof module !== 'undefined') module.exports = Logic;
   function nightPaid(h) {
     if (h.paid) return h.paid;
     const parts = [h.t && h.t.paid, h.w && h.w.paid, h.h && h.h.paid].filter(Boolean);
-    return parts.length ? [0, 1, 2, 3].map((i) => parts.reduce((s, p) => s + p[i], 0)) : null;
+    return parts.length ? h.players.map((_, i) => parts.reduce((s, p) => s + p[i], 0)) : null;
   }
-  const nightLost = (h) => [0, 1, 2, 3].map((i) => (h.t ? h.t.lost[i] : 0) + (h.w ? h.w.lost[i] : 0) + (h.h ? h.h.lost[i] : 0));
+  const HKEYS = ['t', 'w', 'h', 'p'];
+  const nightLost = (h) => h.players.map((_, i) => HKEYS.reduce((a, k) => a + (h[k] ? h[k].lost[i] || 0 : 0), 0));
+  const nightWon = (h) => h.players.map((_, i) => HKEYS.reduce((a, k) => a + (h[k] ? h[k].won[i] || 0 : 0), 0));
   // Grote verliezer: wie het meest betaalde; zonder bedragen wie het meest verloor.
   function nightLoser(h) {
     const paid = nightPaid(h), score = paid || nightLost(h);
     const max = Math.max(...score);
     if (max <= 0) return null;
-    return { who: [0, 1, 2, 3].filter((i) => score[i] === max), byPaid: !!paid, val: max };
+    return { who: h.players.map((_, i) => i).filter((i) => score[i] === max), byPaid: !!paid, val: max };
   }
   const hDate = (t) => { const s = new Date(t).toLocaleDateString('nl-BE', { weekday: 'long', day: 'numeric', month: 'long' }); return s.charAt(0).toUpperCase() + s.slice(1); };
 
@@ -1052,32 +1110,37 @@ if (typeof module !== 'undefined') module.exports = Logic;
     all.forEach((h) => {
       const paid = nightPaid(h), lo = nightLoser(h);
       h.players.forEach((nm, i) => {
-        const a = agg[nm] = agg[nm] || { nights: 0, loser: 0, paid: 0, paidKnown: false, won: 0, lost: 0 };
+        const a = agg[nm] = agg[nm] || { nights: 0, loser: 0, paid: 0, paidNights: 0, won: 0, lost: 0 };
         a.nights++;
         if (lo && lo.who.includes(i)) a.loser++;
-        if (paid) { a.paid += paid[i]; a.paidKnown = true; }
-        a.won += (h.t ? h.t.won[i] : 0) + (h.w ? h.w.won[i] : 0) + (h.h ? h.h.won[i] : 0);
+        if (paid) { a.paid += paid[i]; a.paidNights++; }
+        a.won += nightWon(h)[i];
         a.lost += nightLost(h)[i];
       });
     });
-    const names = Object.keys(agg).sort((a, b) => agg[b].loser - agg[a].loser || agg[b].paid - agg[a].paid);
-    const sumRows = names.map((nm) => { const a = agg[nm]; return `<tr><th class="rowh" scope="row">${esc(nm)}</th><td><span class="w">${a.won}</span><span class="l">–${a.lost}</span></td><td>${a.loser ? `<b class="neg">${a.loser}×</b>` : '<span class="l">0</span>'}</td><td>${a.paidKnown ? euro(a.paid) : '–'}</td></tr>`; }).join('');
+    // Klassement: wie gemiddeld het minst betaalt per avond staat bovenaan
+    const avg = (a) => (a.paidNights ? a.paid / a.paidNights : Infinity);
+    const names = Object.keys(agg).sort((a, b) => avg(agg[a]) - avg(agg[b]) || agg[a].loser - agg[b].loser || agg[b].won - agg[a].won);
+    const sumRows = names.map((nm, k) => { const a = agg[nm]; return `<div class="krow"><span class="kn">${k + 1}</span>
+      <span class="kname">${esc(nm)}<small>${a.nights} avond${a.nights > 1 ? 'en' : ''} · ${a.won}–${a.lost}${a.loser ? ` · <b class="neg">${a.loser}× verliezer</b>` : ''}</small></span>
+      <span class="kpaid">${a.paidNights ? euro(a.paid) : '–'}<small>${a.paidNights ? `gem. ${euro(a.paid / a.paidNights)}` : ''}</small></span></div>`; }).join('');
 
     const items = all.map((h, idx) => ({ h, idx })).reverse().map(({ h, idx }) => {
       const open = ui.hOpen === idx, paid = nightPaid(h), lo = nightLoser(h);
-      const games = [h.t ? `Troeven ${h.t.n} rondje${h.t.n > 1 ? 's' : ''}` : '', h.w ? `Wiezen ${h.w.r ? `${h.w.r} rondje${h.w.r > 1 ? 's' : ''}` : `${h.w.n} spelletje${h.w.n > 1 ? 's' : ''}`}` : '', h.h ? `Hartenjagen ${h.h.r ? `${h.h.r} rondje${h.h.r > 1 ? 's' : ''}` : `${h.h.n} ${h.h.n > 1 ? 'handen' : 'hand'}`}` : ''].filter(Boolean).join(' · ');
+      const games = [h.t ? `Troeven ${h.t.n} rondje${h.t.n > 1 ? 's' : ''}` : '', h.w ? `Wiezen ${h.w.r ? `${h.w.r} rondje${h.w.r > 1 ? 's' : ''}` : `${h.w.n} spelletje${h.w.n > 1 ? 's' : ''}`}` : '', h.h ? `Hartenjagen ${h.h.r ? `${h.h.r} rondje${h.h.r > 1 ? 's' : ''}` : `${h.h.n} ${h.h.n > 1 ? 'handen' : 'hand'}`}` : '', h.p ? `Pietjesbak ${h.p.r} rondje${h.p.r > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ');
       const total = paid ? paid.reduce((a, b) => a + b, 0) : null;
       const loserTxt = lo ? `${lo.who.map((i) => esc(h.players[i])).join(' &amp; ')} · ${lo.byPaid ? euro(lo.val) : `${lo.val} verloren`}` : 'niemand';
       let body = '';
       if (open) {
-        const cols = [h.t ? '<th scope="col">Troeven</th>' : '', h.w ? '<th scope="col">Wiezen</th>' : '', h.h ? '<th scope="col">Harten</th>' : '', '<th scope="col">Betaald</th>'].join('');
+        const cols = [h.t ? '<th scope="col">Troeven</th>' : '', h.w ? '<th scope="col">Wiezen</th>' : '', h.h ? '<th scope="col">Harten</th>' : '', h.p ? '<th scope="col">Pietjes</th>' : '', '<th scope="col">Betaald</th>'].join('');
         const rows = h.players.map((nm, i) => `<tr><th class="rowh" scope="row" style="color:var(--p${i})">${esc(nm)}${lo && lo.who.includes(i) ? ' <small class="dl">verliezer</small>' : ''}</th>
           ${h.t ? `<td><span class="w">${h.t.won[i]}</span><span class="l">–${h.t.lost[i]}</span></td>` : ''}
           ${h.w ? `<td><span class="w">${h.w.won[i]}</span><span class="l">–${h.w.lost[i]}</span>${h.w.pts ? `<small class="hpts ${pn(h.w.pts[i])}">${sign(h.w.pts[i])} ptn</small>` : ''}</td>` : ''}
           ${h.h ? `<td><span class="w">${h.h.won[i]}</span><span class="l">–${h.h.lost[i]}</span>${h.h.pts ? `<small class="hpts ${h.h.pts[i] <= 0 ? 'neg' : ''}">${h.h.pts[i]} over</small>` : ''}</td>` : ''}
+          ${h.p ? `<td><span class="w">${h.p.won[i]}</span><span class="l">–${h.p.lost[i]}</span></td>` : ''}
           <td>${paid ? euro(paid[i]) : '–'}</td></tr>`).join('');
         body = `<div class="hbody"><div class="h2h-wrap"><table class="h2h htab"><thead><tr><th></th>${cols}</tr></thead><tbody>${rows}</tbody></table></div>
-          <p class="hint">Gewonnen–verloren per rondje. Bij wiezen en hartenjagen wint de 1ste en verliest wie het meest betaalt.${h.legacy ? ' Van deze avond zijn de bedragen niet bewaard.' : ''}${!h.paid && h.w && !h.w.paid ? ' De wiezen-rekening werd niet ingevuld.' : ''}${!h.paid && h.h && !h.h.paid ? ' De hartenjagen-rekening werd niet ingevuld.' : ''}</p>
+          <p class="hint">Gewonnen–verloren per rondje. Bij wiezen, hartenjagen en pietjesbak wint de 1ste en verliest wie het meest betaalt.${h.legacy ? ' Van deze avond zijn de bedragen niet bewaard.' : ''}${!h.paid && h.w && !h.w.paid ? ' De wiezen-rekening werd niet ingevuld.' : ''}${!h.paid && h.h && !h.h.paid ? ' De hartenjagen-rekening werd niet ingevuld.' : ''}</p>
           <button class="link" data-act="hDel" data-v="${idx}" style="align-self:flex-start;color:${ui.hDel === idx ? 'var(--danger)' : ''}">${ui.hDel === idx ? 'Tik nog eens om deze avond te verwijderen' : 'Avond verwijderen'}</button></div>`;
       }
       return `<div class="hitem ${open ? 'open' : ''}"><button class="hhead" data-act="hOpen" data-v="${idx}" aria-expanded="${open}">
@@ -1086,20 +1149,23 @@ if (typeof module !== 'undefined') module.exports = Logic;
     }).join('');
 
     return `<section class="panel"><div class="panel-head"><h2>Vorige avonden</h2><span class="label">${all.length} avond${all.length > 1 ? 'en' : ''}</span></div>
-      <p class="sub">Alle avonden samen</p>
-      <div class="h2h-wrap"><table class="h2h htab"><thead><tr><th></th><th scope="col">Won–verl.</th><th scope="col">Verliezer</th><th scope="col">Betaald</th></tr></thead><tbody>${sumRows}</tbody></table></div>
+      <p class="sub">Klassement</p>
+      <div>${sumRows}</div>
       <p class="sub">Per avond · tik voor details</p>
       <div>${items}</div></section>`;
   }
 
   // ---------- Start van de avond ----------
+  const nightBusy = () => !!(openAny() || owedAll().n);
   function renderStart() {
+    const names = ui.names || S.players, n = names.length, locked = nightBusy();
     return `<div class="wrap">
       <header class="top"><div class="brand">Kaartavond</div>${syncChip()}</header>
       <section><p class="label">${esc(today())}</p><h1>Wie speelt er <em>mee</em>?</h1>
         <p class="lead">In volgorde rond de tafel.</p></section>
       <form id="startForm" class="steps" autocomplete="off">
-        <div class="panel" style="gap:0;padding-block:6px">${[0, 1, 2, 3].map((i) => `<label class="pfield" style="--pc:var(--p${i})"><span>${i + 1}</span><input id="sp${i}" value="${esc(S.players[i] || '')}" placeholder="Speler ${i + 1}" maxlength="18" enterkeyhint="${i < 3 ? 'next' : 'done'}"></label>`).join('')}</div>
+        <div class="panel" style="gap:0;padding-block:6px">${names.map((nm, i) => `<label class="pfield" style="--pc:var(--p${i})"><span>${i + 1}</span><input id="sp${i}" value="${esc(nm || '')}" placeholder="Speler ${i + 1}" maxlength="18" enterkeyhint="${i < n - 1 ? 'next' : 'done'}"></label>`).join('')}</div>
+        ${locked ? '<p class="hint">Het aantal spelers ligt vast tot een nieuwe avond.</p>' : `<div class="np"><button type="button" class="btn ghost sm" data-act="npSet" data-v="-1" ${n <= 2 ? 'disabled' : ''}>− speler</button><span class="label">${n} spelers</span><button type="button" class="btn ghost sm" data-act="npSet" data-v="1" ${n >= 8 ? 'disabled' : ''}>+ speler</button></div>`}
         <p class="err" id="startErr" style="min-height:0"></p>
         <button class="btn primary xl" type="submit">Verder <span class="arr">→</span></button>
       </form></div>`;
@@ -1109,11 +1175,12 @@ if (typeof module !== 'undefined') module.exports = Logic;
   function rondjesTonight() {
     const items = [];
     finished().forEach((r) => items.push({ t: r.end || r.start, game: 'Troeven', price: r.price, txt: `${tName(r, 1 - r.winner)} betalen` }));
-    [['wiezen', 'Wiezen'], ['harten', 'Hartenjagen']].forEach(([g, name]) => PG[g].st().rondjes.forEach((r) => {
+    PG_KEYS.forEach((g) => PG[g].st().rondjes.forEach((r) => {
       if (!r.end || !r.price) return;
-      const { out } = wPayPct(PG[g].tot(r), r.pct);
+      const name = PG[g].title;
+      const { out } = wPayPct(rankOf(g, r), r.pct);
       const mx = Math.max(...out);
-      const most = [0, 1, 2, 3].filter((i) => out[i] === mx);
+      const most = out.map((_, i) => i).filter((i) => out[i] === mx);
       items.push({ t: r.end, game: name, price: r.price, txt: `${most.map(P).join(' &amp; ')} ${most.length > 1 ? 'betalen' : 'betaalt'} het meest` });
     }));
     return items.sort((a, b) => a.t - b.t);
@@ -1128,6 +1195,9 @@ if (typeof module !== 'undefined') module.exports = Logic;
       ${avondPanel()}
       ${items.length ? `<section class="panel"><h2>Rondjes</h2><div>${list}</div></section>` : ''}
       ${renderHistory()}
+      <section class="panel"><h2>Back-up</h2>
+        <div class="row2"><button class="btn soft" data-act="backupOut">Bewaren</button><button class="btn soft" data-act="backupIn">Terugzetten</button></div>
+        <p class="muted" id="bkMsg" style="margin:0;font-size:13px"></p></section>
     </div>${A.n ? dock() : ''}`;
   }
 
@@ -1151,15 +1221,18 @@ if (typeof module !== 'undefined') module.exports = Logic;
   const GAME_ART = {
     troeven: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M48 14v70" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity=".55"/>${[0, 1, 2, 3, 4, 5].map((k) => `<rect x="${24 + (k % 2) * 4}" y="${70 - k * 10}" width="${44 - (k % 2) * 8 - k * 2}" height="4.5" rx="2.2" fill="currentColor" opacity="${k > 3 ? .35 : 1}"/>`).join('')}<g transform="translate(58 8) rotate(12)"><rect width="26" height="36" rx="4" fill="#fff"/><text x="13" y="24" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-weight="700" font-size="18" fill="#2b1d55">B</text></g></svg>`,
     wiezen: `<svg viewBox="0 0 96 96" aria-hidden="true">${[-20, 0, 20].map((a, k) => `<g transform="rotate(${a} 48 84)"><rect x="32" y="22" width="32" height="46" rx="5" fill="#fff" opacity="${.55 + k * .22}"/></g>`).join('')}<g transform="rotate(20 48 84)"><path d="M54 32c-5 6-11 9-11 15a5 5 0 0 0 9 3l-2 6h8l-2-6a5 5 0 0 0 9-3c0-6-6-9-11-15z" fill="#07324a"/></g></svg>`,
+    pietjes: `<svg viewBox="0 0 96 96" aria-hidden="true">${[[14, 40, -14], [40, 18, 8], [50, 50, 18]].map(([x, y, a], k) => `<g transform="rotate(${a} ${x + 16} ${y + 16})"><rect x="${x}" y="${y}" width="32" height="32" rx="7" fill="#fff" opacity="${.75 + k * .12}"/>${[[[16, 16]], [[9, 9], [23, 23]], [[9, 9], [16, 16], [23, 23]]][k].map(([cx, cy]) => `<circle cx="${x + cx}" cy="${y + cy}" r="3.4" fill="#5a3300"/>`).join('')}</g>`).join('')}</svg>`,
     harten: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M48 80 20 52a16 16 0 0 1 28-20 16 16 0 0 1 28 20z" fill="#fff"/><path d="M14 28 70 62" stroke="#5a0f33" stroke-width="3.5" stroke-linecap="round"/><path d="M70 62l-9-1 5-7z" fill="#5a0f33"/><path d="M14 28l6 1-3 5z" fill="#5a0f33"/></svg>`,
   };
   const GAMES = [
-    { k: 'troeven', name: 'Troeven', cls: 'g-troef' },
-    { k: 'wiezen', name: 'Wiezen', cls: 'g-wiez' },
-    { k: 'harten', name: 'Hartenjagen', cls: 'g-hart' },
+    { k: 'troeven', name: 'Troeven', cls: 'g-troef', min: 4, max: 4 },
+    { k: 'wiezen', name: 'Wiezen', cls: 'g-wiez', min: 4, max: 4 },
+    { k: 'harten', name: 'Hartenjagen', cls: 'g-hart', min: 4, max: 4 },
+    { k: 'pietjes', name: 'Pietjesbak', cls: 'g-pietjes', min: 2, max: 8 },
   ];
   function renderPick() {
-    const tiles = GAMES.map((g) => `<button class="tile ${g.cls}" data-act="flowGame" data-v="${g.k}"><span class="tart">${GAME_ART[g.k]}</span><span class="tname">${g.name}</span></button>`).join('');
+    const n = S.players.length;
+    const tiles = GAMES.map((g) => { const ok = n >= g.min && n <= g.max; return `<button class="tile ${g.cls} ${ok ? '' : 'off'}" data-act="flowGame" data-v="${g.k}" ${ok ? '' : 'disabled'}><span class="tart">${GAME_ART[g.k]}</span>${ok ? '' : `<span class="tstat">${g.min === g.max ? g.min : `${g.min}–${g.max}`} spelers</span>`}<span class="tname">${g.name}</span></button>`; }).join('');
     const soon = GAMES.length % 2 ? '<div class="tile soon" aria-hidden="true"><span class="tname">Binnenkort</span></div>' : '';
     return `<div class="wrap">
       <header class="top"><button class="btn ghost sm" data-act="flowBack">← Terug</button><span class="label">Rondje ${owedAll().n + 1} · ${euro(ui.flow.price)}</span></header>
@@ -1171,17 +1244,19 @@ if (typeof module !== 'undefined') module.exports = Logic;
   const samePct = (a, b) => a.every((v, i) => v === b[i]);
   function renderNPct() {
     const g = ui.flow.game, p = ui.pct, wz = g === 'wiezen';
-    const sub = ['meeste punten', '', '', 'minste punten'];
-    const rows = p.map((v, i) => `<div class="pctrow"><span class="pl">${ORD[i]}${sub[i] ? `<small>${sub[i]}</small>` : ''}</span>
+    const sub = (i) => (i === 0 ? 'winnaar' : i === p.length - 1 ? 'verliezer' : '');
+    const rows = p.map((v, i) => `<div class="pctrow"><span class="pl">${ORD[i]}${sub(i) ? `<small>${sub(i)}</small>` : ''}</span>
       <div class="stepper"><button type="button" data-act="pctStep" data-i="${i}" data-v="-5" aria-label="5 procent minder">−</button><input id="pct${i}" inputmode="numeric" maxlength="3" value="${v}" aria-label="Percentage ${ORD[i]} plaats"><span class="pc">%</span><button type="button" data-act="pctStep" data-i="${i}" data-v="5" aria-label="5 procent meer">+</button></div></div>`).join('');
     return `<div class="wrap">
       <header class="top"><button class="btn ghost sm" data-act="flowBack">← Terug</button><span class="label">${PG[g].title} · ${euro(ui.flow.price)}</span></header>
       <section><h1>Wie betaalt <em>hoeveel</em>?</h1></section>
-      <div class="chips">${PCT_PRESETS.map((x, i) => `<button class="chip ${samePct(x.v, p) ? 'on' : ''}" data-act="pctPreset" data-v="${i}">${x.n}</button>`).join('')}</div>
+      <div class="chips">${presetsFor(p.length).map((x, i) => `<button class="chip ${samePct(x.v, p) ? 'on' : ''}" data-act="pctPreset" data-v="${i}">${x.n}</button>`).join('')}</div>
       <section class="panel" style="gap:0;padding-block:6px">${rows}</section>
       <div id="pctSum">${pctSumHTML()}</div>
       ${wz ? `<section class="steps" style="gap:10px"><p class="label">Spelletjes per rondje</p>
         <div class="chips">${[1, 4, 8, 12, 16].map((v) => `<button class="chip ${ui.per === v ? 'on' : ''}" data-act="perSet" data-v="${v}">${v}</button>`).join('')}</div></section>` : ''}
+      ${g === 'pietjes' ? `<section class="steps" style="gap:10px"><p class="label">Streepjes bij de start</p>
+        <div class="chips">${[5, 7, 9, 12].map((v) => `<button class="chip ${ui.boom === v ? 'on' : ''}" data-act="boomSet" data-v="${v}">${v}</button>`).join('')}</div></section>` : ''}
       <button class="btn primary xl" data-act="npctStart" id="pctSave" ${p.reduce((a, b) => a + b, 0) === 100 ? '' : 'disabled'}>Start rondje <span class="arr">→</span></button>
     </div>`;
   }
@@ -1196,13 +1271,13 @@ if (typeof module !== 'undefined') module.exports = Logic;
   function updatePct() {
     const s = document.getElementById('pctSum'); if (s) s.innerHTML = pctSumHTML();
     const b = document.getElementById('pctSave'); if (b) b.disabled = ui.pct.reduce((a, c) => a + c, 0) !== 100;
-    document.querySelectorAll('.chip[data-act="pctPreset"]').forEach((c) => c.classList.toggle('on', samePct(PCT_PRESETS[+c.dataset.v].v, ui.pct)));
+    document.querySelectorAll('.chip[data-act="pctPreset"]').forEach((c) => c.classList.toggle('on', samePct(presetsFor(ui.pct.length)[+c.dataset.v].v, ui.pct)));
   }
 
   // Wat iedereen betaalt voor een uitgespeeld rondje
   function rondjeRows(g, r) {
     const tot = PG[g].tot(r);
-    const { out, place, order, tied } = wPayPct(tot, r.pct);
+    const { out, place, order, tied } = wPayPct(rankOf(g, r), r.pct);
     return order.map((i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${P(i)}<span class="meta">${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]} · ${ptsLabel(g, tot[i])}</span></span>
       <span class="owe ${out[i] ? '' : 'zero'}">${euro(r.price * out[i] / 100)}<small>${fmtPct(out[i])}</small></span></div>`).join('');
   }
@@ -1314,6 +1389,56 @@ if (typeof module !== 'undefined') module.exports = Logic;
       ${hands.length ? `<section class="panel"><div class="panel-head"><h2>Gespeeld</h2><button class="btn soft sm" data-act="hUndo">Laatste ongedaan</button></div><div>${hist}</div></section>` : ''}
       ${c ? avondPanel() : ''}
     </div>${dock()}`;
+  }
+
+  // ---------- Pietjesbak: stand ----------
+  const pjType = (t) => PJ_TYPES.find((x) => x[0] === t);
+  const stripes = (v, boom) => `<span class="pjs" aria-label="${v} streepjes">${Array.from({ length: Math.max(boom, v) }, (_, k) => `<i class="${k < v ? '' : 'off'}"></i>`).join('')}</span>`;
+  function renderPGame() {
+    const J = S.pj, c = openOf(J), last = lastOf(J), nr = owedAll().n + (c ? 1 : 0), r = c || last;
+    let head, main, stand = '';
+    if (c) {
+      const n = c.beurten.length, tot = pTot(c);
+      const { out, place, order, tied } = wPayPct(tot.map((v) => -v), c.pct);
+      head = `<p class="label">Rondje ${nr} · ${euro(c.price)}</p><h1>${n ? `Beurt <em>${n + 1}</em>` : `Iedereen op <em>${c.boom}</em>`}</h1>`;
+      main = `<button class="btn primary xl" data-act="pNew">Nieuwe beurt <span class="arr">→</span></button>`;
+      stand = `<section class="panel"><div class="panel-head"><h2>Stand</h2></div>
+        <div>${order.map((i) => `<div class="hjrow" style="--pc:var(--p${i})">
+          <div class="hjtop"><span class="who">${P(i)}</span><span class="hjnum">${tot[i]}</span></div>
+          ${stripes(tot[i], c.boom)}
+          ${n ? `<span class="meta">${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]} · ${euro(c.price * out[i] / 100)}</span>` : ''}</div>`).join('')}</div></section>`;
+    } else {
+      head = `<p class="label">Pietjesbak · ${euro(last.price)}</p><h1>Rondje <em>gedaan</em></h1>`;
+      main = doneButtons();
+      stand = `<section class="panel"><div class="panel-head"><h2>Wie betaalt</h2></div><div>${rondjeRows('pietjes', last)}</div></section>`;
+    }
+    const bs = r ? r.beurten : [];
+    const hist = bs.map((b, k) => `<div class="hrow"><span class="n">${k + 1}</span><span><b>${P(b.w)}</b> · ${pjType(b.t)[1].toLowerCase()} ${pjType(b.t)[2]}${b.plus.length ? ` · +1 ${b.plus.map(P).join(', ')}` : ''}</span><span></span></div>`).reverse().join('');
+    return `<div class="wrap">
+      ${gameHeader('Pietjesbak')}
+      <section>${head}</section>
+      ${main}
+      ${stand}
+      ${bs.length ? `<section class="panel"><div class="panel-head"><h2>Gespeeld</h2><button class="btn soft sm" data-act="pUndo">Laatste ongedaan</button></div><div>${hist}</div></section>` : ''}
+      ${c ? avondPanel() : ''}
+    </div>${dock()}`;
+  }
+
+  // ---------- Pietjesbak: een beurt ingeven ----------
+  function renderPRound() {
+    const R = ui.pr, c = openOf(S.pj), n = c ? c.beurten.length : 0;
+    return `<div class="wrap">
+      <header class="top"><button class="btn ghost sm" data-act="pCancel">← Terug</button><span class="label">Beurt ${n + 1}</span></header>
+      <section class="steps">
+        <div class="step"><div class="slabel"><span class="no">1</span><span class="label">Wie wint de beurt?</span></div>
+          <div class="seg">${S.players.map((p, i) => `<button class="opt ${R.w === i ? 'who-on' : ''}" data-act="pWin" data-v="${i}" style="--pc:var(--p${i})"><span class="big">${esc(p)}</span></button>`).join('')}</div></div>
+        <div class="step ${R.w !== null ? '' : 'wait'}"><div class="slabel"><span class="no">2</span><span class="label">Met wat?</span></div>
+          <div class="seg">${PJ_TYPES.map(([k, name, eff]) => `<button class="opt ${R.t === k ? 'on' : ''}" data-act="pType" data-v="${k}"><span class="big">${name}</span><small>${eff}</small></button>`).join('')}</div></div>
+        <div class="step"><span class="label">Streepje erbij? (2-2-3 of van tafel)</span>
+          <div class="chips">${S.players.map((p, i) => `<button class="chip ${R.plus.includes(i) ? 'on' : ''}" data-act="pPlus" data-v="${i}">${esc(p)}</button>`).join('')}</div></div>
+      </section>
+      <button class="btn primary xl" data-act="pSave" ${R.w !== null && R.t ? '' : 'disabled'}>Bewaar beurt <span class="arr">→</span></button>
+    </div>`;
   }
 
   // ---------- Hartenjagen: een hand ingeven ----------
@@ -1565,7 +1690,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   function renderEnd() {
     const A = owedAll();
     const done = { length: A.n };
-    const open = current() || openOf(S.wz) || openOf(S.hj);
+    const open = openAny();
     const { owed } = A;
     const parts = A.parts.filter((p) => p[1]);
     const payerBtns = S.players.map((p, i) => `<button class="payer ${ui.payer === i ? 'on' : ''}" data-act="payer" data-v="${i}"><span class="nm">${esc(p)}</span><small>aandeel ${euro(owed[i])}</small></button>`).join('');
@@ -1614,9 +1739,38 @@ if (typeof module !== 'undefined') module.exports = Logic;
           ? `${P(ui.payer)} krijgt in totaal ${euro(inc)} binnen, ${euro(-own)} meer dan de rekening.`
           : `${P(ui.payer)} krijgt ${euro(inc)} binnen en betaalt zelf ${euro(own)} van de rekening.`;
       })()}</p>
-      <button class="btn primary block" data-act="copy">Kopieer voor de groepschat</button>
+      <div class="row2"><button class="btn primary" data-act="share">Delen</button><button class="btn ghost" data-act="copy">Kopiëren</button></div>
       <p class="muted" id="copyMsg" style="margin:0;font-size:13px;text-align:center"></p>
     </section>`;
+  }
+
+  // Afrekening als afbeelding (voor Snapchat, WhatsApp, ...)
+  async function settleImage() {
+    const r = settleAll(ui.payer, billValue());
+    const W = 1080, H = 1350, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const x = cv.getContext('2d');
+    try { await document.fonts.ready; } catch (e) {}
+    const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#0b1230'); g.addColorStop(1, '#060914'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+    [['rgba(94,240,192,.45)', 260, 160], ['rgba(182,140,255,.40)', 820, 220], ['rgba(79,216,255,.30)', 540, 420]].forEach(([c, cx, cy]) => {
+      const rg = x.createRadialGradient(cx, cy, 0, cx, cy, 520); rg.addColorStop(0, c); rg.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = rg; x.fillRect(0, 0, W, H);
+    });
+    const serif = '"Cormorant Garamond", Georgia, serif', sans = 'Manrope, system-ui, sans-serif';
+    x.fillStyle = '#eaf2ff'; x.font = `italic 600 92px ${serif}`; x.fillText('Kaartavond', 80, 190);
+    x.fillStyle = '#8a95b8'; x.font = `600 30px ${sans}`; x.fillText(today().toUpperCase(), 84, 250);
+    x.fillStyle = '#eaf2ff'; x.font = `600 46px ${serif}`; x.fillText(`${S.players[ui.payer]} betaalde ${euro(r.total)}`, 80, 360);
+    let y = 470;
+    const rows = r.transfers.length ? r.transfers : [];
+    rows.slice(0, 7).forEach((t) => {
+      x.fillStyle = 'rgba(255,255,255,.06)'; x.beginPath(); if (x.roundRect) x.roundRect(60, y - 70, W - 120, 110, 26); else x.rect(60, y - 70, W - 120, 110); x.fill();
+      x.fillStyle = '#eaf2ff'; x.font = `600 50px ${serif}`; x.fillText(S.players[t.from], 100, y);
+      const wFrom = x.measureText(S.players[t.from]).width;
+      x.fillStyle = '#5ef0c0'; x.font = `italic 500 34px ${serif}`; x.fillText(`  → ${S.players[t.to]}`, 100 + wFrom, y);
+      x.fillStyle = '#eaf2ff'; x.font = `700 44px ${sans}`; const a = euro(t.amount); x.fillText(a, W - 100 - x.measureText(a).width, y);
+      y += 135;
+    });
+    if (!rows.length) { x.fillStyle = '#8a95b8'; x.font = `500 40px ${sans}`; x.fillText('Niemand moet iets overschrijven.', 80, y); }
+    x.fillStyle = '#8a95b8'; x.font = `500 28px ${sans}`; x.fillText(`${owedAll().n} rondjes · ${euro(r.rounds)}`, 80, H - 80);
+    return new Promise((res) => cv.toBlob(res, 'image/png'));
   }
 
   function settleText() {
@@ -1661,6 +1815,12 @@ if (typeof module !== 'undefined') module.exports = Logic;
     } else if (m === 'askReset') {
       body = `<h2>Nieuwe avond starten?</h2><p class="muted" style="margin:0">De rondjes, spelletjes en bedragen van deze avond worden gewist, van alle spellen. Ze komen bij Vorige avonden. De spelersnamen en jullie afspraken over percentages en punten blijven.</p>
         <div class="row2"><button class="btn ghost" data-act="close">Nee</button><button class="btn danger" data-act="reset">Ja, wissen</button></div>`;
+    } else if (m === 'backup') {
+      body = `<h2>Back-up terugzetten</h2>
+        <input class="input" type="file" id="bkFile" accept=".json,application/json,text/plain">
+        <textarea class="input" id="bkText" rows="4" placeholder="of plak hier de back-up"></textarea>
+        <p class="err" id="bkErr" style="min-height:0"></p>
+        <div class="row2"><button class="btn ghost" data-act="close">Annuleer</button><button class="btn ${ui.bkSure ? 'danger' : 'primary'}" data-act="backupApply">${ui.bkSure ? 'Zeker? Alles wordt vervangen' : 'Terugzetten'}</button></div>`;
     } else if (m === 'wpts') {
       body = `<h2>Puntentabel wiezen</h2><p class="muted" style="margin:0;font-size:13.5px">Samen spelen: elke speler krijgt de punten en elke tegenspeler verliest ze. Alleen spelen: elke tegenspeler betaalt de punten, dus je krijgt 3 keer zoveel. Bij vragen, troel en alleen telt elke extra slag +1 (bij alleen tot 3 extra). Niet gehaald: dezelfde punten in de min, plus 1 per slag te weinig.</p>
         <div>${WBIDS.map((b) => `<div class="pctrow"><span class="pl">${b.n}<small>${b.need}</small></span><div class="stepper"><button type="button" data-act="wPtStep" data-k="${b.k}" data-v="-1" aria-label="Minder">−</button><output>${wpts(b.k)}</output><button type="button" data-act="wPtStep" data-k="${b.k}" data-v="1" aria-label="Meer">+</button></div></div>`).join('')}</div>
@@ -1673,8 +1833,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
 
   function render() {
     const v = view();
-    ui.view = ['draw', 'end', 'wround', 'hround', 'start', 'nprice', 'npick', 'npct'].includes(v) ? v : null;
-    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound };
+    ui.view = ['draw', 'end', 'wround', 'hround', 'pround', 'start', 'nprice', 'npick', 'npct'].includes(v) ? v : null;
+    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound };
     $app.innerHTML = screens[v]();
     renderModal();
     updateCalc();
@@ -1828,7 +1988,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     playing(b) { ui.pick.playing = +b.dataset.v; render(); const s = document.getElementById('step3'); if (s) s.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); },
     result(b) { hideToast(); addHand(b.dataset.v); },
     statScope(b) { ui.statScope = b.dataset.v; render(); },
-    toastUndo() { hideToast(); if (S.game === 'wiezen') actions.wUndo(); else if (S.game === 'harten') actions.hUndo(); else actions.undo(); },
+    toastUndo() { hideToast(); if (S.game === 'wiezen') actions.wUndo(); else if (S.game === 'harten') actions.hUndo(); else if (S.game === 'pietjes') actions.pUndo(); else actions.undo(); },
     // Hartenjagen
     hNew() { ui.hr = { p: [0, 0, 0, 0], q: null, moon: null }; ui.view = 'hround'; render(); window.scrollTo(0, 0); keepAwake(); },
     hCancel() { ui.hr = null; ui.view = null; render(); window.scrollTo(0, 0); },
@@ -1850,7 +2010,66 @@ if (typeof module !== 'undefined') module.exports = Logic;
     perSet(b) { ui.per = +b.dataset.v; render(); },
     hNextDealer() { S.hj.dealer = (S.hj.dealer + 1) % 4; save(); render(); },
     // Start van de avond en keuze van het spel
-    toStart() { ui.view = 'start'; render(); window.scrollTo(0, 0); },
+    toStart() { ui.names = null; ui.view = 'start'; render(); window.scrollTo(0, 0); },
+    npSet(b) {
+      const names = [...document.querySelectorAll('[id^="sp"]')].map((el) => el.value);
+      const n = Math.max(2, Math.min(8, names.length + +b.dataset.v));
+      while (names.length < n) names.push('');
+      ui.names = names.slice(0, n); render();
+    },
+    boomSet(b) { ui.boom = +b.dataset.v; render(); },
+    // Pietjesbak
+    pNew() { ui.pr = { w: null, t: null, plus: [] }; ui.view = 'pround'; render(); window.scrollTo(0, 0); keepAwake(); },
+    pCancel() { ui.pr = null; ui.view = null; render(); window.scrollTo(0, 0); },
+    pWin(b) { ui.pr.w = +b.dataset.v; render(); },
+    pType(b) { ui.pr.t = b.dataset.v; render(); },
+    pPlus(b) { const i = +b.dataset.v, R = ui.pr; R.plus = R.plus.includes(i) ? R.plus.filter((x) => x !== i) : [...R.plus, i]; render(); },
+    pSave() {
+      const R = ui.pr, c = openOf(S.pj); if (!R || !c || R.w === null || !R.t) return;
+      c.beurten.push({ w: R.w, t: R.t, plus: R.plus.slice(), at: Date.now() });
+      const done = pDone(c); if (done) { c.end = Date.now(); ui.result = 'pietjes'; }
+      S.game = 'pietjes';
+      ui.pr = null; ui.view = null; save(); render(); window.scrollTo({ top: 0, behavior: 'smooth' });
+      showToast(done ? `<b>Rondje gedaan</b> · ${P(pTot(c).findIndex((v) => v <= 0))} is alles kwijt` : `<b>Beurt ${c.beurten.length}</b> bewaard`);
+    },
+    pUndo() { const r = lastOf(S.pj); if (!r || !r.beurten.length) return; r.beurten.pop(); r.end = null; save(); render(); },
+    // Delen en back-up
+    async share() {
+      const msg = document.getElementById('copyMsg'), text = settleText();
+      try {
+        const blob = await settleImage();
+        const file = blob && new File([blob], 'kaartavond.png', { type: 'image/png' });
+        if (file && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text }); return; }
+        if (navigator.share) { await navigator.share({ text }); return; }
+      } catch (e) { if (e && e.name === 'AbortError') return; }
+      if (msg) msg.textContent = 'Delen lukt hier niet. De tekst wordt gekopieerd.';
+      actions.copy();
+    },
+    async backupOut() {
+      const msg = document.getElementById('bkMsg');
+      const json = JSON.stringify(S);
+      const name = `kaartavond-${new Date().toISOString().slice(0, 10)}.json`;
+      try {
+        const file = new File([json], name, { type: 'application/json' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file] }); msg.textContent = 'Back-up gemaakt.'; return; }
+      } catch (e) { if (e && e.name === 'AbortError') return; }
+      if (/github\.io$|^localhost$/.test(location.hostname)) {
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' })); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+        msg.textContent = 'Back-up opgeslagen als ' + name + '.'; return;
+      }
+      try { await navigator.clipboard.writeText(json); msg.textContent = 'Back-up gekopieerd. Plak ze in de app bij Terugzetten.'; }
+      catch (e) { msg.textContent = 'Bewaren lukt hier niet.'; }
+    },
+    backupIn() { ui.bkSure = false; ui.modal = 'backup'; renderModal(); },
+    backupApply() {
+      const err = document.getElementById('bkErr'), txt = (document.getElementById('bkText').value || '').trim();
+      let d = null;
+      try { d = JSON.parse(txt); } catch (e) {}
+      if (!d || d.v !== 1 || !Array.isArray(d.players) || !Array.isArray(d.rounds)) { err.textContent = 'Dat is geen geldige back-up.'; return; }
+      if (!ui.bkSure) { ui.bkSure = true; const t = document.getElementById('bkText').value; renderModal(); document.getElementById('bkText').value = t; return; }
+      S = normalize(d); S.updatedAt = Date.now(); save();
+      ui.modal = null; ui.bkSure = false; ui.view = null; ui.result = null; render(); window.scrollTo(0, 0);
+    },
     // Nieuw rondje: prijs → spel → percentages
     newRondje() { hideToast(); ui.flow = { price: null, game: null }; ui.result = null; ui.modal = null; ui.calc = { expr: '', target: null }; ui.view = 'nprice'; render(); window.scrollTo(0, 0); },
     flowBack() {
@@ -1862,7 +2081,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
     flowGame(b) {
       const g = b.dataset.v; ui.flow.game = g;
       if (g === 'troeven') { startDraw(); return; }
-      ui.pct = (PG[g].st().pct || PCT_PRESETS[0].v).slice(); ui.per = S.wz.per || 1;
+      const n = S.players.length, stored = PG[g].st().pct;
+      ui.pct = (stored && stored.length === n ? stored : presetsFor(n)[0].v).slice(); ui.per = S.wz.per || 1; ui.boom = S.pj.boom || 9;
       ui.view = 'npct'; render(); window.scrollTo(0, 0);
     },
     npctStart() {
@@ -1870,7 +2090,9 @@ if (typeof module !== 'undefined') module.exports = Logic;
       const g = ui.flow.game, st = PG[g].st();
       st.pct = ui.pct.slice();
       const r = { price: ui.flow.price, pct: ui.pct.slice(), start: Date.now(), end: null };
-      if (g === 'wiezen') { S.wz.per = ui.per || 1; r.per = S.wz.per; r.games = []; } else r.hands = [];
+      if (g === 'wiezen') { S.wz.per = ui.per || 1; r.per = S.wz.per; r.games = []; }
+      else if (g === 'pietjes') { S.pj.boom = ui.boom || 9; r.boom = S.pj.boom; r.beurten = []; }
+      else r.hands = [];
       st.rondjes.push(r); S.game = g; ui.flow = null; ui.pct = null;
       if (g === 'wiezen') { ui.wr = { k: null, sel: [], made: null, diff: 0 }; ui.view = 'wround'; } else ui.view = null;
       save(); render(); window.scrollTo(0, 0); keepAwake();
@@ -1878,7 +2100,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     hOpen(b) { const i = +b.dataset.v; ui.hOpen = ui.hOpen === i ? null : i; ui.hDel = null; render(); },
     hDel(b) { const i = +b.dataset.v; if (ui.hDel !== i) { ui.hDel = i; render(); return; } S.history.splice(i, 1); ui.hOpen = null; ui.hDel = null; save(); render(); },
     // Wiezen: percentages
-    pctPreset(b) { ui.pct = PCT_PRESETS[+b.dataset.v].v.slice(); render(); },
+    pctPreset(b) { ui.pct = presetsFor(ui.pct.length)[+b.dataset.v].v.slice(); render(); },
     pctStep(b) { const i = +b.dataset.i; ui.pct[i] = Math.max(0, Math.min(100, ui.pct[i] + +b.dataset.v)); const inp = document.getElementById('pct' + i); if (inp) inp.value = ui.pct[i]; updatePct(); },
     // Wiezen: spelletjes
     wNew() { ui.wr = { k: null, sel: [], made: null, diff: 0 }; ui.view = 'wround'; render(); window.scrollTo(0, 0); keepAwake(); },
@@ -1937,7 +2159,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       }
     },
     askReset() { ui.modal = 'askReset'; renderModal(); },
-    reset() { const archive = [...(S.archive || []), ...finished().map((r) => ({ teams: r.teams, winner: r.winner, date: r.end || r.start }))]; const rec = nightRecord(); const history = [...(S.history || []), ...(rec ? [rec] : [])]; const wz = freshWz(S.wz), hj = freshHj(S.hj); S = fresh(S.players); S.archive = archive; S.wz = wz; S.hj = hj; S.history = history; ui.hOpen = null; ui.hDel = null; ui.modal = null; ui.view = 'start'; ui.payer = null; ui.bill = ''; ui.hr = null; ui.wr = null; save(); render(); window.scrollTo(0, 0); },
+    reset() { const archive = [...(S.archive || []), ...finished().map((r) => ({ teams: r.teams, winner: r.winner, date: r.end || r.start }))]; const rec = nightRecord(); const history = [...(S.history || []), ...(rec ? [rec] : [])]; const wz = freshWz(S.wz), hj = freshHj(S.hj), pj = freshPj(S.pj); S = fresh(S.players); S.archive = archive; S.wz = wz; S.hj = hj; S.pj = pj; S.history = history; ui.hOpen = null; ui.hDel = null; ui.modal = null; ui.view = 'start'; ui.payer = null; ui.bill = ''; ui.hr = null; ui.wr = null; save(); render(); window.scrollTo(0, 0); },
   };
 
   document.addEventListener('click', (e) => {
@@ -1949,7 +2171,15 @@ if (typeof module !== 'undefined') module.exports = Logic;
 
   document.addEventListener('keydown', (e) => {
     const m = /^sp(\d)$/.exec(e.target.id || '');
-    if (m && e.key === 'Enter' && +m[1] < 3) { e.preventDefault(); document.getElementById('sp' + (+m[1] + 1)).focus(); }
+    const nx = m && document.getElementById('sp' + (+m[1] + 1));
+    if (m && e.key === 'Enter' && nx) { e.preventDefault(); nx.focus(); }
+  });
+
+  document.addEventListener('change', (e) => {
+    if (e.target.id !== 'bkFile' || !e.target.files[0]) return;
+    const rd = new FileReader();
+    rd.onload = () => { const t = document.getElementById('bkText'); if (t) t.value = rd.result; };
+    rd.readAsText(e.target.files[0]);
   });
 
   document.addEventListener('input', (e) => {
@@ -1992,11 +2222,12 @@ if (typeof module !== 'undefined') module.exports = Logic;
       if (!v) { document.getElementById('priceErr2').textContent = 'Geef een bedrag in, bijvoorbeeld 24,50.'; return; }
       current().price = v; S.lastPrice = v; ui.modal = null; save(); render();
     } else if (f.id === 'startForm') {
-      const names = [0, 1, 2, 3].map((i) => document.getElementById('sp' + i).value.trim());
+      const names = [...document.querySelectorAll('[id^="sp"]')].map((el) => el.value.trim());
       const err = document.getElementById('startErr');
       const empty = names.findIndex((n) => !n);
       if (empty >= 0) { err.textContent = 'Vul alle 4 de namen in.'; document.getElementById('sp' + empty).focus(); return; }
-      if (new Set(names.map((n) => n.toLowerCase())).size < 4) { err.textContent = 'Geef elke speler een andere naam.'; return; }
+      if (new Set(names.map((n) => n.toLowerCase())).size < names.length) { err.textContent = 'Geef elke speler een andere naam.'; return; }
+      ui.names = null;
       S.players = names; S.ready = true; save();
       const busy = current() || openOf(S.wz) || openOf(S.hj);
       if (!busy && !owedAll().n) { actions.newRondje(); return; }
