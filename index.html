@@ -1071,6 +1071,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (!s.lk) s.lk = freshLk();
     if (!s.dt) s.dt = freshDt();
     if (!s.pk) s.pk = freshPk();
+    migratePk(s);
     ['pj', 'np', 'dt'].forEach((k) => { if (s[k] && Array.isArray(s[k].rondjes) && Array.isArray(s.players)) s[k].rondjes.forEach((r) => { if (!r.n) r.n = s.players.length; }); });
     if (!Array.isArray(s.dt.rondjes)) s.dt.rondjes = [];
     if (!Array.isArray(s.lk.rondjes)) s.lk.rondjes = [];
@@ -1181,23 +1182,33 @@ if (typeof module !== 'undefined') module.exports = Logic;
     nappen: { title: 'Nappen', st: () => S.np, tot: nTot, rank: (r) => nTot(r).map((v) => -v) },
     lucky: { title: 'Lucky 7', st: () => S.lk, tot: lTot },
     darts: { title: 'Darts', st: () => S.dt, tot: dTot, rank: dRank },
+    poker: { title: 'Poker', st: () => S.pk, tot: (r) => pkNet(r), rank: (r) => pkRank(r) },
   };
-  const PG_KEYS = ['wiezen', 'harten', 'pietjes', 'nappen', 'lucky', 'darts'];
+  const PG_KEYS = ['wiezen', 'harten', 'pietjes', 'nappen', 'lucky', 'darts', 'poker'];
   const rankOf = (g, r) => (PG[g].rank ? PG[g].rank(r) : PG[g].tot(r));
-  const openAny = () => current() || openOf(S.wz) || openOf(S.hj) || openOf(S.pj) || openOf(S.np) || openOf(S.lk) || openOf(S.dt);
+  // Plaats en percentage per speler voor een uitgespeeld rondje. Speelde niet iedereen mee (poker), dan tellen alleen de deelnemers.
+  function payOf(g, r) {
+    const full = rankOf(g, r);
+    if (!r.who) return wPayPct(full, r.pct);
+    const n = Math.max(full.length, S.players.length), sub = r.who.map((i) => full[i]), res = wPayPct(sub, r.pct);
+    const out = Array(n).fill(0), place = Array(n).fill(-1), tied = Array(n).fill(false);
+    r.who.forEach((i, k) => { out[i] = res.out[k]; place[i] = res.place[k]; tied[i] = res.tied[k]; });
+    return { out, place, order: res.order.map((k) => r.who[k]), tied };
+  }
+  const openAny = () => current() || openOf(S.wz) || openOf(S.hj) || openOf(S.pj) || openOf(S.np) || openOf(S.lk) || openOf(S.dt) || openOf(S.pk);
   const pg = () => PG[S.game] || PG.wiezen;
   const lastOf = (st) => st.rondjes[st.rondjes.length - 1] || null;
   const openOf = (st) => { const r = lastOf(st); return r && !r.end ? r : null; };
   const gCur = () => openOf(pg().st());
   const priceTxt = (c) => (c ? euro(c) : 'zonder geld');
-  const ptsLabel = (g, v, r) => g === 'darts' ? (r && r.mode === 'cricket' ? `${v} ptn` : `${v} over`) : ptsLabel0(g, v);
+  const ptsLabel = (g, v, r) => g === 'poker' ? '' : g === 'darts' ? (r && r.mode === 'cricket' ? `${v} ptn` : `${v} over`) : ptsLabel0(g, v);
   const ptsLabel0 = (g, v) => (g === 'harten' ? `${v < 0 ? '−' + Math.abs(v) : v} over` : g === 'pietjes' ? `${v} streepje${v === 1 ? '' : 's'}` : g === 'nappen' || g === 'lucky' ? `${v} ptn` : `${sign(v)} ptn`);
   // Wat elke speler betaalt voor de uitgespeelde rondjes van één spel (in cent)
   function gameOwed(g) {
     const owed = Array(S.players.length).fill(0); let total = 0, n = 0;
     PG[g].st().rondjes.forEach((r) => {
       if (!r.end || r.price == null) return;
-      const { out } = wPayPct(rankOf(g, r), r.pct);
+      const { out } = payOf(g, r);
       out.forEach((p, i) => { owed[i] += r.price * p / 100; });
       total += r.price; n++;
     });
@@ -1211,10 +1222,30 @@ if (typeof module !== 'undefined') module.exports = Logic;
       total: tTotal + gs.reduce((a, [, o]) => a + o.total, 0), n: done.length + gs.reduce((a, [, o]) => a + o.n, 0),
       parts: [['Troeven', done.length, tTotal], ...gs.map(([g, o]) => [PG[g].title, o.n, o.total])] };
   }
-  // ---------- Poker (kassa) ----------
-  // Iedereen koopt in met een vast bedrag (buy-in), en kan bijkopen. Op het einde vul je in met hoeveel elke speler stopt
-  // (buy-out). Winst of verlies = buy-out − buy-in. Klopt de pot niet, dan wordt het verschil gelijk over de spelers verdeeld.
-  function freshPk(prev) { return { unit: prev && prev.unit ? prev.unit : 1000, mode: prev && prev.mode ? prev.mode : 'cash', lvlMin: prev && prev.lvlMin ? prev.lvlMin : 5, on: false, step: 'setup', who: [], buyin: [], buyout: [] }; }
+  // ---------- Poker ----------
+  // Poker is een rondje zoals de andere spellen. De eindstand bepaalt wie het rondje betaalt (met percentages):
+  // toernooi = wie het langst overblijft is 1ste; cash game = wie het meest wint is 1ste.
+  // Daarnaast kan er een inzet zijn: bij een toernooi een pot met prijzen, bij een cash game buy-ins en buy-outs.
+  // Die inzet wordt apart verrekend in de afrekening van de avond.
+  // Cash game: winst of verlies = buy-out − buy-in. Klopt de pot niet, dan wordt het verschil gelijk over de spelers verdeeld.
+  function freshPk(prev) { const p = prev || {}; return { pct: Array.isArray(p.pct) ? p.pct : null, mode: p.mode || 'tour', stake: p.stake !== undefined ? !!p.stake : true, unit: p.unit || 1000, lvlMin: p.lvlMin || 5, rondjes: [] }; }
+  // Oude pokervorm (één poker per avond, los van de rondjes) omzetten naar een rondje
+  function migratePk(s) {
+    const o = s.pk;
+    if (!o || Array.isArray(o.rondjes)) return;
+    s.pk = freshPk(o);
+    if (!o.on || !Array.isArray(o.who) || !o.who.length) return;
+    const mode = o.mode === 'tour' ? 'tour' : 'cash', unit = o.unit || 1000;
+    const r = { price: 0, pct: Array(o.who.length).fill(0), start: o.start || Date.now(), end: o.step === 'done' ? Date.now() : null, n: (s.players || []).length,
+      who: o.who.slice(), mode, stake: true, unit, buyin: o.buyin || [], buyout: o.buyout || [], out: o.out || [], step: o.step === 'setup' ? (mode === 'tour' ? 'play' : 'buyin') : o.step,
+      reb: (s.players || []).map((_, i) => Math.max(0, Math.round(((o.buyin || [])[i] || 0) / unit) - 1)) };
+    if (mode === 'tour') {
+      let pay = o.pay || [0, 0, 0];
+      if (pay.reduce((a, b) => a + b, 0) === 100) { const pot0 = o.who.length * unit; pay = pay.map((p) => Math.round((pot0 * p) / 100)); }
+      Object.assign(r, { pay, lvlMin: o.lvlMin || 5, t: o.t || { start: r.start, pausedAt: Date.now(), off: 0 }, lastLvl: o.lastLvl || 0 });
+    }
+    s.pk.rondjes.push(r);
+  }
   function splitEqually(total, n) {
     if (n <= 0) return [];
     const sg = total < 0 ? -1 : 1, base = Math.floor(Math.abs(total) / n) * sg, arr = Array(n).fill(base);
@@ -1237,7 +1268,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   const mmss = (ms) => { const x = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(x / 60)}:${String(x % 60).padStart(2, '0')}`; };
   const tAlive = (K) => K.who.filter((i) => !K.out.includes(i));
   const tPot = (K) => K.who.reduce((t, i) => t + (K.buyin[i] || 0), 0);
-  const tReb = (K, i) => Math.max(0, Math.round((K.buyin[i] || 0) / K.unit) - 1);
+  const tReb = (K, i) => (K.reb ? K.reb[i] || 0 : Math.max(0, Math.round((K.buyin[i] || 0) / K.unit) - 1));
   function tPrizes(K) {
     // De gekozen bedragen blijven; extra geld (terug inkopen, speler erbij) gaat half naar de 1ste en half naar de 2de. De 3de blijft gelijk.
     const pot = tPot(K), base = K.pay.reduce((x, y) => x + y, 0), extra = pot - base, half = Math.floor(extra / 2);
@@ -1274,31 +1305,46 @@ if (typeof module !== 'undefined') module.exports = Logic;
   function audioCtx() { try { if (!ac0) { const A = window.AudioContext || window.webkitAudioContext; if (A) ac0 = new A(); } if (ac0 && ac0.state === 'suspended') ac0.resume(); } catch (e) {} return ac0; }
   // De klok loopt op tijdstippen, dus hij klopt ook als de app even dicht was
   setInterval(() => {
-    const K = S.pk; if (!K || !K.on || K.mode !== 'tour' || K.step !== 'play') return;
+    const K = openOf(S.pk); if (!K || K.mode !== 'tour' || K.step !== 'play') return;
     const t = tState(K);
     if (K.lastLvl === undefined) K.lastLvl = t.lv;
-    if (t.lv !== K.lastLvl) { const up = t.lv > K.lastLvl; K.lastLvl = t.lv; save(); if (up) blindAlarm(t.lv); if (ui.view === 'poker' && !ui.modal) render(); return; }
+    if (t.lv !== K.lastLvl) { const up = t.lv > K.lastLvl; K.lastLvl = t.lv; save(); if (up) blindAlarm(t.lv); if (view() === 'kgame' && !ui.modal) render(); return; }
     const el = document.getElementById('pkTime'); if (!el) return;
     el.textContent = t.rem === null ? 'laatste niveau' : mmss(t.rem);
     el.className = 'time' + (K.t.pausedAt ? ' paused' : t.rem !== null && t.rem < 30000 ? ' soon' : '') + (t.rem === null ? ' last' : '');
     const bar = document.getElementById('pkBar'); if (bar) bar.style.width = (t.prog * 100).toFixed(1) + '%';
   }, 1000);
 
-  // Winst/verlies per speler van de avond (in cent), null als de poker nog niet afgerekend is
-  function pokerNet() {
-    const K = S.pk;
-    if (!K || !K.on || K.step !== 'done') return null;
-    if (K.mode === 'tour') {
-      const net = S.players.map(() => 0), pr = tPrizes(K);
-      tOrder(K).forEach((i, k) => { net[i] = (pr[k] || 0) - (K.buyin[i] || 0); });
+  // Winst of verlies van de inzet van één pokerrondje (in cent, per speler)
+  function pkNet(r) {
+    const net = Array(Math.max(r.n || 0, S.players.length)).fill(0);
+    if (!r.stake) return net;
+    if (r.mode === 'tour') {
+      if (r.step !== 'done') return net;
+      const pr = tPrizes(r);
+      tOrder(r).forEach((i, k) => { net[i] = (pr[k] || 0) - (r.buyin[i] || 0); });
       return net;
     }
-    const idx = K.who;
-    const tin = idx.reduce((t, i) => t + (K.buyin[i] || 0), 0), tout = idx.reduce((t, i) => t + (K.buyout[i] || 0), 0);
+    const idx = r.who;
+    const tin = idx.reduce((t, i) => t + (r.buyin[i] || 0), 0), tout = idx.reduce((t, i) => t + (r.buyout[i] || 0), 0);
     const sh = splitEqually(tout - tin, idx.length);
-    const net = S.players.map(() => 0);
-    idx.forEach((i, k) => { net[i] = (K.buyout[i] || 0) - (K.buyin[i] || 0) - sh[k]; });
+    idx.forEach((i, k) => { net[i] = (r.buyout[i] || 0) - (r.buyin[i] || 0) - sh[k]; });
     return net;
+  }
+  // Winst/verlies van alle pokerrondjes met inzet samen, null als er geen zijn
+  function pokerNet() {
+    const rs = S.pk.rondjes.filter((r) => r.end && r.stake);
+    if (!rs.length) return null;
+    const net = S.players.map(() => 0);
+    rs.forEach((r) => pkNet(r).forEach((v, i) => { if (i < net.length) net[i] += v; }));
+    return net;
+  }
+  // Eindstand van een pokerrondje: hoger = beter
+  function pkRank(r) {
+    const v = Array(r.n || S.players.length).fill(-1e12);
+    if (r.mode === 'tour') tOrder(r).forEach((i, k) => { v[i] = -k; });
+    else { const net = pkNet(r); r.who.forEach((i) => { v[i] = net[i]; }); }
+    return v;
   }
   // Zo weinig mogelijk overschrijvingen: grootste schuld met grootste tegoed
   function minTransfers(bal) {
@@ -1404,7 +1450,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   async function keepAwake() {
     try { if (!lock && navigator.wakeLock) { lock = await navigator.wakeLock.request('screen'); lock.addEventListener('release', () => { lock = null; }); } } catch (e) {}
   }
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && (current() || (S.pk && S.pk.on && S.pk.mode === 'tour' && S.pk.step === 'play'))) keepAwake(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && (current() || openOf(S.pk))) keepAwake(); });
 
   // ---------- Helpers ----------
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1417,8 +1463,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
 
   // Een avond: spelers → (per rondje) prijs → spel → percentages (niet bij troeven) → spelen.
   function view() {
-    if (ui.view === 'start' || ui.view === 'end' || (ui.view === 'draw' && ui.draw) || (ui.view === 'hist' && ui.hist) || ui.view === 'poker') return ui.view;
-    if (ui.flow && ['nprice', 'npick', 'npct'].includes(ui.view)) return ui.view;
+    if (ui.view === 'start' || ui.view === 'end' || (ui.view === 'draw' && ui.draw) || (ui.view === 'hist' && ui.hist)) return ui.view;
+    if (ui.flow && ['nprice', 'npick', 'npct', 'pkset'].includes(ui.view)) return ui.view;
     if (!S.ready) return 'start';
     const r = current();
     if (r) return r.price == null ? 'price' : 'game';
@@ -1431,6 +1477,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (openOf(S.dt) || (ui.result === 'darts' && lastOf(S.dt))) return 'dgame';
     if (ui.result === 'wiezen' && lastOf(S.wz)) return 'wgame';
     if (ui.result === 'harten' && lastOf(S.hj)) return 'hgame';
+    if (openOf(S.pk) || (ui.result === 'poker' && lastOf(S.pk))) return 'kgame';
     return 'hub';
   }
 
@@ -1482,24 +1529,22 @@ if (typeof module !== 'undefined') module.exports = Logic;
       starts.push(done[0].start || done[0].id);
     }
     // Wiezen en hartenjagen: per uitgespeeld rondje telt de 1ste als gewonnen, wie het meest betaalt als verloren.
-    [['w', 'wiezen'], ['h', 'harten'], ['p', 'pietjes'], ['n', 'nappen'], ['l', 'lucky'], ['d', 'darts']].forEach(([key, g]) => {
+    [['w', 'wiezen'], ['h', 'harten'], ['p', 'pietjes'], ['n', 'nappen'], ['l', 'lucky'], ['d', 'darts'], ['k', 'poker']].forEach(([key, g]) => {
       const rs = PG[g].st().rondjes.filter((r) => r.end && r.price != null);
       if (!rs.length) return;
       const won = S.players.map(() => 0), lost = S.players.map(() => 0);
       rs.forEach((r) => {
-        const { out, place } = wPayPct(rankOf(g, r), r.pct);
+        const { out, place } = payOf(g, r);
         const mx = Math.max(...out);
         out.forEach((o, i) => { if (place[i] === 0) won[i]++; if (o === mx && mx > 0) lost[i]++; });
       });
       const nn = Math.max(...rs.map((r) => r.n || S.players.length));
-      rec[key] = { who: S.players.map((_, i) => i).filter((i) => i < nn), n: rs.length, r: rs.length, won, lost, paid: gameOwed(g).owed.map((c) => Math.round(c)) };
+      const who = rs.some((r) => r.who) ? [...new Set(rs.flatMap((r) => r.who || []))].sort((a, b) => a - b) : S.players.map((_, i) => i).filter((i) => i < nn);
+      rec[key] = { who, n: rs.length, r: rs.length, won, lost, paid: gameOwed(g).owed.map((c) => Math.round(c)) };
       starts.push(rs[0].start);
     });
     const pnet = pokerNet();
-    if (pnet) {
-      rec.k = { who: S.pk.who.slice(), n: 1, r: 1, won: pnet.map((v) => (v > 0 ? 1 : 0)), lost: pnet.map((v) => (v < 0 ? 1 : 0)), paid: pnet.map((v) => (v < 0 ? -v : 0)), net: pnet };
-      starts.push(S.pk.start);
-    }
+    if (pnet && rec.k) rec.k.net = pnet;
     if (!rec.t && !rec.w && !rec.h && !rec.p && !rec.n && !rec.l && !rec.d && !rec.k) return null;
     rec.paid = settleAll(0, Logic.parsePrice(ui.bill)).per.map((c) => Math.round(c));
     if (starts.filter(Boolean).length) rec.date = Math.min(...starts.filter(Boolean));
@@ -1599,10 +1644,10 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const H = ui.hist, all = (S.history || []).map((h, idx) => ({ h, idx }));
     const head = (label) => `<header class="top"><button class="btn ghost sm" data-act="histBack">← Terug</button><span class="label">${label}</span></header>`;
     if (!H.game) {
-      const tiles = [...GAMES, POKER_TILE].map((g) => { const n = all.filter(({ h }) => h[HK[g.k]]).length; return `<button class="tile ${g.cls} ${n ? '' : 'off'}" data-act="histGame" data-v="${g.k}" ${n ? '' : 'disabled'}><span class="tart">${GAME_ART[g.k]}</span><span class="tstat">${n ? `${n} avond${n > 1 ? 'en' : ''}` : 'nog niets'}</span><span class="tname">${g.name}</span></button>`; }).join('');
+      const tiles = GAMES.map((g) => { const n = all.filter(({ h }) => h[HK[g.k]]).length; return `<button class="tile ${g.cls} ${n ? '' : 'off'}" data-act="histGame" data-v="${g.k}" ${n ? '' : 'disabled'}><span class="tart">${GAME_ART[g.k]}</span><span class="tstat">${n ? `${n} avond${n > 1 ? 'en' : ''}` : 'nog niets'}</span><span class="tname">${g.name}</span></button>`; }).join('');
       return `<div class="wrap">${head('Geschiedenis')}<section><h1>Welk <em>spel</em>?</h1></section><div class="tiles">${tiles}</div></div>`;
     }
-    const k = HK[H.game], gname = [...GAMES, POKER_TILE].find((g) => g.k === H.game).name;
+    const k = HK[H.game], gname = GAMES.find((g) => g.k === H.game).name;
     const recs = all.filter(({ h }) => h[k]);
     const groups = {};
     recs.forEach(({ h }) => { const gp = gPlayers(h, k), key = groupKey(gp); const g = (groups[key] = groups[key] || { players: gp, n: 0, last: 0 }); g.n++; g.last = Math.max(g.last, h.date); if (gp.reduce((t, p) => t + nameScore(p.trim()), 0) > g.players.reduce((t, p) => t + nameScore(p.trim()), 0)) g.players = gp; });
@@ -1631,12 +1676,13 @@ if (typeof module !== 'undefined') module.exports = Logic;
     });
     const avg = (a) => (a.paidN ? a.paid / a.paidN : Infinity);
     const names = Object.keys(agg).sort((a, b) => avg(agg[a]) - avg(agg[b]) || agg[b].won - agg[a].won || agg[a].loser - agg[b].loser);
-    if (H.game === 'poker') {
+    const money = H.game === 'poker' && nights.some(({ h }) => h[k].net);
+    if (money) {
       nights.forEach(({ h }) => { const x = h[k]; if (!x.net) return; h.players.forEach((nm, i) => { const a = agg[nameKey(nm)]; if (a) a.net = (a.net || 0) + x.net[i]; }); });
       names.sort((a, b) => (agg[b].net || 0) - (agg[a].net || 0));
     }
-    const krows = names.map((nm, i) => { const a = agg[nm]; return H.game === 'poker'
-      ? `<div class="krow"><span class="kn">${i + 1}</span><span class="kname">${esc(tidy(a.name))}<small>${a.nights} avond${a.nights > 1 ? 'en' : ''} · ${a.won}× winst · ${a.lost}× verlies</small></span>
+    const krows = names.map((nm, i) => { const a = agg[nm]; return money
+      ? `<div class="krow"><span class="kn">${i + 1}</span><span class="kname">${esc(tidy(a.name))}<small>${a.nights} avond${a.nights > 1 ? 'en' : ''} · ${a.won}× gewonnen</small></span>
         <span class="kpaid ${pn(a.net || 0)}">${(a.net || 0) > 0 ? '+' : (a.net || 0) < 0 ? '−' : ''}${euro(Math.abs(a.net || 0))}<small>${a.nights ? `gem. ${euro(Math.abs((a.net || 0) / a.nights))}` : ''}</small></span></div>`
       : `<div class="krow"><span class="kn">${i + 1}</span>
       <span class="kname">${esc(tidy(a.name))}<small>${a.won}–${a.lost} rondjes${a.loser ? ` · <b class="neg">${a.loser}× verliezer</b>` : ''}</small></span>
@@ -1646,7 +1692,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       const mx = paid ? Math.max(...paid) : Math.max(...x.lost);
       const losers = mx > 0 ? h.players.filter((_, i) => (paid ? paid[i] : x.lost[i]) === mx) : [];
       const total = paid ? paid.reduce((a, b) => a + b, 0) : null;
-      const body = open ? `<div class="hbody"><div class="h2h-wrap"><table class="h2h htab"><thead><tr><th></th><th scope="col">Won–verl.</th><th scope="col">Betaald</th></tr></thead><tbody>${h.players.map((nm, i) => (inGame(h).includes(i) ? `<tr><th class="rowh" scope="row" style="color:var(--p${i})">${esc(tidy(nm))}</th><td><span class="w">${x.won[i]}</span><span class="l">–${x.lost[i]}</span></td><td>${x.net ? `<span class="${pn(x.net[i])}">${x.net[i] > 0 ? '+' : x.net[i] < 0 ? '−' : ''}${euro(Math.abs(x.net[i]))}</span>` : paid ? euro(paid[i]) : '–'}</td></tr>` : '')).join('')}</tbody></table></div>
+      const body = open ? `<div class="hbody"><div class="h2h-wrap"><table class="h2h htab"><thead><tr><th></th><th scope="col">Won–verl.</th><th scope="col">Betaald</th>${x.net ? '<th scope="col">Inzet</th>' : ''}</tr></thead><tbody>${h.players.map((nm, i) => (inGame(h).includes(i) ? `<tr><th class="rowh" scope="row" style="color:var(--p${i})">${esc(tidy(nm))}</th><td><span class="w">${x.won[i]}</span><span class="l">–${x.lost[i]}</span></td><td>${paid ? euro(paid[i]) : '–'}</td>${x.net ? `<td><span class="${pn(x.net[i])}">${x.net[i] > 0 ? '+' : x.net[i] < 0 ? '−' : ''}${euro(Math.abs(x.net[i]))}</span></td>` : ''}</tr>` : '')).join('')}</tbody></table></div>
         <button class="link" data-act="hDel" data-v="${idx}" style="align-self:flex-start;color:${ui.hDel === idx ? 'var(--danger)' : ''}">${ui.hDel === idx ? 'Tik nog eens om deze avond te verwijderen' : 'Avond verwijderen'}</button></div>` : '';
       return `<div class="hitem ${open ? 'open' : ''}"><button class="hhead" data-act="hOpen" data-v="${idx}" aria-expanded="${open}">
         <span class="hmain"><span class="hdate">${esc(hDate(h.date))}</span><span class="hsub">${H.game === 'poker' ? `${inGame(h).length} spelers · ${inGame(h).map((i) => esc(tidy(h.players[i]))).join(', ')}` : `${x.r || x.n} rondje${(x.r || x.n) > 1 ? 's' : ''}${total ? ` · ${euro(total)}` : ''}`}</span>
@@ -1660,7 +1706,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   }
 
   // ---------- Start van de avond ----------
-  const nightBusy = () => !!(openAny() || owedAll().n || S.pk.on);
+  const nightBusy = () => !!(openAny() || owedAll().n);
   function renderStart() {
     const names = ui.names || S.players, n = names.length, locked = nightBusy();
     return `<div class="wrap">
@@ -1683,16 +1729,16 @@ if (typeof module !== 'undefined') module.exports = Logic;
     PG_KEYS.forEach((g) => PG[g].st().rondjes.forEach((r) => {
       if (!r.end || r.price == null) return;
       const name = PG[g].title;
-      const { out } = wPayPct(rankOf(g, r), r.pct);
-      const mx = Math.max(...out);
-      const most = out.map((_, i) => i).filter((i) => out[i] === mx);
-      items.push({ t: r.end, game: name, price: r.price, txt: r.price ? `${most.map(P).join(' &amp; ')} ${most.length > 1 ? 'betalen' : 'betaalt'} het meest` : (() => { const best = out.map((_, i) => i).filter((i) => out[i] === Math.min(...out)); return `${best.map(P).join(' &amp; ')} ${best.length > 1 ? 'wonnen' : 'won'}`; })() });
+      const { out, order, place } = payOf(g, r);
+      const mx = Math.max(...order.map((i) => out[i]));
+      const most = order.filter((i) => out[i] === mx);
+      items.push({ t: r.end, game: name, price: r.price, txt: r.price ? `${most.map(P).join(' &amp; ')} ${most.length > 1 ? 'betalen' : 'betaalt'} het meest` : (() => { const best = order.filter((i) => place[i] === 0); return `${best.map(P).join(' &amp; ')} ${best.length > 1 ? 'wonnen' : 'won'}`; })() });
     }));
     return items.sort((a, b) => a.t - b.t);
   }
   // Wanneer begon de avond? Het eerste rondje (van eender welk spel) of de poker
   function firstStart() {
-    const ts = [...S.rounds.map((r) => r.start), ...PG_KEYS.flatMap((g) => PG[g].st().rondjes.map((r) => r.start)), S.pk.on ? S.pk.start : null].filter(Boolean);
+    const ts = [...S.rounds.map((r) => r.start), ...PG_KEYS.flatMap((g) => PG[g].st().rondjes.map((r) => r.start))].filter(Boolean);
     return ts.length ? Math.min(...ts) : null;
   }
   function liveTxt() {
@@ -1707,13 +1753,13 @@ if (typeof module !== 'undefined') module.exports = Logic;
       <header class="top"><div class="brand">Spelletjes</div><div style="display:flex;gap:12px;align-items:center">${syncChip()}<button class="btn ghost sm" data-act="toStart">Spelers</button></div></header>
       <section><p class="label">${firstStart() ? `<span class="live" id="liveClock">${liveTxt()}</span>` : esc(today())}</p><h1>${A.n ? `Rondje <em>${A.n + 1}</em>` : 'Een nieuwe <em>avond</em>'}</h1></section>
       <button class="btn primary xl" data-act="newRondje">Nieuw rondje <span class="arr">→</span></button>
-      ${S.pk.on ? `<div class="row2"><button class="btn ghost" data-act="pkOpen">♠ ${S.pk.mode === 'tour' ? (S.pk.step === 'done' ? 'Toernooi · klaar' : `${nf(BL[tState(S.pk).lv][0])}/${nf(BL[tState(S.pk).lv][1])}`) : `Poker · ${S.pk.step === 'done' ? 'klaar' : 'bezig'}`}</button><button class="btn ghost" data-act="histOpen">Geschiedenis</button></div>` : '<button class="btn ghost block" data-act="histOpen">Geschiedenis</button>'}
+      <button class="btn ghost block" data-act="histOpen">Geschiedenis</button>
       ${avondPanel()}
       ${items.length ? `<section class="panel"><h2>Rondjes</h2><div>${list}</div></section>` : ''}
       <section class="panel"><h2>Back-up</h2>
         <div class="row2"><button class="btn soft" data-act="backupOut">Bewaren</button><button class="btn soft" data-act="backupIn">Terugzetten</button></div>
         <p class="muted" id="bkMsg" style="margin:0;font-size:13px"></p></section>
-    </div>${A.n || S.pk.on ? dock() : ''}`;
+    </div>${A.n ? dock() : ''}`;
   }
 
   // ---------- Nieuw rondje: 1. prijs ----------
@@ -1730,7 +1776,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
         ${last ? `<div><button type="button" class="chip" data-act="setprice" data-v="${last}">Zelfde als vorige · ${euro(last)}</button></div>` : ''}
         <p class="err" id="priceErr" style="min-height:0"></p>
         <button class="btn primary xl" type="submit">Kies het spel <span class="arr">→</span></button>
-      </form>` : `<section><h1>Rondje <em>zonder geld</em></h1><p class="lead">Ook voor poker, dat heeft een eigen kassa.</p></section>
+      </form>` : `<section><h1>Rondje <em>zonder geld</em></h1><p class="lead">Niemand betaalt, het gaat om de eer.</p></section>
       <button class="btn primary xl" data-act="freeRondje">Kies het spel <span class="arr">→</span></button>`}</div>`;
   }
 
@@ -1754,19 +1800,17 @@ if (typeof module !== 'undefined') module.exports = Logic;
     { k: 'nappen', name: 'Nappen', cls: 'g-nappen', min: 3, max: 8 },
     { k: 'lucky', name: 'Lucky 7', cls: 'g-lucky', min: 3, max: 7 },
     { k: 'darts', name: 'Darts', cls: 'g-darts', min: 2, max: 8 },
+    { k: 'poker', name: 'Poker', cls: 'g-poker', min: 2, max: 8 },
   ];
   const POKER_TILE = { k: 'poker', name: 'Poker', cls: 'g-poker' };
   function renderPick() {
     const n = S.players.length;
     const tiles = GAMES.map((g) => { const ok = n >= g.min && n <= g.max; return `<button class="tile ${g.cls} ${ok ? '' : 'off'}" data-act="flowGame" data-v="${g.k}" ${ok ? '' : 'disabled'}><span class="tart">${GAME_ART[g.k]}</span>${ok ? '' : `<span class="tstat">${g.min === g.max ? g.min : `${g.min}–${g.max}`} spelers</span>`}<span class="tname">${g.name}</span></button>`; }).join('');
-    const free = ui.flow.price === 0, pkOk = free && n >= 2;
-    const poker = `<button class="tile ${POKER_TILE.cls} ${pkOk ? '' : 'off'}" data-act="pokerPick"><span class="tart">${GAME_ART.poker}</span>${pkOk ? (S.pk.on ? '<span class="tstat">bezig</span>' : '') : '<span class="tstat">zonder geld</span>'}<span class="tname">Poker</span></button>`;
-    const count = GAMES.length + 1;
-    const soon = count % 2 ? '<div class="tile soon" aria-hidden="true"><span class="tname">Binnenkort</span></div>' : '';
+    const soon = GAMES.length % 2 ? '<div class="tile soon" aria-hidden="true"><span class="tname">Binnenkort</span></div>' : '';
     return `<div class="wrap">
       <header class="top"><button class="btn ghost sm" data-act="flowBack">← Terug</button><span class="label">Rondje ${owedAll().n + 1} · ${priceTxt(ui.flow.price)}</span></header>
       <section><h1>Welk <em>spel</em>?</h1></section>
-      <div class="tiles">${tiles}${poker}${soon}</div></div>`;
+      <div class="tiles">${tiles}${soon}</div></div>`;
   }
 
   // ---------- Nieuw rondje: 3. wie betaalt hoeveel (wiezen en hartenjagen) ----------
@@ -1810,9 +1854,9 @@ if (typeof module !== 'undefined') module.exports = Logic;
   // Wat iedereen betaalt voor een uitgespeeld rondje
   function rondjeRows(g, r) {
     const tot = PG[g].tot(r);
-    const { out, place, order, tied } = wPayPct(rankOf(g, r), r.pct);
-    return order.map((i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${P(i)}<span class="meta">${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]} · ${ptsLabel(g, tot[i], r)}</span></span>
-      <span class="owe ${out[i] && r.price ? '' : 'zero'}">${r.price ? `${euro(r.price * out[i] / 100)}<small>${fmtPct(out[i])}</small>` : '–'}</span></div>`).join('');
+    const { out, place, order, tied } = payOf(g, r);
+    return order.map((i) => { const lab = ptsLabel(g, tot[i], r); return `<div class="srow" style="--pc:var(--p${i})"><span class="who">${P(i)}<span class="meta">${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]}${lab ? ` · ${lab}` : ''}</span></span>
+      <span class="owe ${out[i] && r.price ? '' : 'zero'}">${r.price ? `${euro(r.price * out[i] / 100)}<small>${fmtPct(out[i])}</small>` : '–'}</span></div>`; }).join('');
   }
   // Wat iedereen deze avond al moet betalen, over alle spellen samen
   function avondPanel() {
@@ -1960,88 +2004,108 @@ if (typeof module !== 'undefined') module.exports = Logic;
 
   // ---------- Poker: buy-in → buy-out → verrekening ----------
   const cents = (t) => { const x = String(t || '').trim().replace(/€/g, '').replace(/\s/g, '').replace(',', '.'); if (!/^\d+(\.\d{0,2})?$/.test(x)) return null; return Math.round(parseFloat(x) * 100); };
-  function renderPoker() {
-    const K = S.pk, head = (label) => `<header class="top"><button class="btn ghost sm" data-act="pkBack">← ${K.on && K.step !== 'setup' ? 'Overzicht' : 'Terug'}</button><span class="label">${label}</span></header>`;
-    if (!K.on) {
-      const sel = ui.pkSel || S.players.map((_, i) => i), tour = (ui.pkMode || K.mode || 'cash') === 'tour';
-      const unitTxt = ui.pkUnitTxt !== undefined && ui.pkUnitTxt !== null ? ui.pkUnitTxt : fmt(K.unit), pot0 = sel.length * (cents(unitTxt) || 0);
-      const pay = ui.pkPayEdited && ui.pkPay ? ui.pkPay : defPay(pot0), lvl = ui.pkLvl || K.lvlMin || 5;
-      return `<div class="wrap">${head('Poker')}
-        <div class="seg money-seg"><button class="opt ${tour ? '' : 'on'}" type="button" data-act="pkMode" data-v="cash"><span class="big">Cash game</span></button><button class="opt ${tour ? 'on' : ''}" type="button" data-act="pkMode" data-v="tour"><span class="big">Toernooi</span></button></div>
-        <section><h1>Wie <em>pokert</em> er mee?</h1></section>
-        <div class="chips">${S.players.map((p, i) => `<button class="chip ${sel.includes(i) ? 'on' : ''}" data-act="pkSel" data-v="${i}">${esc(p)}</button>`).join('')}</div>
-        <div class="field"><label for="pkUnit">${tour ? 'Inkoop per speler (ook bij terug inkopen)' : 'Buy-in per keer'}</label><div class="money"><span>€</span><input id="pkUnit" inputmode="decimal" value="${esc(unitTxt)}"></div></div>
-        ${tour ? `<div class="field"><label>Wie krijgt wat van de pot?</label>
-          <div class="paygrid">${['1ste', '2de', '3de'].map((n, k) => `<label for="pkP${k}">${n}<span class="pin"><span>€</span><input id="pkP${k}" inputmode="decimal" value="${pay[k] ? fmt(pay[k]) : '0'}"></span></label>`).join('')}</div>
-          <p class="hint" id="pkPaySum">${payHint(pay, pot0)}</p></div>
-        <div class="field"><label>Blinds omhoog na</label><div class="chips">${[5, 10, 15, 20].map((m) => `<button class="chip ${m === lvl ? 'on' : ''}" data-act="pkLvl" data-v="${m}">${m} min</button>`).join('')}</div></div>
-        <p class="hint">Blinds: ${BL.map((b) => `${b[0]}/${b[1]}`).join(' → ')}</p>
-        ${chipsHTML()}` : ''}
-        <p class="err" id="pkErr" style="min-height:0"></p>
-        <button class="btn primary xl" data-act="pkStart" ${sel.length >= 2 ? '' : 'disabled'}>${sel.length >= 2 ? `Start ${tour ? 'toernooi' : 'poker'} · ${sel.length} spelers` : 'Kies minstens 2 spelers'} <span class="arr">→</span></button>
-      </div>`;
-    }
-    if (K.mode === 'tour') return renderTour(head);
-    const tin = K.who.reduce((t, i) => t + K.buyin[i], 0);
-    if (K.step === 'buyin') {
-      const rows = K.who.map((i) => `<div class="pkrow" style="--pc:var(--p${i})"><span class="who">${P(i)}<span class="meta">${Math.round(K.buyin[i] / K.unit)}× buy-in</span></span><span class="pkamt">${euro(K.buyin[i])}</span>
-        <div class="pkctl"><button class="min" data-act="pkBuy" data-i="${i}" data-v="-1" ${K.buyin[i] <= K.unit ? 'disabled' : ''} aria-label="Buy-in minder voor ${P(i)}">−</button><button class="plus" data-act="pkBuy" data-i="${i}" data-v="1">+ buy-in</button></div></div>`).join('');
-      return `<div class="wrap">${head('Poker · buy-ins')}
-        <section><h1>Buy-<em>ins</em></h1><p class="lead">${euro(K.unit)} per keer</p></section>
-        <section class="panel" style="gap:0;padding-block:6px">${rows}</section>
-        ${ui.pkAdd ? pkAddHTML() : `<button class="btn ghost block" data-act="pkAddOpen" ${S.players.length >= 8 && K.who.length >= S.players.length ? 'disabled' : ''}>+ Speler erbij</button>`}
-        <div class="totbar"><div><span class="label">Spelers</span><b>${K.who.length}</b></div><div style="text-align:right"><span class="label">In de pot</span><b>${euro(tin)}</b></div></div>
-        <button class="btn primary xl" data-act="pkStep" data-v="buyout">Einde poker · buy-out <span class="arr">→</span></button>
-        <button class="btn ghost block" data-act="pkCancel">${ui.pkSure ? 'Tik nog eens: poker wissen' : 'Poker wissen'}</button>
-      </div>`;
-    }
-    if (K.step === 'buyout') {
-      const tout = K.who.reduce((t, i) => t + (K.buyout[i] || 0), 0), all = K.who.every((i) => K.buyout[i] !== null && K.buyout[i] !== undefined);
-      const rows = K.who.map((i) => `<div class="pkrow" style="--pc:var(--p${i})"><span class="who">${P(i)}<span class="meta">in ${euro(K.buyin[i])}</span></span>
-        <div class="pkin"><span>€</span><input id="pko${i}" inputmode="decimal" placeholder="0,00" value="${K.buyout[i] === null || K.buyout[i] === undefined ? '' : fmt(K.buyout[i])}" aria-label="Buy-out van ${P(i)}"></div></div>`).join('');
-      return `<div class="wrap">${head('Poker · buy-out')}
-        <section><h1>Buy-<em>out</em></h1><p class="lead">Met hoeveel stopt iedereen?</p></section>
-        <section class="panel" style="gap:0;padding-block:6px">${rows}</section>
-        <div class="totbar" id="pkTot">${pkTotHTML()}</div>
-        <button class="btn primary xl" data-act="pkStep" data-v="done" id="pkCalc" ${all ? '' : 'disabled'}>Bereken <span class="arr">→</span></button>
-        <button class="btn ghost block" data-act="pkStep" data-v="buyin">← Buy-ins</button>
-      </div>`;
-    }
-    // klaar: resultaat en wie wie betaalt (enkel poker)
-    const net = pokerNet();
-    const tout = K.who.reduce((t, i) => t + (K.buyout[i] || 0), 0), D = tout - tin;
-    const rows = K.who.slice().sort((a, b) => net[b] - net[a]).map((i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${P(i)}<span class="meta">in ${euro(K.buyin[i])} · uit ${euro(K.buyout[i] || 0)}</span></span><span class="pts ${pn(net[i])}">${net[i] > 0 ? '+' : net[i] < 0 ? '−' : ''}${euro(Math.abs(net[i])).replace('€ ', '€')}</span></div>`).join('');
-    return `<div class="wrap">${head('Poker · resultaat')}
-      <section><h1>Poker <em>klaar</em></h1></section>
-      ${D ? `<div class="note">De pot klopt niet: ${euro(Math.abs(D))} ${D > 0 ? 'te veel' : 'te weinig'}. Dat verschil is gelijk over iedereen verdeeld.</div>` : ''}
-      <section class="panel"><h2>Winst en verlies</h2><div>${rows}</div></section>
-      <button class="btn primary xl" data-act="end">Afrekenen <span class="arr">→</span></button>
-      <button class="btn ghost block" data-act="pkStep" data-v="buyout">Buy-out aanpassen</button>
-    </div>`;
-  }
   const readPay = () => [0, 1, 2].map((k) => { const el = document.getElementById('pkP' + k); return el ? cents(el.value) || 0 : 0; });
   // Standaard: 75% voor de 1ste (afgerond op hele euro's), de rest voor de 2de
   const defPay = (pot) => { const a = Math.round((pot * 0.75) / 100) * 100; return [a, pot - a, 0]; };
-  const setupPot = () => { const sel = ui.pkSel || S.players.map((_, k) => k), el = document.getElementById('pkUnit'); return sel.length * (cents(el ? el.value : '') || 0); };
+  const setupPot = () => { const C = ui.pkCfg, el = document.getElementById('pkUnit'); return (C ? C.who.length : 0) * (cents(el ? el.value : C ? C.unitTxt : '') || 0); };
   const payHint = (pay, pot) => { const t = pay.reduce((a, b) => a + b, 0); return t === pot ? `In de pot: ${euro(pot)} · klopt` : `<span class="neg">${euro(t)} verdeeld, maar er zit ${euro(pot)} in de pot</span>`; };
   const plc = (k) => `${k + 1}${k === 0 ? 'ste' : 'de'}`;
-  function renderTour(head) {
-    const K = S.pk, pot = tPot(K), pr = tPrizes(K), alive = tAlive(K);
-    if (K.step === 'done') {
-      const net = pokerNet();
-      const rows = tOrder(K).map((i, k) => `<div class="prize" style="--pc:var(--p${i})"><span class="pl">${plc(k)}</span>
-        <span class="nm">${P(i)}<small>inkoop ${euro(K.buyin[i])}${tReb(K, i) ? ` · ${tReb(K, i)}× terug ingekocht` : ''}${pr[k] ? ` · wint ${euro(pr[k])}` : ''}</small></span>
-        <span class="am ${pn(net[i])}">${net[i] > 0 ? '+' : net[i] < 0 ? '−' : ''}${euro(Math.abs(net[i]))}</span></div>`).join('');
-      return `<div class="wrap">${head('Toernooi · uitslag')}
-        <section><p class="label">Pot ${euro(pot)}</p><h1>${P(alive[0])} <em>wint</em></h1></section>
+  const pkMoney = (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${euro(Math.abs(v))}`;
+
+  // ---------- Poker instellen (na de keuze van het spel) ----------
+  function pkCfgInit() {
+    const K = S.pk;
+    ui.pkCfg = { mode: K.mode || 'tour', who: S.players.map((_, i) => i), stake: K.stake !== false, unitTxt: fmt(K.unit || 1000), pay: null, payEdited: false, lvl: K.lvlMin || 5 };
+    ui.pkErr = '';
+  }
+  function renderPkSet() {
+    if (!ui.pkCfg) pkCfgInit();
+    const C = ui.pkCfg, tour = C.mode === 'tour', stake = !tour || C.stake, free = ui.flow.price === 0;
+    const pot0 = C.who.length * (cents(C.unitTxt) || 0), pay = C.payEdited && C.pay ? C.pay : defPay(pot0);
+    const seg = (act, a, b, on) => `<div class="seg money-seg"><button class="opt ${on ? 'on' : ''}" type="button" data-act="${act}" data-v="${a[0]}"><span class="big">${a[1]}</span></button><button class="opt ${on ? '' : 'on'}" type="button" data-act="${act}" data-v="${b[0]}"><span class="big">${b[1]}</span></button></div>`;
+    return `<div class="wrap">
+      <header class="top"><button class="btn ghost sm" data-act="flowBack">← Terug</button><span class="label">Poker · ${priceTxt(ui.flow.price)}</span></header>
+      ${seg('pkMode', ['tour', 'Toernooi'], ['cash', 'Cash game'], tour)}
+      <section><h1>Wie <em>pokert</em> er mee?</h1></section>
+      <div class="chips">${S.players.map((p, i) => `<button class="chip ${C.who.includes(i) ? 'on' : ''}" data-act="pkSel" data-v="${i}">${esc(p)}</button>`).join('')}</div>
+      ${tour ? `<div class="field"><label>Inzet</label>${seg('pkStake', ['1', 'Met inzet'], ['0', 'Zonder inzet'], C.stake)}</div>` : ''}
+      ${stake ? `<div class="field"><label for="pkUnit">${tour ? 'Inkoop per speler (ook bij terug inkopen)' : 'Buy-in per keer'}</label><div class="money"><span>€</span><input id="pkUnit" inputmode="decimal" value="${esc(C.unitTxt)}"></div></div>` : ''}
+      ${tour && stake ? `<div class="field"><label>Wie krijgt wat van de pot?</label>
+        <div class="paygrid">${['1ste', '2de', '3de'].map((n, k) => `<label for="pkP${k}">${n}<span class="pin"><span>€</span><input id="pkP${k}" inputmode="decimal" value="${pay[k] ? fmt(pay[k]) : '0'}"></span></label>`).join('')}</div>
+        <p class="hint" id="pkPaySum">${payHint(pay, pot0)}</p></div>` : ''}
+      ${tour ? `<div class="field"><label>Blinds omhoog na</label><div class="chips">${[5, 10, 15, 20].map((m) => `<button class="chip ${m === C.lvl ? 'on' : ''}" data-act="pkLvl" data-v="${m}">${m} min</button>`).join('')}</div></div>
+      <p class="hint">Blinds: ${BL.map((b) => `${b[0]}/${b[1]}`).join(' → ')}</p>
+      ${chipsHTML()}` : ''}
+      <p class="hint">${free ? 'Het rondje is zonder geld.' : `Het rondje van ${euro(ui.flow.price)} betalen jullie volgens de eindstand, net als bij de andere spellen.`}${stake ? ' De inzet wordt apart verrekend.' : ''}</p>
+      <p class="err" id="pkErr" style="min-height:0">${esc(ui.pkErr || '')}</p>
+      <button class="btn primary xl" data-act="pkNext" ${C.who.length >= 2 ? '' : 'disabled'}>${C.who.length < 2 ? 'Kies minstens 2 spelers' : free ? `Start ${tour ? 'toernooi' : 'poker'} · ${C.who.length} spelers <span class="arr">→</span>` : 'Wie betaalt hoeveel <span class="arr">→</span>'}</button>
+    </div>`;
+  }
+
+  // ---------- Poker spelen ----------
+  function renderKGame() {
+    const c = openOf(S.pk), last = lastOf(S.pk), nr = owedAll().n + (c ? 1 : 0), r = c || last;
+    const label = `Rondje ${nr} · ${priceTxt(r.price)} · ${r.mode === 'tour' ? 'toernooi' : 'cash game'}`;
+    if (!c) return renderKDone(r);
+    if (r.mode === 'tour') return renderTour(r, label);
+    const K = r, tin = K.who.reduce((t, i) => t + (K.buyin[i] || 0), 0);
+    if (K.step === 'buyout') {
+      const all = K.who.every((i) => K.buyout[i] !== null && K.buyout[i] !== undefined);
+      const rows = K.who.map((i) => `<div class="pkrow" style="--pc:var(--p${i})"><span class="who">${P(i)}<span class="meta">in ${euro(K.buyin[i])}</span></span>
+        <div class="pkin"><span>€</span><input id="pko${i}" inputmode="decimal" placeholder="0,00" value="${K.buyout[i] === null || K.buyout[i] === undefined ? '' : fmt(K.buyout[i])}" aria-label="Buy-out van ${P(i)}"></div></div>`).join('');
+      return `<div class="wrap">${gameHeader('Poker')}
+        <section><p class="label">${label}</p><h1>Buy-<em>out</em></h1><p class="lead">Met hoeveel stopt iedereen?</p></section>
         <section class="panel" style="gap:0;padding-block:6px">${rows}</section>
-        <button class="btn primary xl" data-act="end">Afrekenen <span class="arr">→</span></button>
-        <button class="btn ghost block" data-act="tUndo">Laatste uitschakeling ongedaan</button>
-      </div>`;
+        <div class="totbar" id="pkTot">${pkTotHTML(K)}</div>
+        <button class="btn primary xl" data-act="pkStep" data-v="done" id="pkCalc" ${all ? '' : 'disabled'}>Bereken <span class="arr">→</span></button>
+        <button class="btn ghost block" data-act="pkStep" data-v="buyin">← Buy-ins</button>
+      </div>${dock()}`;
     }
+    const rows = K.who.map((i) => `<div class="pkrow" style="--pc:var(--p${i})"><span class="who">${P(i)}<span class="meta">${Math.round(K.buyin[i] / K.unit)}× buy-in</span></span><span class="pkamt">${euro(K.buyin[i])}</span>
+      <div class="pkctl"><button class="min" data-act="pkBuy" data-i="${i}" data-v="-1" ${K.buyin[i] <= K.unit ? 'disabled' : ''} aria-label="Buy-in minder voor ${P(i)}">−</button><button class="plus" data-act="pkBuy" data-i="${i}" data-v="1">+ buy-in</button></div></div>`).join('');
+    return `<div class="wrap">${gameHeader('Poker')}
+      <section><p class="label">${label}</p><h1>Buy-<em>ins</em></h1><p class="lead">${euro(K.unit)} per keer</p></section>
+      <section class="panel" style="gap:0;padding-block:6px">${rows}</section>
+      ${pkAddBtn(K)}
+      <div class="totbar"><div><span class="label">Spelers</span><b>${K.who.length}</b></div><div style="text-align:right"><span class="label">In de pot</span><b>${euro(tin)}</b></div></div>
+      <button class="btn primary xl" data-act="pkStep" data-v="buyout">Einde poker · buy-out <span class="arr">→</span></button>
+      <button class="btn ghost block" data-act="pkCancel">${ui.pkSure ? 'Tik nog eens: dit rondje wissen' : 'Rondje wissen'}</button>
+    </div>${dock()}`;
+  }
+  // Uitslag van een pokerrondje: wie het rondje betaalt, en de inzet
+  function renderKDone(r) {
+    const net = pkNet(r);
+    let stakeRows = '';
+    if (r.stake) {
+      if (r.mode === 'tour') {
+        const pr = tPrizes(r);
+        stakeRows = tOrder(r).map((i, k) => `<div class="prize" style="--pc:var(--p${i})"><span class="pl">${plc(k)}</span>
+          <span class="nm">${P(i)}<small>inkoop ${euro(r.buyin[i])}${tReb(r, i) ? ` · ${tReb(r, i)}× terug ingekocht` : ''}${pr[k] ? ` · wint ${euro(pr[k])}` : ''}</small></span>
+          <span class="am ${pn(net[i])}">${pkMoney(net[i])}</span></div>`).join('');
+      } else {
+        stakeRows = r.who.slice().sort((a, b) => net[b] - net[a]).map((i, k) => `<div class="prize" style="--pc:var(--p${i})"><span class="pl">${plc(k)}</span>
+          <span class="nm">${P(i)}<small>in ${euro(r.buyin[i])} · uit ${euro(r.buyout[i] || 0)}</small></span><span class="am ${pn(net[i])}">${pkMoney(net[i])}</span></div>`).join('');
+      }
+    }
+    const tin = r.who.reduce((t, i) => t + (r.buyin[i] || 0), 0), tout = r.who.reduce((t, i) => t + (r.buyout[i] || 0), 0), D = r.mode === 'cash' ? tout - tin : 0;
+    const win = r.mode === 'tour' ? tOrder(r)[0] : r.who.slice().sort((a, b) => net[b] - net[a])[0];
+    return `<div class="wrap">
+      ${gameHeader('Poker')}
+      <section><p class="label">${r.mode === 'tour' ? 'Toernooi' : 'Cash game'} · ${priceTxt(r.price)}</p><h1>${P(win)} <em>wint</em></h1></section>
+      ${doneButtons()}
+      <section class="panel"><div class="panel-head"><h2>${r.price ? 'Wie betaalt het rondje' : 'Uitslag'}</h2></div><div>${rondjeRows('poker', r)}</div></section>
+      ${r.stake ? `<section class="panel" style="gap:0;padding-block:6px"><div class="panel-head" style="padding:8px 0 4px"><h2>Inzet</h2><span class="label">${r.mode === 'tour' ? `pot ${euro(tPot(r))}` : `${euro(tin)} in de pot`}</span></div>${stakeRows}</section>
+        ${D ? `<div class="note">De pot klopt niet: ${euro(Math.abs(D))} ${D > 0 ? 'te veel' : 'te weinig'}. Dat verschil is gelijk over iedereen verdeeld.</div>` : ''}
+        <p class="hint" style="margin:0">De inzet zit mee in de afrekening bij "Einde avond".</p>` : ''}
+      <button class="link" data-act="${r.mode === 'tour' ? 'tUndo' : 'pkReopen'}" style="align-self:center">${r.mode === 'tour' ? 'Laatste uitschakeling ongedaan' : 'Buy-out aanpassen'}</button>
+    </div>${dock()}`;
+  }
+  function renderTour(K, label) {
+    const pot = tPot(K), pr = tPrizes(K), alive = tAlive(K);
     const t = tState(K), b = BL[t.lv], nx = BL[t.lv + 1];
     const chipsIn = (K.who.length + K.who.reduce((a, i) => a + tReb(K, i), 0)) * STACK;
     const timeCls = K.t.pausedAt ? 'paused' : t.rem !== null && t.rem < 30000 ? 'soon' : '';
+    const third = K.stake ? `<div><span class="label">Pot</span><b>${euro(pot)}</b></div>` : `<div><span class="label">Fiches</span><b>${nf(chipsIn)}</b></div>`;
     if (ui.bigClock) {
       return `<div class="bigclock" role="dialog" aria-label="Grote klok">
         <button class="btn ghost sm x" data-act="bigClock" data-v="0">✕ Sluiten</button>
@@ -2050,13 +2114,14 @@ if (typeof module !== 'undefined') module.exports = Logic;
         <div class="time ${timeCls} ${t.rem === null ? 'last' : ''}" id="pkTime">${t.rem === null ? 'laatste niveau' : mmss(t.rem)}</div>
         <div class="bar"><i id="pkBar" style="width:${(t.prog * 100).toFixed(1)}%"></i></div>
         <span class="next">${nx ? `Daarna <b>${nf(nx[0])} / ${nf(nx[1])}</b>` : 'Blinds blijven nu zo'}</span>
-        <div class="stats"><div>Spelers<b>${alive.length}/${K.who.length}</b></div><div>Gem. stack<b>${nf(chipsIn / Math.max(1, alive.length))}</b></div><div>Pot<b>${euro(pot)}</b></div></div>
+        <div class="stats"><div>Spelers<b>${alive.length}/${K.who.length}</b></div><div>Gem. stack<b>${nf(chipsIn / Math.max(1, alive.length))}</b></div>${K.stake ? `<div>Pot<b>${euro(pot)}</b></div>` : ''}</div>
         <div class="ctl"><button class="btn ${K.t.pausedAt ? 'primary' : 'soft'}" data-act="tPause">${K.t.pausedAt ? '▶ Verder' : 'Pauze'}</button></div>
       </div>`;
     }
     const board = [...alive.map((i) => `<button class="bust" style="--pc:var(--p${i})" data-act="tBust" data-v="${i}"><span class="who">${P(i)}<span class="meta">${tReb(K, i) ? `${tReb(K, i)}× terug ingekocht` : 'speelt'}</span></span><span class="tag">ligt eruit</span></button>`),
       ...K.out.slice().reverse().map((i) => `<button class="bust out" style="--pc:var(--p${i})" data-act="tBack" data-v="${i}"><span class="who">${P(i)}<span class="meta">${plc(K.who.length - 1 - K.out.indexOf(i))} · tik om terug te zetten</span></span><span class="tag">eruit</span></button>`)].join('');
-    return `<div class="wrap">${head('Toernooi')}
+    return `<div class="wrap">${gameHeader('Poker')}
+      <p class="label">${label}</p>
       <section class="panel pkclock">
         <span class="lvl">Niveau ${t.lv + 1} van ${BL.length}</span>
         <div class="blinds">${nf(b[0])}<small>/</small>${nf(b[1])}</div>
@@ -2066,30 +2131,49 @@ if (typeof module !== 'undefined') module.exports = Logic;
         <div class="ctl"><button class="btn ghost sm" data-act="tLvl" data-v="-1" ${t.lv ? '' : 'disabled'} aria-label="Vorig niveau">◀ Vorig</button><button class="btn ${K.t.pausedAt ? 'primary' : 'soft'} sm" data-act="tPause">${K.t.pausedAt ? '▶ Verder' : 'Pauze'}</button><button class="btn ghost sm" data-act="tLvl" data-v="1" ${nx ? '' : 'disabled'} aria-label="Volgend niveau">Volgend ▶</button></div>
         <button class="btn primary block" data-act="bigClock" data-v="1">Grote klok</button>
       </section>
-      <div class="pkstats"><div><span class="label">Spelers</span><b>${alive.length}/${K.who.length}</b></div><div><span class="label">Gem. stack</span><b>${nf(chipsIn / Math.max(1, alive.length))}</b></div><div><span class="label">Pot</span><b>${euro(pot)}</b></div></div>
+      <div class="pkstats"><div><span class="label">Spelers</span><b>${alive.length}/${K.who.length}</b></div><div><span class="label">Gem. stack</span><b>${nf(chipsIn / Math.max(1, alive.length))}</b></div>${third}</div>
       <section class="panel" style="gap:0;padding-block:6px"><div class="panel-head" style="padding:8px 0 4px"><h2>Wie ligt eruit?</h2><span class="label">tik op een naam</span></div>${board}</section>
-      <section class="panel"><div class="panel-head"><h2>Prijzen</h2><span class="label">${euro(K.unit)} inkoop</span></div>
+      ${K.stake ? `<section class="panel"><div class="panel-head"><h2>Prijzen</h2><span class="label">${euro(K.unit)} inkoop</span></div>
         <div>${pr.map((p, k) => (p ? `<div class="srow"><span class="who">${plc(k)}</span><span class="owe">${euro(pr[k])}</span></div>` : '')).join('')}</div>
-        <p class="hint">Wie terug inkoopt, betaalt opnieuw ${euro(K.unit)}. Dat geld gaat voor de helft naar de 1ste en voor de helft naar de 2de plaats. De 3de blijft gelijk. Eigen inkopen gaan van de winst af.</p></section>
+        <p class="hint">Wie terug inkoopt, betaalt opnieuw ${euro(K.unit)}. Dat geld gaat voor de helft naar de 1ste en voor de helft naar de 2de plaats. De 3de blijft gelijk. Eigen inkopen gaan van de winst af.</p></section>` : ''}
       ${chipsHTML()}
-      ${ui.pkAdd ? pkAddHTML() : `<button class="btn ghost block" data-act="pkAddOpen" ${S.players.length >= 8 && K.who.length >= S.players.length ? 'disabled' : ''}>+ Speler erbij</button>`}
-      <button class="btn ghost block" data-act="pkCancel">${ui.pkSure ? 'Tik nog eens: toernooi wissen' : 'Toernooi wissen'}</button>
-    </div>`;
+      ${pkAddBtn(K)}
+      <button class="btn ghost block" data-act="pkCancel">${ui.pkSure ? 'Tik nog eens: dit rondje wissen' : 'Rondje wissen'}</button>
+    </div>${dock()}`;
   }
-  function pkAddHTML() {
-    const K = S.pk, rest = S.players.map((_, i) => i).filter((i) => !K.who.includes(i));
-    const blocked = !!(current() || openOf(S.wz) || openOf(S.hj) || openOf(S.pj) || openOf(S.np) || openOf(S.lk) || openOf(S.dt));
+  const pkAddBtn = (K) => (ui.pkAdd ? pkAddHTML(K) : `<button class="btn ghost block" data-act="pkAddOpen" ${S.players.length >= 8 && K.who.length >= S.players.length ? 'disabled' : ''}>+ Speler erbij</button>`);
+  function pkAddHTML(K) {
+    const rest = S.players.map((_, i) => i).filter((i) => !K.who.includes(i));
     return `<section class="panel"><div class="panel-head"><h2>Speler erbij</h2><button class="link" data-act="pkAddClose">Sluiten</button></div>
       ${rest.length ? `<div class="chips">${rest.map((i) => `<button class="chip" data-act="pkAdd" data-v="${i}">+ ${P(i)}</button>`).join('')}</div>` : ''}
-      ${S.players.length < 8 ? (blocked ? '<p class="hint">Een nieuwe naam toevoegen kan pas als er geen ander rondje meer bezig is.</p>'
-        : `<form id="pkNewForm" class="dtyped" autocomplete="off"><input class="input" id="pkNew" maxlength="18" placeholder="Nieuwe naam"><button class="btn soft" type="submit">Toevoegen</button></form><p class="err" id="pkNewErr" style="min-height:0"></p>`) : ''}
-      <p class="hint">Een nieuwe speler start met één ${S.pk.mode === 'tour' ? `inkoop en ${nf(STACK)} fiches` : 'buy-in'}.</p></section>`;
+      ${S.players.length < 8 ? `<form id="pkNewForm" class="dtyped" autocomplete="off"><input class="input" id="pkNew" maxlength="18" placeholder="Nieuwe naam"><button class="btn soft" type="submit">Toevoegen</button></form><p class="err" id="pkNewErr" style="min-height:0"></p>` : ''}
+      <p class="hint">Een nieuwe speler start met ${K.mode === 'tour' ? `${nf(STACK)} fiches${K.stake ? ` en betaalt de inkoop van ${euro(K.unit)}` : ''}` : `één buy-in van ${euro(K.unit)}`}.</p></section>`;
   }
-  function pkTotHTML() {
-    const K = S.pk, tin = K.who.reduce((t, i) => t + K.buyin[i], 0), tout = K.who.reduce((t, i) => t + (K.buyout[i] || 0), 0), D = tout - tin;
+  function pkTotHTML(K) {
+    const tin = K.who.reduce((t, i) => t + (K.buyin[i] || 0), 0), tout = K.who.reduce((t, i) => t + (K.buyout[i] || 0), 0), D = tout - tin;
     return `<div><span class="label">Buy-in</span><b>${euro(tin)}</b></div><div style="text-align:center"><span class="label">Buy-out</span><b>${euro(tout)}</b></div><div style="text-align:right"><span class="label">Verschil</span><b class="${D ? 'neg' : 'pos'}">${D ? (D > 0 ? '+' : '−') + euro(Math.abs(D)) : 'klopt'}</b></div>`;
   }
 
+  // Nieuw pokerrondje starten met de instellingen van het pokerscherm
+  function pkStartRondje(r) {
+    const C = ui.pkCfg, tour = C.mode === 'tour', stake = !tour || C.stake, now = Date.now();
+    Object.assign(r, { who: C.who.slice(), mode: C.mode, stake, unit: stake ? C.u : 0, step: tour ? 'play' : 'buyin', out: [],
+      buyin: S.players.map((_, i) => (stake && C.who.includes(i) ? C.u : 0)), buyout: S.players.map(() => null), reb: S.players.map(() => 0) });
+    if (tour) Object.assign(r, { pay: stake ? C.payFinal : [0, 0, 0], lvlMin: C.lvl, t: { start: now, pausedAt: null, off: 0 }, lastLvl: 0 });
+    Object.assign(S.pk, { mode: C.mode, stake: C.stake, lvlMin: C.lvl }); if (stake) S.pk.unit = C.u;
+    S.pk.rondjes.push(r); S.game = 'poker';
+    ui.flow = null; ui.pct = null; ui.pkCfg = null; ui.pkAdd = false; ui.pkSure = false; ui.bigClock = false; ui.view = null;
+    audioCtx(); save(); render(); window.scrollTo(0, 0); keepAwake();
+  }
+  // Een speler komt erbij in een lopend pokerrondje: krijgt een plaats achteraan in de percentages (0%)
+  function pkJoin(K, i) {
+    if (K.who.includes(i)) return;
+    K.who.push(i);
+    K.buyin[i] = K.stake ? K.unit : 0; K.buyout[i] = null;
+    if (!K.reb) K.reb = []; K.reb[i] = 0;
+    while (K.pct.length < K.who.length) K.pct.unshift(0);
+    K.n = Math.max(K.n || 0, S.players.length);
+  }
   // ---------- Darts ----------
   const MARK = ['', '/', '✕', 'ⓧ'];
   function renderDGame() {
@@ -2475,22 +2559,19 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const open = openAny();
     const { owed } = A;
     const parts = A.parts.filter((p) => p[1]);
-    const pk = pokerNet();
-    if (pk) parts.push(['Poker', 0, 0]);
-    const pkOpen = S.pk.on && S.pk.step !== 'done';
+    const pk = pokerNet(), onlyPoker = !A.total && !!pk;
     const payerBtns = S.players.map((p, i) => `<button class="payer ${ui.payer === i ? 'on' : ''}" data-act="payer" data-v="${i}"><span class="nm">${esc(p)}</span><small>aandeel ${euro(owed[i])}</small></button>`).join('');
     return `<div class="wrap">
       <header class="top"><button class="btn ghost sm" data-act="home">← Terug</button><span class="label">Einde avond</span></header>
-      <section>${!done.length && pk ? '<h1>Poker <em>afrekenen</em></h1>' : `<p class="label">${done.length} rondje${done.length === 1 ? '' : 's'} gespeeld</p><h1>Wie heeft de <em>rekening</em> betaald?</h1>`}
-        ${parts.length && done.length ? `<p class="lead">${parts.map((p) => (p[0] === 'Poker' ? 'Poker: zit mee in de afrekening' : `${p[0]}: ${p[1]} rondje${p[1] > 1 ? 's' : ''} · ${euro(p[2])}`)).join('<br>')}</p>` : ''}</section>
+      <section>${onlyPoker ? '<h1>Poker <em>afrekenen</em></h1>' : `<p class="label">${done.length} rondje${done.length === 1 ? '' : 's'} gespeeld</p><h1>Wie heeft de <em>rekening</em> betaald?</h1>`}
+        ${parts.length && done.length && !onlyPoker ? `<p class="lead">${parts.map((p) => `${p[0]}: ${p[1]} rondje${p[1] > 1 ? 's' : ''} · ${p[2] ? euro(p[2]) : 'zonder geld'}`).join('<br>')}${pk ? '<br>Inzet van de poker: zit mee in de afrekening' : ''}</p>` : ''}</section>
       ${open ? `<div class="note">Een rondje dat nog bezig is, telt niet mee.</div>` : ''}
-      ${pkOpen ? `<div class="note">De poker is nog niet afgerekend en telt niet mee. Vul eerst de buy-outs in.</div>` : ''}
-      ${!done.length && pk ? `<div id="settle">${renderSettle()}</div>` : ''}
-      ${done.length ? `<div class="payers">${payerBtns}</div>
+      ${onlyPoker ? `<div id="settle">${renderSettle()}</div>` : ''}
+      ${done.length && !onlyPoker ? `<div class="payers">${payerBtns}</div>
       <div class="field"><label for="bill">Wat stond er op de rekening?</label>
         <input class="input" id="bill" inputmode="decimal" placeholder="${fmt(roundsTotal())}" value="${esc(ui.bill)}" style="font:600 22px var(--f-serif);font-variant-numeric:lining-nums">
         <p class="bill-hint" id="billHint">${billHint()}</p></div>
-      <div id="settle">${renderSettle()}</div>` : pk ? '' : `<p class="empty">Nog geen rondjes uitgespeeld, dus niemand moet iets.</p>`}
+      <div id="settle">${renderSettle()}</div>` : onlyPoker ? '' : `<p class="empty">Nog geen rondjes uitgespeeld, dus niemand moet iets.</p>`}
       <button class="btn soft block" data-act="saveNight">${S.savedAt ? `Opnieuw bewaren <span class="muted">· bewaard om ${hhmm(S.savedAt)}</span>` : 'Bewaren in geschiedenis'}</button>
       <button class="btn ghost block" data-act="askReset">Nieuwe avond starten</button>
     </div>`;
@@ -2511,7 +2592,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   }
 
   function renderSettle() {
-    const onlyPoker = !owedAll().n && pokerNet();
+    const onlyPoker = !owedAll().total && pokerNet();
     if (ui.payer === null && !onlyPoker) return `<p class="empty">Kies hierboven wie betaald heeft.</p>`;
     if (onlyPoker && ui.payer === null) ui.payer = 0;
     const r = settleAll(ui.payer, onlyPoker ? 0 : billValue());
@@ -2584,9 +2665,9 @@ if (typeof module !== 'undefined') module.exports = Logic;
         <form id="playersForm" class="steps">${S.players.map((p, i) => `<div class="field"><label for="pl${i}">Speler ${i + 1}</label><input class="input" id="pl${i}" value="${esc(p)}" maxlength="18" required></div>`).join('')}
         <div class="row2"><button type="button" class="btn ghost" data-act="close">Annuleer</button><button class="btn primary" type="submit">Bewaar</button></div></form>`;
     } else if (m === 'pkBust') {
-      const K = S.pk, i = ui.pkBustI, left = tAlive(K).length - 1;
-      body = `<h2>${P(i)} ligt eruit</h2><p class="muted" style="margin:0">Terug inkopen voor ${euro(K.unit)}? Dan krijgt ${P(i)} opnieuw ${nf(STACK)} fiches.</p>
-        <button class="btn primary block" data-act="tRebuy">Ja, terug inkopen · ${euro(K.unit)}</button>
+      const K = openOf(S.pk), i = ui.pkBustI, left = tAlive(K).length - 1;
+      body = `<h2>${P(i)} ligt eruit</h2><p class="muted" style="margin:0">Terug inkopen${K.stake ? ` voor ${euro(K.unit)}` : ''}? Dan krijgt ${P(i)} opnieuw ${nf(STACK)} fiches.</p>
+        <button class="btn primary block" data-act="tRebuy">Ja, terug inkopen${K.stake ? ` · ${euro(K.unit)}` : ''}</button>
         <button class="btn danger block" data-act="tOut">Nee, ${left <= 1 ? `${P(tAlive(K).find((x) => x !== i))} wint` : `${P(i)} wordt ${plc(left)}`}</button>
         <button class="btn ghost block" data-act="close">Annuleren</button>`;
     } else if (m === 'winner') {
@@ -2635,8 +2716,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
 
   function render() {
     const v = view();
-    ui.view = ['draw', 'end', 'wround', 'hround', 'pround', 'start', 'nprice', 'npick', 'npct', 'hist', 'poker'].includes(v) ? v : null;
-    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound, ngame: renderNGame, lgame: renderLGame, hist: renderHist, dgame: renderDGame, poker: renderPoker };
+    ui.view = ['draw', 'end', 'wround', 'hround', 'pround', 'start', 'nprice', 'npick', 'npct', 'hist', 'pkset'].includes(v) ? v : null;
+    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound, ngame: renderNGame, lgame: renderLGame, hist: renderHist, dgame: renderDGame, kgame: renderKGame, pkset: renderPkSet };
     const same = v === lastScreen, before = same ? numSnap() : null;
     $app.innerHTML = screens[v]();
     $app.classList.toggle('fresh', !same);
@@ -2919,32 +3000,29 @@ if (typeof module !== 'undefined') module.exports = Logic;
       ui.pr = null; ui.view = null; save(); render(); window.scrollTo({ top: 0, behavior: 'smooth' });
       showToast(done ? `<b>Rondje gedaan</b> · ${P(pTot(c).findIndex((v) => v <= 0))} is alles kwijt` : `<b>Beurt ${c.beurten.length}</b> bewaard`);
     },
-    // Poker
-    pokerPick() {
-      if (ui.flow && ui.flow.price !== 0) { showToast('<b>Poker heeft een eigen kassa</b> · kies "Zonder geld" en dan Poker', false); return; }
-      ui.flow = null; actions.pkOpen();
-    },
-    pkOpen() { hideToast(); ui.pkSel = null; ui.pkMode = null; ui.pkPay = null; ui.pkPayEdited = false; ui.pkUnitTxt = null; ui.pkLvl = null; ui.pkSure = false; ui.pkAdd = false; ui.view = 'poker'; render(); window.scrollTo(0, 0); },
-    pkBack() { ui.bigClock = false; ui.view = null; ui.pkSure = false; render(); window.scrollTo(0, 0); },
-    pkSel(b) { const i = +b.dataset.v; const sel = ui.pkSel || S.players.map((_, k) => k); ui.pkSel = sel.includes(i) ? sel.filter((x) => x !== i) : [...sel, i].sort((a, c) => a - c); render(); },
-    pkMode(b) { ui.pkMode = b.dataset.v; render(); },
-    pkLvl(b) { ui.pkLvl = +b.dataset.v; render(); },
-    pkStart() {
-      const sel = ui.pkSel || S.players.map((_, k) => k), u = cents(document.getElementById('pkUnit').value);
-      if (!u) { document.getElementById('pkErr').textContent = 'Geef een bedrag in, bijvoorbeeld 10.'; return; }
-      if (sel.length < 2) return;
-      if ((ui.pkMode || S.pk.mode || 'cash') === 'tour') {
-        const pay = readPay();
-        if (pay.reduce((a, c) => a + c, 0) !== sel.length * u) { document.getElementById('pkErr').textContent = `Verdeel precies ${euro(sel.length * u)} over de plaatsen.`; return; }
-        if (!pay[0]) { document.getElementById('pkErr').textContent = 'De winnaar moet iets krijgen.'; return; }
-        if (pay[2] && sel.length < 3) { document.getElementById('pkErr').textContent = 'Met 2 spelers is er geen 3de plaats. Zet die op 0.'; return; }
-        const now = Date.now();
-        S.pk = { mode: 'tour', unit: u, on: true, step: 'play', who: sel, buyin: S.players.map((_, i) => (sel.includes(i) ? u : 0)), buyout: S.players.map(() => null), out: [], pay, lvlMin: ui.pkLvl || S.pk.lvlMin || 5, t: { start: now, pausedAt: null, off: 0 }, lastLvl: 0, start: now };
-        audioCtx(); save(); render(); window.scrollTo(0, 0); keepAwake(); return;
+    // Poker: instellen
+    pkMode(b) { ui.pkCfg.mode = b.dataset.v; ui.pkErr = ''; render(); },
+    pkStake(b) { ui.pkCfg.stake = b.dataset.v === '1'; ui.pkErr = ''; render(); },
+    pkSel(b) { const C = ui.pkCfg, i = +b.dataset.v; C.who = C.who.includes(i) ? C.who.filter((x) => x !== i) : [...C.who, i].sort((a, c) => a - c); render(); },
+    pkLvl(b) { ui.pkCfg.lvl = +b.dataset.v; render(); },
+    pkNext() {
+      const C = ui.pkCfg; if (!C || C.who.length < 2) return;
+      const tour = C.mode === 'tour', stake = !tour || C.stake, err = (m) => { ui.pkErr = m; render(); };
+      let u = 0, pay = null;
+      if (stake) { u = cents(C.unitTxt); if (!u) return err('Geef een bedrag in, bijvoorbeeld 10.'); }
+      if (tour && stake) {
+        pay = C.payEdited && C.pay ? C.pay : defPay(C.who.length * u);
+        if (pay.reduce((a, c) => a + c, 0) !== C.who.length * u) return err(`Verdeel precies ${euro(C.who.length * u)} over de plaatsen.`);
+        if (!pay[0]) return err('De winnaar moet iets krijgen.');
+        if (pay[2] && C.who.length < 3) return err('Met 2 spelers is er geen 3de plaats. Zet die op 0.');
       }
-      S.pk = { unit: u, on: true, step: 'buyin', who: sel, buyin: S.players.map((_, i) => (sel.includes(i) ? u : 0)), buyout: S.players.map(() => null), start: Date.now() };
-      save(); render(); window.scrollTo(0, 0); keepAwake();
+      C.u = u; C.payFinal = pay; ui.pkErr = '';
+      const n = C.who.length, stored = S.pk.pct;
+      ui.pct = (stored && stored.length === n ? stored : presetsFor(n)[0].v).slice();
+      if (ui.flow.price === 0) { actions.npctStart(); return; }
+      ui.view = 'npct'; render(); window.scrollTo(0, 0);
     },
+    // Poker: spelen
     bigClock(b) {
       ui.bigClock = b.dataset.v === '1';
       try {
@@ -2953,24 +3031,48 @@ if (typeof module !== 'undefined') module.exports = Logic;
       } catch (e) {}
       audioCtx(); keepAwake(); render(); window.scrollTo(0, 0);
     },
-    tPause() { const K = S.pk, now = Date.now(); if (K.t.pausedAt) { K.t.off += now - K.t.pausedAt; K.t.pausedAt = null; keepAwake(); } else K.t.pausedAt = now; audioCtx(); save(); render(); },
-    tLvl(b) { const K = S.pk, t = tState(K), lv = Math.max(0, Math.min(BL.length - 1, t.lv + +b.dataset.v)); tSetEl(K, lv * t.L); save(); render(); },
+    tPause() { const K = openOf(S.pk); if (!K) return; const now = Date.now(); if (K.t.pausedAt) { K.t.off += now - K.t.pausedAt; K.t.pausedAt = null; keepAwake(); } else K.t.pausedAt = now; audioCtx(); save(); render(); },
+    tLvl(b) { const K = openOf(S.pk); if (!K) return; const t = tState(K), lv = Math.max(0, Math.min(BL.length - 1, t.lv + +b.dataset.v)); tSetEl(K, lv * t.L); save(); render(); },
     tBust(b) { ui.pkBustI = +b.dataset.v; ui.modal = 'pkBust'; render(); },
-    tRebuy() { const K = S.pk, i = ui.pkBustI; K.buyin[i] = (K.buyin[i] || 0) + K.unit; ui.modal = null; save(); render(); showToast(`<b>${P(i)}</b> koopt terug in · pot ${euro(tPot(K))}`, false); },
+    tRebuy() {
+      const K = openOf(S.pk), i = ui.pkBustI; if (!K) return;
+      if (!K.reb) K.reb = []; K.reb[i] = (K.reb[i] || 0) + 1;
+      if (K.stake) K.buyin[i] = (K.buyin[i] || 0) + K.unit;
+      ui.modal = null; save(); render(); showToast(`<b>${P(i)}</b> koopt terug in${K.stake ? ` · pot ${euro(tPot(K))}` : ''}`, false);
+    },
     tOut() {
-      const K = S.pk, i = ui.pkBustI; ui.modal = null;
+      const K = openOf(S.pk), i = ui.pkBustI; ui.modal = null; if (!K) return;
       if (!K.out.includes(i)) K.out.push(i);
-      if (tAlive(K).length <= 1) { hideToast(); ui.bigClock = false; K.step = 'done'; if (!K.t.pausedAt) K.t.pausedAt = Date.now(); partyDue = true; save(); render(); window.scrollTo(0, 0); return; }
+      if (tAlive(K).length <= 1) {
+        hideToast(); ui.bigClock = false; K.step = 'done'; K.end = Date.now(); if (!K.t.pausedAt) K.t.pausedAt = Date.now();
+        if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+        ui.result = 'poker'; partyDue = true; save(); render(); window.scrollTo(0, 0); return;
+      }
       save(); render(); showToast(`<b>${P(i)}</b> wordt ${plc(tAlive(K).length)}`, false);
     },
-    tBack(b) { const K = S.pk, i = +b.dataset.v; K.out = K.out.filter((x) => x !== i); save(); render(); showToast(`<b>${P(i)}</b> speelt terug mee`, false); },
-    tUndo() { const K = S.pk; K.out.pop(); K.step = 'play'; if (K.t.pausedAt) { K.t.off += Date.now() - K.t.pausedAt; K.t.pausedAt = null; } save(); render(); window.scrollTo(0, 0); },
+    tBack(b) { const K = openOf(S.pk), i = +b.dataset.v; if (!K) return; K.out = K.out.filter((x) => x !== i); save(); render(); showToast(`<b>${P(i)}</b> speelt terug mee`, false); },
+    tUndo() {
+      const K = lastOf(S.pk); if (!K || K.mode !== 'tour' || !K.out.length) return;
+      K.out.pop(); K.step = 'play'; K.end = null; ui.result = null;
+      if (K.t.pausedAt) { K.t.off += Date.now() - K.t.pausedAt; K.t.pausedAt = null; }
+      save(); render(); window.scrollTo(0, 0);
+    },
+    pkReopen() { const K = lastOf(S.pk); if (!K || K.mode !== 'cash') return; K.end = null; K.step = 'buyout'; ui.result = null; save(); render(); window.scrollTo(0, 0); },
     pkAddOpen() { ui.pkAdd = true; render(); },
     pkAddClose() { ui.pkAdd = false; render(); },
-    pkAdd(b) { const K = S.pk, i = +b.dataset.v; if (K.who.includes(i)) return; K.who.push(i); K.buyin[i] = K.unit; K.buyout[i] = null; ui.pkAdd = false; save(); render(); showToast(`<b>${P(i)}</b> doet mee`, false); },
-    pkBuy(b) { const K = S.pk, i = +b.dataset.i; K.buyin[i] = Math.max(K.unit, K.buyin[i] + +b.dataset.v * K.unit); save(); render(); if (navigator.vibrate) try { navigator.vibrate(10); } catch (e) {} },
-    pkStep(b) { S.pk.step = b.dataset.v; save(); render(); window.scrollTo(0, 0); },
-    pkCancel() { if (!ui.pkSure) { ui.pkSure = true; render(); return; } S.pk = freshPk(S.pk); ui.pkSure = false; save(); ui.view = null; render(); },
+    pkAdd(b) { const K = openOf(S.pk), i = +b.dataset.v; if (!K || K.who.includes(i)) return; pkJoin(K, i); ui.pkAdd = false; save(); render(); showToast(`<b>${P(i)}</b> doet mee`, false); },
+    pkBuy(b) { const K = openOf(S.pk), i = +b.dataset.i; if (!K) return; K.buyin[i] = Math.max(K.unit, K.buyin[i] + +b.dataset.v * K.unit); save(); render(); if (navigator.vibrate) try { navigator.vibrate(10); } catch (e) {} },
+    pkStep(b) {
+      const K = openOf(S.pk); if (!K) return;
+      K.step = b.dataset.v;
+      if (K.step === 'done') { K.end = Date.now(); ui.result = 'poker'; partyDue = true; }
+      save(); render(); window.scrollTo(0, 0);
+    },
+    pkCancel() {
+      if (!ui.pkSure) { ui.pkSure = true; render(); return; }
+      const K = openOf(S.pk); if (K) S.pk.rondjes.splice(S.pk.rondjes.indexOf(K), 1);
+      ui.pkSure = false; ui.bigClock = false; ui.view = null; ui.result = null; save(); render(); window.scrollTo(0, 0);
+    },
     // Darts
     dModeSet(b) { ui.dmode = b.dataset.v; render(); },
     dOutSet(b) { ui.dout = b.dataset.v === '1'; render(); },
@@ -3074,7 +3176,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
     freeRondje() { if (!ui.flow) return; ui.flow.price = 0; ui.calc = { expr: '', target: null }; ui.view = 'npick'; render(); window.scrollTo(0, 0); },
     newRondje() { hideToast(); ui.flow = { price: null, game: null }; ui.result = null; ui.modal = null; ui.calc = { expr: '', target: null }; ui.view = 'nprice'; render(); window.scrollTo(0, 0); },
     flowBack() {
-      if (ui.view === 'npct') ui.view = 'npick';
+      if (ui.view === 'npct') ui.view = ui.flow && ui.flow.game === 'poker' ? 'pkset' : 'npick';
+      else if (ui.view === 'pkset') ui.view = 'npick';
       else if (ui.view === 'npick') ui.view = 'nprice';
       else { ui.flow = null; ui.view = null; }
       render(); window.scrollTo(0, 0);
@@ -3082,6 +3185,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     flowGame(b) {
       const g = b.dataset.v; ui.flow.game = g;
       if (g === 'troeven') { startDraw(); return; }
+      if (g === 'poker') { pkCfgInit(); ui.view = 'pkset'; render(); window.scrollTo(0, 0); return; }
       const n = S.players.length, stored = PG[g].st().pct;
       ui.pct = (stored && stored.length === n ? stored : presetsFor(n)[0].v).slice(); ui.per = S.wz.per || 1; ui.boom = S.pj.boom || 9; ui.dmode = S.dt.mode || '501'; ui.dout = !!S.dt.dout;
       ui.view = 'npct'; render(); window.scrollTo(0, 0);
@@ -3091,6 +3195,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       const g = ui.flow.game, st = PG[g].st();
       if (ui.flow.price !== 0) st.pct = ui.pct.slice();
       const r = { price: ui.flow.price, pct: ui.pct.slice(), start: Date.now(), end: null, n: S.players.length };
+      if (g === 'poker') { pkStartRondje(r); return; }
       if (g === 'wiezen') { S.wz.per = ui.per || 1; r.per = S.wz.per; r.games = []; }
       else if (g === 'pietjes') { S.pj.boom = ui.boom || 9; r.boom = S.pj.boom; r.beurten = []; }
       else if (g === 'nappen') { r.base = NP_START; r.log = []; }
@@ -3212,20 +3317,21 @@ if (typeof module !== 'undefined') module.exports = Logic;
       updateHRound();
       return;
     }
-    if (/^pkP\d$/.test(e.target.id || '')) { ui.pkPayEdited = true; ui.pkPay = readPay(); const h = document.getElementById('pkPaySum'); if (h) h.innerHTML = payHint(ui.pkPay, setupPot()); return; }
-    if (e.target.id === 'pkUnit') {
-      ui.pkUnitTxt = e.target.value;
-      const pot = setupPot(), pay = ui.pkPayEdited && ui.pkPay ? ui.pkPay : defPay(pot);
-      if (!ui.pkPayEdited) pay.forEach((v, k) => { const el = document.getElementById('pkP' + k); if (el) el.value = v ? fmt(v) : '0'; });
+    if (/^pkP\d$/.test(e.target.id || '') && ui.pkCfg) { ui.pkCfg.payEdited = true; ui.pkCfg.pay = readPay(); const h = document.getElementById('pkPaySum'); if (h) h.innerHTML = payHint(ui.pkCfg.pay, setupPot()); return; }
+    if (e.target.id === 'pkUnit' && ui.pkCfg) {
+      ui.pkCfg.unitTxt = e.target.value;
+      const pot = setupPot(), pay = ui.pkCfg.payEdited && ui.pkCfg.pay ? ui.pkCfg.pay : defPay(pot);
+      if (!ui.pkCfg.payEdited) pay.forEach((v, k) => { const el = document.getElementById('pkP' + k); if (el) el.value = v ? fmt(v) : '0'; });
       const h = document.getElementById('pkPaySum'); if (h) h.innerHTML = payHint(pay, pot);
       return;
     }
     const po = /^pko(\d)$/.exec(e.target.id || '');
     if (po) {
       const v = e.target.value.trim() === '' ? null : cents(e.target.value);
-      S.pk.buyout[+po[1]] = v; save();
-      const t = document.getElementById('pkTot'); if (t) t.innerHTML = pkTotHTML();
-      const btn = document.getElementById('pkCalc'); if (btn) btn.disabled = !S.pk.who.every((i) => S.pk.buyout[i] !== null && S.pk.buyout[i] !== undefined);
+      const K = openOf(S.pk); if (!K) return;
+      K.buyout[+po[1]] = v; save();
+      const t = document.getElementById('pkTot'); if (t) t.innerHTML = pkTotHTML(K);
+      const btn = document.getElementById('pkCalc'); if (btn) btn.disabled = !K.who.every((i) => K.buyout[i] !== null && K.buyout[i] !== undefined);
       return;
     }
     if (e.target.id === 'bill') {
@@ -3243,13 +3349,13 @@ if (typeof module !== 'undefined') module.exports = Logic;
       if (!v) { document.getElementById('priceErr').textContent = 'Geef een bedrag in, bijvoorbeeld 24,50.'; return; }
       current().price = v; S.lastPrice = v; ui.calc = { expr: '', target: null }; save(); render(); keepAwake();
     } else if (f.id === 'pkNewForm') {
-      const K = S.pk, nm = document.getElementById('pkNew').value.trim().replace(/\s+/g, ' '), err = document.getElementById('pkNewErr');
+      const K = openOf(S.pk), nm = document.getElementById('pkNew').value.trim().replace(/\s+/g, ' '), err = document.getElementById('pkNewErr');
+      if (!K) return;
       if (!nm) { err.textContent = 'Geef een naam in.'; return; }
       if (S.players.some((p) => p.toLowerCase() === nm.toLowerCase())) { err.textContent = 'Die naam bestaat al. Kies hem hierboven.'; return; }
       if (S.players.length >= 8) return;
       S.players.push(nm);
-      const i = S.players.length - 1;
-      K.who.push(i); K.buyin[i] = K.unit; K.buyout[i] = null;
+      pkJoin(K, S.players.length - 1);
       ui.pkAdd = false; save(); render(); showToast(`<b>${esc(nm)}</b> doet mee`, false);
     } else if (f.id === 'dTypedForm') {
       const c = openOf(S.dt), err = document.getElementById('dErr');
@@ -3279,7 +3385,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       if (new Set(names.map((n) => n.toLowerCase())).size < names.length) { err.textContent = 'Geef elke speler een andere naam.'; return; }
       ui.names = null;
       S.players = names; S.ready = true; save();
-      if (!openAny() && !owedAll().n && !S.pk.on) { actions.newRondje(); return; }
+      if (!openAny() && !owedAll().n) { actions.newRondje(); return; }
       ui.view = null; render(); window.scrollTo(0, 0);
     } else if (f.id === 'playersForm') {
       const names = S.players.map((_, i) => document.getElementById('pl' + i).value.trim());
@@ -3289,7 +3395,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   });
 
   // Liep er een toernooi toen de app dichtging? Dan meteen terug naar de klok.
-  if (S.pk && S.pk.on && S.pk.mode === 'tour' && S.pk.step === 'play') { ui.view = 'poker'; try { keepAwake(); } catch (e) {} }
+  if (openOf(S.pk)) { try { keepAwake(); } catch (e) {} }
   render();
   window.__troeven = { get state() { return S; }, ui };
 })();
@@ -3298,7 +3404,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 <script>
 // Installeerbare app: offline werken en vanzelf de nieuwste versie laden.
 (() => {
-  const APP_VERSION = '20261125-213452';
+  const APP_VERSION = '20261125-215926';
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
