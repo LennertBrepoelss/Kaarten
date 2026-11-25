@@ -1472,8 +1472,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
     { k: 'wiezen', name: 'Wiezen', cls: 'g-wiez', min: 4, max: 4 },
     { k: 'harten', name: 'Hartenjagen', cls: 'g-hart', min: 4, max: 4 },
     { k: 'pietjes', name: 'Pietjesbak', cls: 'g-pietjes', min: 2, max: 8 },
-    { k: 'nappen', name: 'Nappen', cls: 'g-nappen', min: 2, max: 8 },
-    { k: 'lucky', name: 'Lucky 7', cls: 'g-lucky', min: 2, max: 7 },
+    { k: 'nappen', name: 'Nappen', cls: 'g-nappen', min: 3, max: 8 },
+    { k: 'lucky', name: 'Lucky 7', cls: 'g-lucky', min: 3, max: 7 },
     { k: 'darts', name: 'Darts', cls: 'g-darts', min: 2, max: 8 },
   ];
   function renderPick() {
@@ -2705,7 +2705,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 <script>
 // Installeerbare app: offline werken en vanzelf de nieuwste versie laden.
 (() => {
-  const APP_VERSION = '20261125-114449';
+  const APP_VERSION = '20261125-114627';
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
