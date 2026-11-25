@@ -901,12 +901,13 @@ if (typeof module !== 'undefined') module.exports = Logic;
   const lastOf = (st) => st.rondjes[st.rondjes.length - 1] || null;
   const openOf = (st) => { const r = lastOf(st); return r && !r.end ? r : null; };
   const gCur = () => openOf(pg().st());
+  const priceTxt = (c) => (c ? euro(c) : 'zonder geld');
   const ptsLabel = (g, v) => (g === 'harten' ? `${v < 0 ? '−' + Math.abs(v) : v} over` : g === 'pietjes' ? `${v} streepje${v === 1 ? '' : 's'}` : `${sign(v)} ptn`);
   // Wat elke speler betaalt voor de uitgespeelde rondjes van één spel (in cent)
   function gameOwed(g) {
     const owed = Array(S.players.length).fill(0); let total = 0, n = 0;
     PG[g].st().rondjes.forEach((r) => {
-      if (!r.end || !r.price) return;
+      if (!r.end || r.price == null) return;
       const { out } = wPayPct(rankOf(g, r), r.pct);
       out.forEach((p, i) => { owed[i] += r.price * p / 100; });
       total += r.price; n++;
@@ -1067,7 +1068,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     }
     // Wiezen en hartenjagen: per uitgespeeld rondje telt de 1ste als gewonnen, wie het meest betaalt als verloren.
     [['w', 'wiezen'], ['h', 'harten'], ['p', 'pietjes']].forEach(([key, g]) => {
-      const rs = PG[g].st().rondjes.filter((r) => r.end && r.price);
+      const rs = PG[g].st().rondjes.filter((r) => r.end && r.price != null);
       if (!rs.length) return;
       const won = S.players.map(() => 0), lost = S.players.map(() => 0);
       rs.forEach((r) => {
@@ -1174,20 +1175,20 @@ if (typeof module !== 'undefined') module.exports = Logic;
   // ---------- Overzicht van de avond ----------
   function rondjesTonight() {
     const items = [];
-    finished().forEach((r) => items.push({ t: r.end || r.start, game: 'Troeven', price: r.price, txt: `${tName(r, 1 - r.winner)} betalen` }));
+    finished().forEach((r) => items.push({ t: r.end || r.start, game: 'Troeven', price: r.price, txt: r.price ? `${tName(r, 1 - r.winner)} betalen` : `${tName(r, r.winner)} wonnen` }));
     PG_KEYS.forEach((g) => PG[g].st().rondjes.forEach((r) => {
-      if (!r.end || !r.price) return;
+      if (!r.end || r.price == null) return;
       const name = PG[g].title;
       const { out } = wPayPct(rankOf(g, r), r.pct);
       const mx = Math.max(...out);
       const most = out.map((_, i) => i).filter((i) => out[i] === mx);
-      items.push({ t: r.end, game: name, price: r.price, txt: `${most.map(P).join(' &amp; ')} ${most.length > 1 ? 'betalen' : 'betaalt'} het meest` });
+      items.push({ t: r.end, game: name, price: r.price, txt: r.price ? `${most.map(P).join(' &amp; ')} ${most.length > 1 ? 'betalen' : 'betaalt'} het meest` : (() => { const best = out.map((_, i) => i).filter((i) => out[i] === Math.min(...out)); return `${best.map(P).join(' &amp; ')} ${best.length > 1 ? 'wonnen' : 'won'}`; })() });
     }));
     return items.sort((a, b) => a.t - b.t);
   }
   function renderHub() {
     const A = owedAll(), items = rondjesTonight();
-    const list = items.map((x, k) => `<div class="rround"><span class="no">${k + 1}</span><div class="txt"><b>${x.game}</b><br><span class="muted">${x.txt}</span></div><div class="amt">${euro(x.price)}</div></div>`).reverse().join('');
+    const list = items.map((x, k) => `<div class="rround"><span class="no">${k + 1}</span><div class="txt"><b>${x.game}</b><br><span class="muted">${x.txt}</span></div><div class="amt ${x.price ? '' : 'muted'}">${x.price ? euro(x.price) : 'gratis'}</div></div>`).reverse().join('');
     return `<div class="wrap">
       <header class="top"><div class="brand">Kaartavond</div><div style="display:flex;gap:12px;align-items:center">${syncChip()}<button class="btn ghost sm" data-act="toStart">Spelers</button></div></header>
       <section><p class="label">${esc(today())}</p><h1>${A.n ? `Rondje <em>${A.n + 1}</em>` : 'Een nieuwe <em>avond</em>'}</h1></section>
@@ -1213,6 +1214,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
         ${last ? `<div><button type="button" class="chip" data-act="setprice" data-v="${last}">Zelfde als vorige · ${euro(last)}</button></div>` : ''}
         <p class="err" id="priceErr" style="min-height:0"></p>
         <button class="btn primary xl" type="submit">Kies het spel <span class="arr">→</span></button>
+        <button class="btn ghost block" type="button" data-act="freeRondje">Zonder geld</button>
       </form></div>`;
   }
 
@@ -1235,7 +1237,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const tiles = GAMES.map((g) => { const ok = n >= g.min && n <= g.max; return `<button class="tile ${g.cls} ${ok ? '' : 'off'}" data-act="flowGame" data-v="${g.k}" ${ok ? '' : 'disabled'}><span class="tart">${GAME_ART[g.k]}</span>${ok ? '' : `<span class="tstat">${g.min === g.max ? g.min : `${g.min}–${g.max}`} spelers</span>`}<span class="tname">${g.name}</span></button>`; }).join('');
     const soon = GAMES.length % 2 ? '<div class="tile soon" aria-hidden="true"><span class="tname">Binnenkort</span></div>' : '';
     return `<div class="wrap">
-      <header class="top"><button class="btn ghost sm" data-act="flowBack">← Terug</button><span class="label">Rondje ${owedAll().n + 1} · ${euro(ui.flow.price)}</span></header>
+      <header class="top"><button class="btn ghost sm" data-act="flowBack">← Terug</button><span class="label">Rondje ${owedAll().n + 1} · ${priceTxt(ui.flow.price)}</span></header>
       <section><h1>Welk <em>spel</em>?</h1></section>
       <div class="tiles">${tiles}${soon}</div></div>`;
   }
@@ -1243,21 +1245,21 @@ if (typeof module !== 'undefined') module.exports = Logic;
   // ---------- Nieuw rondje: 3. wie betaalt hoeveel (wiezen en hartenjagen) ----------
   const samePct = (a, b) => a.every((v, i) => v === b[i]);
   function renderNPct() {
-    const g = ui.flow.game, p = ui.pct, wz = g === 'wiezen';
+    const g = ui.flow.game, p = ui.pct, wz = g === 'wiezen', free = ui.flow.price === 0;
     const sub = (i) => (i === 0 ? 'winnaar' : i === p.length - 1 ? 'verliezer' : '');
     const rows = p.map((v, i) => `<div class="pctrow"><span class="pl">${ORD[i]}${sub(i) ? `<small>${sub(i)}</small>` : ''}</span>
       <div class="stepper"><button type="button" data-act="pctStep" data-i="${i}" data-v="-5" aria-label="5 procent minder">−</button><input id="pct${i}" inputmode="numeric" maxlength="3" value="${v}" aria-label="Percentage ${ORD[i]} plaats"><span class="pc">%</span><button type="button" data-act="pctStep" data-i="${i}" data-v="5" aria-label="5 procent meer">+</button></div></div>`).join('');
     return `<div class="wrap">
-      <header class="top"><button class="btn ghost sm" data-act="flowBack">← Terug</button><span class="label">${PG[g].title} · ${euro(ui.flow.price)}</span></header>
-      <section><h1>Wie betaalt <em>hoeveel</em>?</h1></section>
-      <div class="chips">${presetsFor(p.length).map((x, i) => `<button class="chip ${samePct(x.v, p) ? 'on' : ''}" data-act="pctPreset" data-v="${i}">${x.n}</button>`).join('')}</div>
+      <header class="top"><button class="btn ghost sm" data-act="flowBack">← Terug</button><span class="label">${PG[g].title} · ${priceTxt(ui.flow.price)}</span></header>
+      <section><h1>${free ? 'Rondje <em>zonder geld</em>' : 'Wie betaalt <em>hoeveel</em>?'}</h1></section>
+      ${free ? '' : `<div class="chips">${presetsFor(p.length).map((x, i) => `<button class="chip ${samePct(x.v, p) ? 'on' : ''}" data-act="pctPreset" data-v="${i}">${x.n}</button>`).join('')}</div>
       <section class="panel" style="gap:0;padding-block:6px">${rows}</section>
-      <div id="pctSum">${pctSumHTML()}</div>
+      <div id="pctSum">${pctSumHTML()}</div>`}
       ${wz ? `<section class="steps" style="gap:10px"><p class="label">Spelletjes per rondje</p>
         <div class="chips">${[1, 4, 8, 12, 16].map((v) => `<button class="chip ${ui.per === v ? 'on' : ''}" data-act="perSet" data-v="${v}">${v}</button>`).join('')}</div></section>` : ''}
       ${g === 'pietjes' ? `<section class="steps" style="gap:10px"><p class="label">Streepjes bij de start</p>
         <div class="chips">${[5, 7, 9, 12].map((v) => `<button class="chip ${ui.boom === v ? 'on' : ''}" data-act="boomSet" data-v="${v}">${v}</button>`).join('')}</div></section>` : ''}
-      <button class="btn primary xl" data-act="npctStart" id="pctSave" ${p.reduce((a, b) => a + b, 0) === 100 ? '' : 'disabled'}>Start rondje <span class="arr">→</span></button>
+      <button class="btn primary xl" data-act="npctStart" id="pctSave" ${free || p.reduce((a, b) => a + b, 0) === 100 ? '' : 'disabled'}>Start rondje <span class="arr">→</span></button>
     </div>`;
   }
   function pctSumHTML() {
@@ -1279,7 +1281,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const tot = PG[g].tot(r);
     const { out, place, order, tied } = wPayPct(rankOf(g, r), r.pct);
     return order.map((i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${P(i)}<span class="meta">${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]} · ${ptsLabel(g, tot[i])}</span></span>
-      <span class="owe ${out[i] ? '' : 'zero'}">${euro(r.price * out[i] / 100)}<small>${fmtPct(out[i])}</small></span></div>`).join('');
+      <span class="owe ${out[i] && r.price ? '' : 'zero'}">${r.price ? `${euro(r.price * out[i] / 100)}<small>${fmtPct(out[i])}</small>` : '–'}</span></div>`).join('');
   }
   // Wat iedereen deze avond al moet betalen, over alle spellen samen
   function avondPanel() {
@@ -1303,19 +1305,19 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (c) {
       const k = c.games.length, tot = wTot(c);
       const { out, place, order, tied } = wPayPct(tot, c.pct);
-      head = `<p class="label">Rondje ${nr} · ${euro(c.price)} · ${P(W.dealer)} deelt</p>
+      head = `<p class="label">Rondje ${nr} · ${priceTxt(c.price)} · ${P(W.dealer)} deelt</p>
         <h1>Spelletje <em>${k + 1}</em>${c.per > 1 ? ` <span class="of">van ${c.per}</span>` : ''}</h1>`;
       main = `<button class="btn primary xl" data-act="wNew">Nieuw spelletje <span class="arr">→</span></button>`;
       if (k) {
         stand = `<section class="panel"><div class="panel-head"><h2>Stand</h2><button class="link" data-act="wNextDealer">Volgende deler</button></div>
           <div>${order.map((i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${P(i)}${W.dealer === i ? '<small class="dl">deler</small>' : ''}
-            <span class="meta">${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]} · ${euro(c.price * out[i] / 100)}</span></span>
+            <span class="meta">${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]}${c.price ? ` · ${euro(c.price * out[i] / 100)}` : ''}</span></span>
             <span class="pts ${pn(tot[i])}">${sign(tot[i])}</span></div>`).join('')}</div></section>`;
       }
     } else {
-      head = `<p class="label">Wiezen · ${euro(last.price)}</p><h1>Rondje <em>gedaan</em></h1>`;
+      head = `<p class="label">Wiezen · ${priceTxt(last.price)}</p><h1>Rondje <em>gedaan</em></h1>`;
       main = doneButtons();
-      stand = `<section class="panel"><div class="panel-head"><h2>Wie betaalt</h2></div><div>${rondjeRows('wiezen', last)}</div></section>`;
+      stand = `<section class="panel"><div class="panel-head"><h2>${last.price ? 'Wie betaalt' : 'Uitslag'}</h2></div><div>${rondjeRows('wiezen', last)}</div></section>`;
     }
     const games = r ? r.games : [];
     const hist = games.map((g, i) => `<div class="hrow"><span class="n">${i + 1}</span><span>${wRoundText(g)}</span><span class="sc ${pn(g.d[g.sel[0]])}">${sign(g.d[g.sel[0]])}</span></div>`).reverse().join('');
@@ -1361,7 +1363,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (c) {
       const n = c.hands.length, tot = hTot(c);
       const { out, place, order, tied } = wPayPct(tot, c.pct);
-      head = `<p class="label">Rondje ${nr} · ${euro(c.price)}</p>
+      head = `<p class="label">Rondje ${nr} · ${priceTxt(c.price)}</p>
         <h1>${n ? `Hand <em>${n + 1}</em>` : 'Iedereen op <em>100</em>'}</h1>
         <p class="lead">${P(H.dealer)} deelt · ${PASS[n % 4]}</p>`;
       main = `<button class="btn primary xl" data-act="hNew">Nieuwe hand <span class="arr">→</span></button>`;
@@ -1369,11 +1371,11 @@ if (typeof module !== 'undefined') module.exports = Logic;
         <div>${order.map((i) => `<div class="hjrow" style="--pc:var(--p${i})">
           <div class="hjtop"><span class="who">${P(i)}${H.dealer === i ? '<small class="dl">deler</small>' : ''}</span><span class="hjnum">${tot[i]}</span></div>
           <div class="hjbar"><i style="width:${Math.max(0, Math.min(100, tot[i]))}%"></i></div>
-          ${n ? `<span class="meta">${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]} · ${euro(c.price * out[i] / 100)}</span>` : ''}</div>`).join('')}</div></section>`;
+          ${n ? `<span class="meta">${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]}${c.price ? ` · ${euro(c.price * out[i] / 100)}` : ''}</span>` : ''}</div>`).join('')}</div></section>`;
     } else {
-      head = `<p class="label">Hartenjagen · ${euro(last.price)}</p><h1>Rondje <em>gedaan</em></h1>`;
+      head = `<p class="label">Hartenjagen · ${priceTxt(last.price)}</p><h1>Rondje <em>gedaan</em></h1>`;
       main = doneButtons();
-      stand = `<section class="panel"><div class="panel-head"><h2>Wie betaalt</h2></div><div>${rondjeRows('harten', last)}</div></section>`;
+      stand = `<section class="panel"><div class="panel-head"><h2>${last.price ? 'Wie betaalt' : 'Uitslag'}</h2></div><div>${rondjeRows('harten', last)}</div></section>`;
     }
     const hands = r ? r.hands : [];
     const hist = hands.map((h, k) => {
@@ -1400,17 +1402,17 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (c) {
       const n = c.beurten.length, tot = pTot(c);
       const { out, place, order, tied } = wPayPct(tot.map((v) => -v), c.pct);
-      head = `<p class="label">Rondje ${nr} · ${euro(c.price)}</p><h1>${n ? `Beurt <em>${n + 1}</em>` : `Iedereen op <em>${c.boom}</em>`}</h1>`;
+      head = `<p class="label">Rondje ${nr} · ${priceTxt(c.price)}</p><h1>${n ? `Beurt <em>${n + 1}</em>` : `Iedereen op <em>${c.boom}</em>`}</h1>`;
       main = `<button class="btn primary xl" data-act="pNew">Nieuwe beurt <span class="arr">→</span></button>`;
       stand = `<section class="panel"><div class="panel-head"><h2>Stand</h2></div>
         <div>${order.map((i) => `<div class="hjrow" style="--pc:var(--p${i})">
           <div class="hjtop"><span class="who">${P(i)}</span><span class="hjnum">${tot[i]}</span></div>
           ${stripes(tot[i], c.boom)}
-          ${n ? `<span class="meta">${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]} · ${euro(c.price * out[i] / 100)}</span>` : ''}</div>`).join('')}</div></section>`;
+          ${n ? `<span class="meta">${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]}${c.price ? ` · ${euro(c.price * out[i] / 100)}` : ''}</span>` : ''}</div>`).join('')}</div></section>`;
     } else {
-      head = `<p class="label">Pietjesbak · ${euro(last.price)}</p><h1>Rondje <em>gedaan</em></h1>`;
+      head = `<p class="label">Pietjesbak · ${priceTxt(last.price)}</p><h1>Rondje <em>gedaan</em></h1>`;
       main = doneButtons();
-      stand = `<section class="panel"><div class="panel-head"><h2>Wie betaalt</h2></div><div>${rondjeRows('pietjes', last)}</div></section>`;
+      stand = `<section class="panel"><div class="panel-head"><h2>${last.price ? 'Wie betaalt' : 'Uitslag'}</h2></div><div>${rondjeRows('pietjes', last)}</div></section>`;
     }
     const bs = r ? r.beurten : [];
     const hist = bs.map((b, k) => `<div class="hrow"><span class="n">${k + 1}</span><span><b>${P(b.w)}</b> · ${pjType(b.t)[1].toLowerCase()} ${pjType(b.t)[2]}${b.plus.length ? ` · +1 ${b.plus.map(P).join(', ')}` : ''}</span><span></span></div>`).reverse().join('');
@@ -1669,7 +1671,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 
     return `<div class="wrap">
       <header class="roundbar"><span class="label">Rondje ${S.rounds.length}</span>
-        <div style="display:flex;gap:8px;align-items:center"><button class="pricechip" data-act="editPrice" aria-label="Prijs aanpassen">${euro(r.price)}</button><button class="btn ghost sm" data-act="menu" aria-label="Meer opties">Meer</button></div></header>
+        <div style="display:flex;gap:8px;align-items:center"><button class="pricechip" data-act="editPrice" aria-label="Prijs aanpassen">${priceTxt(r.price)}</button><button class="btn ghost sm" data-act="menu" aria-label="Meer opties">Meer</button></div></header>
       <div class="boards">${board(0)}${board(1)}</div>
       <section class="steps">
         <div class="step"><div class="slabel"><span class="no">1</span><span class="label">Welke kaart?</span></div>
@@ -1798,7 +1800,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       cls = `win t${w}`;
       body = `<span class="crest">${TEAM[w]} · rondje ${S.rounds.length}</span>
         <canvas id="confetti"></canvas><h2><span class="tc">${tName(r, w)}</span> <em style="font-weight:500">winnen!</em></h2><div class="wl2"></div>
-        <div class="pay"><span class="label">${tName(r, l)} betalen het rondje</span><b>${euro(r.price / 2)}</b><span class="muted" style="font-size:13px">per persoon, ${euro(r.price)} samen</span></div>
+        ${r.price ? `<div class="pay"><span class="label">${tName(r, l)} betalen het rondje</span><b>${euro(r.price / 2)}</b><span class="muted" style="font-size:13px">per persoon, ${euro(r.price)} samen</span></div>` : '<div class="pay"><span class="label">Rondje zonder geld</span><b>Niemand betaalt</b></div>'}
         <button class="btn primary xl" data-act="newRondje">Nieuw rondje <span class="arr">→</span></button>
         <div class="row2" style="width:100%"><button class="btn ghost" data-act="toHome">Overzicht</button><button class="btn ghost" data-act="undoWin">Foutje, terug</button></div>`;
     } else if (m === 'editPrice') {
@@ -2071,6 +2073,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       ui.modal = null; ui.bkSure = false; ui.view = null; ui.result = null; render(); window.scrollTo(0, 0);
     },
     // Nieuw rondje: prijs → spel → percentages
+    freeRondje() { if (!ui.flow) return; ui.flow.price = 0; ui.calc = { expr: '', target: null }; ui.view = 'npick'; render(); window.scrollTo(0, 0); },
     newRondje() { hideToast(); ui.flow = { price: null, game: null }; ui.result = null; ui.modal = null; ui.calc = { expr: '', target: null }; ui.view = 'nprice'; render(); window.scrollTo(0, 0); },
     flowBack() {
       if (ui.view === 'npct') ui.view = 'npick';
@@ -2086,9 +2089,9 @@ if (typeof module !== 'undefined') module.exports = Logic;
       ui.view = 'npct'; render(); window.scrollTo(0, 0);
     },
     npctStart() {
-      if (!ui.flow || ui.pct.reduce((a, c) => a + c, 0) !== 100) return;
+      if (!ui.flow || (ui.flow.price !== 0 && ui.pct.reduce((a, c) => a + c, 0) !== 100)) return;
       const g = ui.flow.game, st = PG[g].st();
-      st.pct = ui.pct.slice();
+      if (ui.flow.price !== 0) st.pct = ui.pct.slice();
       const r = { price: ui.flow.price, pct: ui.pct.slice(), start: Date.now(), end: null };
       if (g === 'wiezen') { S.wz.per = ui.per || 1; r.per = S.wz.per; r.games = []; }
       else if (g === 'pietjes') { S.pj.boom = ui.boom || 9; r.boom = S.pj.boom; r.beurten = []; }
