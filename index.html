@@ -2289,7 +2289,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       const rg = x.createRadialGradient(cx, cy, 0, cx, cy, 520); rg.addColorStop(0, c); rg.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = rg; x.fillRect(0, 0, W, H);
     });
     const serif = '"Cormorant Garamond", Georgia, serif', sans = 'Manrope, system-ui, sans-serif';
-    x.fillStyle = '#eaf2ff'; x.font = `italic 600 92px ${serif}`; x.fillText('Kaartavond', 80, 190);
+    x.fillStyle = '#eaf2ff'; x.font = `italic 600 92px ${serif}`; x.fillText('Spelletjes', 80, 190);
     x.fillStyle = '#8a95b8'; x.font = `600 30px ${sans}`; x.fillText(today().toUpperCase(), 84, 250);
     x.fillStyle = '#eaf2ff'; x.font = `600 46px ${serif}`; x.fillText(r.total ? `${S.players[ui.payer]} betaalde ${euro(r.total)}${r.poker ? ' · met poker' : ''}` : 'Poker: wie betaalt wie', 80, 360);
     let y = 470;
@@ -2309,7 +2309,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 
   function settleText() {
     const r = settleAll(ui.payer, billValue());
-    const lines = [`Kaartavond: afrekening (${owedAll().n} rondjes${r.poker ? ' + poker' : ''})`, r.total ? `${S.players[ui.payer]} betaalde ${euro(r.total)}` : 'Poker'];
+    const lines = [`Spelletjes: afrekening (${owedAll().n} rondjes${r.poker ? ' + poker' : ''})`, r.total ? `${S.players[ui.payer]} betaalde ${euro(r.total)}` : 'Poker'];
     if (r.diff) lines.push(`Rondjes ${euro(r.rounds)}, verschil ${signedEuro(r.diff)} gedeeld door ${S.players.length}`);
     lines.push('');
     r.transfers.forEach((t) => lines.push(`${S.players[t.from]} → ${S.players[t.to]}: ${euro(t.amount)}`));
@@ -2912,7 +2912,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 <script>
 // Installeerbare app: offline werken en vanzelf de nieuwste versie laden.
 (() => {
-  const APP_VERSION = '20261125-121324';
+  const APP_VERSION = '20261125-121331';
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
