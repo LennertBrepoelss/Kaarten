@@ -493,6 +493,45 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 .tile.cur { outline: 2px solid rgba(255,255,255,.75); outline-offset: 3px; }
 .g-troef { --tg: linear-gradient(150deg, #c39bff, #7b4fe0 70%, #5a35b8); --tglow: #7b4fe0; }
 .g-wiez { --tg: linear-gradient(150deg, #7fe6ff, #1fa8e0 70%, #1279b5); --tglow: #1fa8e0; }
+.g-darts { --tg: linear-gradient(150deg, #8af7e0, #22b8a8 65%, #127a8a); --tglow: #22b8a8; }
+.drow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--hair); }
+.drow:last-child { border-bottom: 0; }
+.drow .who { font: 600 20px/1.1 var(--f-serif); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dim); }
+.drow .who::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--pc); margin-right: 10px; vertical-align: 3px; }
+.drow.cur .who { color: var(--ivory); }
+.drow small.dl { font: 700 9px/1 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--gold); margin-left: 8px; vertical-align: 4px; }
+.dnum { font: 600 32px/1 var(--f-serif); font-variant-numeric: lining-nums tabular-nums; color: var(--dim); }
+.drow.cur .dnum { color: var(--ivory); font-size: 44px; text-shadow: 0 0 24px color-mix(in srgb, var(--pc) 50%, transparent); }
+.dturn { gap: 12px; }
+.dtyped { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.dtyped .input { font: 600 20px var(--f-serif); }
+.dslots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.dslot { border: 1px dashed var(--hair-2); border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; gap: 3px; min-height: 64px; }
+.dslot.on { border-style: solid; border-color: color-mix(in srgb, var(--gold) 50%, transparent); background: var(--gold-soft); }
+.dslot b { font: 600 22px/1 var(--f-serif); }
+.dslot small { color: var(--dim); font-size: 12px; }
+.dprev { margin: 0; font: 600 14px var(--f-ui); color: var(--gold); }
+.seg3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.seg3 .opt { min-height: 48px; align-items: center; padding: 8px; }
+.seg3 .opt .big { font-size: 17px; }
+.dpad { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.dpad.cr { grid-template-columns: repeat(4, 1fr); }
+.dk { height: 48px; border-radius: 12px; border: 1px solid var(--hair-2); background: var(--surface-2); font: 700 18px/1 var(--f-ui); color: var(--ivory); touch-action: manipulation; min-width: 0; padding: 0; }
+.dk:active { transform: scale(.94); background: var(--gold-soft); }
+.dk.bull { color: var(--danger); grid-column: span 2; }
+.dk.miss { color: var(--dim); grid-column: span 3; }
+.dpad.cr .dk { height: 56px; font-size: 22px; }
+.dpad.cr .dk.bull { grid-column: span 1; }
+.dpad.cr .dk.miss { grid-column: span 1; }
+.cr-wrap { overflow-x: auto; }
+.cr { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.cr th, .cr td { text-align: center; padding: 7px 4px; border-top: 1px solid var(--hair); }
+.cr thead th { border-top: 0; font: 600 14px var(--f-serif); color: var(--dim); white-space: nowrap; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+.cr thead th.cur { color: var(--pc); }
+.cr tbody th { font: 700 13px var(--f-ui); color: var(--gold); text-align: left; }
+.cr td { font: 700 20px/1 var(--f-ui); color: var(--ivory); }
+.cr td.closed { color: var(--p2); }
+.cr .cr-pts td { font: 600 22px var(--f-serif); color: var(--ivory); }
 .g-lucky { --tg: linear-gradient(150deg, #ff9ac8, #c34cff 60%, #6a3cff); --tglow: #c34cff; }
 .grps { display: grid; gap: 10px; }
 .grp { display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: left; border: 1px solid var(--hair); background: var(--surface); border-radius: 16px; padding: 16px; }
@@ -908,6 +947,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (!s.pj) s.pj = freshPj();
     if (!s.np) s.np = freshNp();
     if (!s.lk) s.lk = freshLk();
+    if (!s.dt) s.dt = freshDt();
+    if (!Array.isArray(s.dt.rondjes)) s.dt.rondjes = [];
     if (!Array.isArray(s.lk.rondjes)) s.lk.rondjes = [];
     if (!Array.isArray(s.np.rondjes)) s.np.rondjes = [];
     if (!Array.isArray(s.pj.rondjes)) s.pj.rondjes = [];
@@ -965,6 +1006,49 @@ if (typeof module !== 'undefined') module.exports = Logic;
     return f >= 0 && f <= tr ? { who: last, v: f } : null;
   };
 
+  // ---------- Darts ----------
+  // 501/301/101: per beurt (3 pijlen) gaat de score eraf; wie eerst precies op 0 komt, wint. Te veel = kapot (score blijft).
+  // Met "dubbel uit" moet de laatste pijl een dubbel zijn (bull 50 telt als dubbel).
+  // Cricket: 20 t.e.m. 15 en de bull. Raak elk 3 keer om het dicht te gooien. Daarna levert elke extra treffer punten op,
+  // zolang een tegenstander dat nummer nog niet dicht heeft. Wie alles dicht heeft en minstens evenveel punten heeft, wint.
+  const CR = [20, 19, 18, 17, 16, 15, 25];
+  const DT_MODES = [['501', '501'], ['301', '301'], ['101', '101'], ['cricket', 'Cricket']];
+  function freshDt(prev) { return { pct: prev && prev.pct ? prev.pct : null, mode: prev && prev.mode ? prev.mode : '501', dout: prev ? !!prev.dout : false, rondjes: [] }; }
+  const dCur = (r) => (r.s0 + r.turns.length) % S.players.length;
+  const dLabel = (d) => (d.n === 0 ? 'Mis' : d.n === 25 ? (d.m === 2 ? 'Bull' : '25') : `${['', '', 'D', 'T'][d.m]}${d.n}`);
+  function xRem(r) {
+    const rem = S.players.map(() => +r.mode);
+    r.turns.forEach((t) => { if (!t.bust) rem[t.p] -= t.total; });
+    return rem;
+  }
+  // Pijlen van een beurt nagaan: hoeveel eraf, kapot of uitgegooid
+  function xEval(r, p, darts) {
+    let rem = xRem(r)[p], total = 0;
+    for (const d of darts) {
+      const v = d.n * d.m; rem -= v; total += v;
+      if (rem < 0 || (r.dout && rem === 1)) return { total: 0, bust: true };
+      if (rem === 0) return r.dout && d.m !== 2 ? { total: 0, bust: true } : { total, finished: true };
+    }
+    return { total };
+  }
+  function crState(r, extra) {
+    const n = S.players.length, marks = S.players.map(() => CR.map(() => 0)), pts = Array(n).fill(0);
+    const hit = (p, d) => {
+      const k = CR.indexOf(d.n); if (k < 0) return;
+      const add = Math.min(d.m, 3 - marks[p][k]); marks[p][k] += add;
+      const more = d.m - add;
+      if (more > 0 && marks.some((m, q) => q !== p && m[k] < 3)) pts[p] += more * d.n;
+    };
+    r.turns.forEach((t) => (t.darts || []).forEach((d) => hit(t.p, d)));
+    if (extra) extra.darts.forEach((d) => hit(extra.p, d));
+    const best = Math.max(...pts);
+    const winner = marks.findIndex((m, p) => m.every((x) => x >= 3) && pts[p] >= best);
+    return { marks, pts, winner };
+  }
+  const dTot = (r) => (r.mode === 'cricket' ? crState(r).pts : xRem(r));
+  const dRank = (r) => { if (r.mode !== 'cricket') return xRem(r).map((v) => -v); const st = crState(r); return st.pts.map((v, p) => v * 100 + st.marks[p].reduce((a, b) => a + b, 0)); };
+  const dDone = (r) => (r.mode === 'cricket' ? crState(r).winner >= 0 : xRem(r).some((v) => v === 0));
+
   // Spellen die afrekenen met percentages per plaats
   const PG = {
     wiezen: { title: 'Wiezen', st: () => S.wz, tot: wTot },
@@ -972,16 +1056,18 @@ if (typeof module !== 'undefined') module.exports = Logic;
     pietjes: { title: 'Pietjesbak', st: () => S.pj, tot: pTot, rank: (r) => pTot(r).map((v) => -v) },
     nappen: { title: 'Nappen', st: () => S.np, tot: nTot, rank: (r) => nTot(r).map((v) => -v) },
     lucky: { title: 'Lucky 7', st: () => S.lk, tot: lTot },
+    darts: { title: 'Darts', st: () => S.dt, tot: dTot, rank: dRank },
   };
-  const PG_KEYS = ['wiezen', 'harten', 'pietjes', 'nappen', 'lucky'];
+  const PG_KEYS = ['wiezen', 'harten', 'pietjes', 'nappen', 'lucky', 'darts'];
   const rankOf = (g, r) => (PG[g].rank ? PG[g].rank(r) : PG[g].tot(r));
-  const openAny = () => current() || openOf(S.wz) || openOf(S.hj) || openOf(S.pj) || openOf(S.np) || openOf(S.lk);
+  const openAny = () => current() || openOf(S.wz) || openOf(S.hj) || openOf(S.pj) || openOf(S.np) || openOf(S.lk) || openOf(S.dt);
   const pg = () => PG[S.game] || PG.wiezen;
   const lastOf = (st) => st.rondjes[st.rondjes.length - 1] || null;
   const openOf = (st) => { const r = lastOf(st); return r && !r.end ? r : null; };
   const gCur = () => openOf(pg().st());
   const priceTxt = (c) => (c ? euro(c) : 'zonder geld');
-  const ptsLabel = (g, v) => (g === 'harten' ? `${v < 0 ? '−' + Math.abs(v) : v} over` : g === 'pietjes' ? `${v} streepje${v === 1 ? '' : 's'}` : g === 'nappen' || g === 'lucky' ? `${v} ptn` : `${sign(v)} ptn`);
+  const ptsLabel = (g, v, r) => g === 'darts' ? (r && r.mode === 'cricket' ? `${v} ptn` : `${v} over`) : ptsLabel0(g, v);
+  const ptsLabel0 = (g, v) => (g === 'harten' ? `${v < 0 ? '−' + Math.abs(v) : v} over` : g === 'pietjes' ? `${v} streepje${v === 1 ? '' : 's'}` : g === 'nappen' || g === 'lucky' ? `${v} ptn` : `${sign(v)} ptn`);
   // Wat elke speler betaalt voor de uitgespeelde rondjes van één spel (in cent)
   function gameOwed(g) {
     const owed = Array(S.players.length).fill(0); let total = 0, n = 0;
@@ -1032,7 +1118,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     return out;
   }
 
-  function fresh(players) { return { v: 1, players: players || [...DEFAULT_PLAYERS], rounds: [], lastPrice: null, updatedAt: 0, game: null, ready: false, wz: freshWz(), hj: freshHj(), pj: freshPj(), np: freshNp(), lk: freshLk() }; }
+  function fresh(players) { return { v: 1, players: players || [...DEFAULT_PLAYERS], rounds: [], lastPrice: null, updatedAt: 0, game: null, ready: false, wz: freshWz(), hj: freshHj(), pj: freshPj(), np: freshNp(), lk: freshLk(), dt: freshDt() }; }
   function loadLocal() {
     try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 1 && Array.isArray(s.rounds)) return normalize(s); } catch (e) {}
     return null;
@@ -1105,6 +1191,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (ui.result === 'pietjes' && lastOf(S.pj)) return 'pgame';
     if (openOf(S.np) || (ui.result === 'nappen' && lastOf(S.np))) return 'ngame';
     if (openOf(S.lk) || (ui.result === 'lucky' && lastOf(S.lk))) return 'lgame';
+    if (openOf(S.dt) || (ui.result === 'darts' && lastOf(S.dt))) return 'dgame';
     if (ui.result === 'wiezen' && lastOf(S.wz)) return 'wgame';
     if (ui.result === 'harten' && lastOf(S.hj)) return 'hgame';
     return 'hub';
@@ -1148,7 +1235,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       starts.push(done[0].start || done[0].id);
     }
     // Wiezen en hartenjagen: per uitgespeeld rondje telt de 1ste als gewonnen, wie het meest betaalt als verloren.
-    [['w', 'wiezen'], ['h', 'harten'], ['p', 'pietjes'], ['n', 'nappen'], ['l', 'lucky']].forEach(([key, g]) => {
+    [['w', 'wiezen'], ['h', 'harten'], ['p', 'pietjes'], ['n', 'nappen'], ['l', 'lucky'], ['d', 'darts']].forEach(([key, g]) => {
       const rs = PG[g].st().rondjes.filter((r) => r.end && r.price != null);
       if (!rs.length) return;
       const won = S.players.map(() => 0), lost = S.players.map(() => 0);
@@ -1160,7 +1247,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       rec[key] = { n: rs.length, r: rs.length, won, lost, paid: gameOwed(g).owed.map((c) => Math.round(c)) };
       starts.push(rs[0].start);
     });
-    if (!rec.t && !rec.w && !rec.h && !rec.p && !rec.n && !rec.l) return null;
+    if (!rec.t && !rec.w && !rec.h && !rec.p && !rec.n && !rec.l && !rec.d) return null;
     rec.paid = settleAll(0, Logic.parsePrice(ui.bill)).per.map((c) => Math.round(c));
     if (starts.filter(Boolean).length) rec.date = Math.min(...starts.filter(Boolean));
     return rec;
@@ -1170,7 +1257,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const parts = HKEYS.map((k) => h[k] && h[k].paid).filter(Boolean);
     return parts.length ? h.players.map((_, i) => parts.reduce((s, p) => s + p[i], 0)) : null;
   }
-  const HKEYS = ['t', 'w', 'h', 'p', 'n', 'l'];
+  const HKEYS = ['t', 'w', 'h', 'p', 'n', 'l', 'd'];
   const nightLost = (h) => h.players.map((_, i) => HKEYS.reduce((a, k) => a + (h[k] ? h[k].lost[i] || 0 : 0), 0));
   const nightWon = (h) => h.players.map((_, i) => HKEYS.reduce((a, k) => a + (h[k] ? h[k].won[i] || 0 : 0), 0));
   // Grote verliezer: wie het meest betaalde; zonder bedragen wie het meest verloor.
@@ -1239,7 +1326,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   }
 
   // ---------- Geschiedenis: spel → spelers → overzicht ----------
-  const HK = { troeven: 't', wiezen: 'w', harten: 'h', pietjes: 'p', nappen: 'n', lucky: 'l' };
+  const HK = { troeven: 't', wiezen: 'w', harten: 'h', pietjes: 'p', nappen: 'n', lucky: 'l', darts: 'd' };
   // Namen vergelijken zonder hoofdletters of spaties: "inez" en "Inez " zijn dezelfde speler.
   const nameKey = (p) => String(p).trim().toLowerCase();
   const groupKey = (players) => players.map(nameKey).sort().join('|');
@@ -1375,6 +1462,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     troeven: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M48 14v70" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity=".55"/>${[0, 1, 2, 3, 4, 5].map((k) => `<rect x="${24 + (k % 2) * 4}" y="${70 - k * 10}" width="${44 - (k % 2) * 8 - k * 2}" height="4.5" rx="2.2" fill="currentColor" opacity="${k > 3 ? .35 : 1}"/>`).join('')}<g transform="translate(58 8) rotate(12)"><rect width="26" height="36" rx="4" fill="#fff"/><text x="13" y="24" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-weight="700" font-size="18" fill="#2b1d55">B</text></g></svg>`,
     wiezen: `<svg viewBox="0 0 96 96" aria-hidden="true">${[-20, 0, 20].map((a, k) => `<g transform="rotate(${a} 48 84)"><rect x="32" y="22" width="32" height="46" rx="5" fill="#fff" opacity="${.55 + k * .22}"/></g>`).join('')}<g transform="rotate(20 48 84)"><path d="M54 32c-5 6-11 9-11 15a5 5 0 0 0 9 3l-2 6h8l-2-6a5 5 0 0 0 9-3c0-6-6-9-11-15z" fill="#07324a"/></g></svg>`,
     pietjes: `<svg viewBox="0 0 96 96" aria-hidden="true">${[[14, 40, -14], [40, 18, 8], [50, 50, 18]].map(([x, y, a], k) => `<g transform="rotate(${a} ${x + 16} ${y + 16})"><rect x="${x}" y="${y}" width="32" height="32" rx="7" fill="#fff" opacity="${.75 + k * .12}"/>${[[[16, 16]], [[9, 9], [23, 23]], [[9, 9], [16, 16], [23, 23]]][k].map(([cx, cy]) => `<circle cx="${x + cx}" cy="${y + cy}" r="3.4" fill="#5a3300"/>`).join('')}</g>`).join('')}</svg>`,
+    darts: `<svg viewBox="0 0 96 96" aria-hidden="true"><circle cx="44" cy="52" r="32" fill="#fff"/><circle cx="44" cy="52" r="22" fill="none" stroke="#0b3b4a" stroke-width="5"/><circle cx="44" cy="52" r="11" fill="#0b3b4a"/><circle cx="44" cy="52" r="4" fill="#fff"/><path d="M47 49 84 12" stroke="#fff" stroke-width="4" stroke-linecap="round"/><path d="M84 12l-11 1 4 6zM84 12l-1 11-6-4z" fill="#fff"/></svg>`,
     lucky: `<svg viewBox="0 0 96 96" aria-hidden="true"><text x="40" y="76" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-weight="700" font-size="74" fill="#fff">7</text>${[[72, 22, 9], [80, 48, 6], [62, 8, 5]].map(([cx, cy, r]) => `<path d="M${cx} ${cy - r}l${r * .3} ${r * .7} ${r * .7} ${r * .3}-${r * .7} ${r * .3}-${r * .3} ${r * .7}-${r * .3}-${r * .7}-${r * .7}-${r * .3} ${r * .7}-${r * .3}z" fill="#fff" opacity=".9"/>`).join('')}</svg>`,
     nappen: `<svg viewBox="0 0 96 96" aria-hidden="true"><circle cx="40" cy="50" r="27" fill="#fff"/><text x="40" y="60" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="28" fill="#1f4d10">20</text><circle cx="74" cy="26" r="13" fill="#fff" opacity=".9"/><path d="M74 19v14M67 26h14" stroke="#1f4d10" stroke-width="3.5" stroke-linecap="round"/><circle cx="76" cy="66" r="11" fill="#fff" opacity=".7"/><path d="M70 66h12" stroke="#1f4d10" stroke-width="3.5" stroke-linecap="round"/></svg>`,
     harten: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M48 80 20 52a16 16 0 0 1 28-20 16 16 0 0 1 28 20z" fill="#fff"/><path d="M14 28 70 62" stroke="#5a0f33" stroke-width="3.5" stroke-linecap="round"/><path d="M70 62l-9-1 5-7z" fill="#5a0f33"/><path d="M14 28l6 1-3 5z" fill="#5a0f33"/></svg>`,
@@ -1386,6 +1474,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     { k: 'pietjes', name: 'Pietjesbak', cls: 'g-pietjes', min: 2, max: 8 },
     { k: 'nappen', name: 'Nappen', cls: 'g-nappen', min: 2, max: 8 },
     { k: 'lucky', name: 'Lucky 7', cls: 'g-lucky', min: 2, max: 7 },
+    { k: 'darts', name: 'Darts', cls: 'g-darts', min: 2, max: 8 },
   ];
   function renderPick() {
     const n = S.players.length;
@@ -1412,6 +1501,10 @@ if (typeof module !== 'undefined') module.exports = Logic;
       <div id="pctSum">${pctSumHTML()}</div>`}
       ${wz ? `<section class="steps" style="gap:10px"><p class="label">Spelletjes per rondje</p>
         <div class="chips">${[1, 4, 8, 12, 16].map((v) => `<button class="chip ${ui.per === v ? 'on' : ''}" data-act="perSet" data-v="${v}">${v}</button>`).join('')}</div></section>` : ''}
+      ${g === 'darts' ? `<section class="steps" style="gap:10px"><p class="label">Welk spel?</p>
+        <div class="chips">${DT_MODES.map(([k, nm]) => `<button class="chip ${ui.dmode === k ? 'on' : ''}" data-act="dModeSet" data-v="${k}">${nm}</button>`).join('')}</div>
+        ${ui.dmode === 'cricket' ? '<p class="hint">20 t.e.m. 15 en de bull elk 3 keer raken. Extra treffers op een nummer dat de anderen nog open hebben, geven punten. Wie alles dicht heeft met de meeste punten, wint.</p>'
+          : `<div class="chips"><button class="chip ${ui.dout ? '' : 'on'}" data-act="dOutSet" data-v="0">Gewoon uitgooien</button><button class="chip ${ui.dout ? 'on' : ''}" data-act="dOutSet" data-v="1">Dubbel uit</button></div>`}</section>` : ''}
       ${g === 'pietjes' ? `<section class="steps" style="gap:10px"><p class="label">Streepjes bij de start</p>
         <div class="chips">${[5, 7, 9, 12].map((v) => `<button class="chip ${ui.boom === v ? 'on' : ''}" data-act="boomSet" data-v="${v}">${v}</button>`).join('')}</div></section>` : ''}
       <button class="btn primary xl" data-act="npctStart" id="pctSave" ${free || p.reduce((a, b) => a + b, 0) === 100 ? '' : 'disabled'}>Start rondje <span class="arr">→</span></button>
@@ -1435,7 +1528,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   function rondjeRows(g, r) {
     const tot = PG[g].tot(r);
     const { out, place, order, tied } = wPayPct(rankOf(g, r), r.pct);
-    return order.map((i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${P(i)}<span class="meta">${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]} · ${ptsLabel(g, tot[i])}</span></span>
+    return order.map((i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${P(i)}<span class="meta">${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]} · ${ptsLabel(g, tot[i], r)}</span></span>
       <span class="owe ${out[i] && r.price ? '' : 'zero'}">${r.price ? `${euro(r.price * out[i] / 100)}<small>${fmtPct(out[i])}</small>` : '–'}</span></div>`).join('');
   }
   // Wat iedereen deze avond al moet betalen, over alle spellen samen
@@ -1578,6 +1671,53 @@ if (typeof module !== 'undefined') module.exports = Logic;
       ${stand}
       ${bs.length ? `<section class="panel"><div class="panel-head"><h2>Gespeeld</h2><button class="btn soft sm" data-act="pUndo">Laatste ongedaan</button></div><div>${hist}</div></section>` : ''}
       ${c ? avondPanel() : ''}
+    </div>${dock()}`;
+  }
+
+  // ---------- Darts ----------
+  const MARK = ['', '/', '✕', 'ⓧ'];
+  function renderDGame() {
+    const D = S.dt, c = openOf(D), last = lastOf(D), nr = owedAll().n + (c ? 1 : 0), r = c || last;
+    const mode = r.mode === 'cricket' ? 'Cricket' : `${r.mode}${r.dout ? ' · dubbel uit' : ''}`;
+    const turnsHtml = (rr) => rr.turns.slice(-8).map((t, k) => `<div class="hrow"><span class="n">${rr.turns.length - Math.min(8, rr.turns.length) + k + 1}</span><span><b>${P(t.p)}</b> · ${t.darts ? t.darts.map(dLabel).join(', ') : 'ingetypt'}${t.bust ? ' · <span class="neg">kapot</span>' : ''}</span><span class="sc">${rr.mode === 'cricket' ? '' : t.bust ? '0' : '−' + t.total}</span></div>`).reverse().join('');
+    if (!c) {
+      return `<div class="wrap">
+        ${gameHeader('Darts')}
+        <section><p class="label">${mode} · ${priceTxt(last.price)}</p><h1>Rondje <em>gedaan</em></h1></section>
+        ${doneButtons()}
+        <section class="panel"><div class="panel-head"><h2>${last.price ? 'Wie betaalt' : 'Uitslag'}</h2><button class="link" data-act="dUndo">Laatste beurt ongedaan</button></div><div>${rondjeRows('darts', last)}</div></section>
+      </div>${dock()}`;
+    }
+    if (!ui.dt) ui.dt = { darts: [], mod: 1 };
+    const cur = dCur(c), T = ui.dt, cricket = c.mode === 'cricket';
+    let board, preview = '';
+    if (cricket) {
+      const st = crState(c, { p: cur, darts: T.darts });
+      board = `<div class="cr-wrap"><table class="cr"><thead><tr><th></th>${S.players.map((p, i) => `<th class="${i === cur ? 'cur' : ''}" style="--pc:var(--p${i})">${esc(p)}</th>`).join('')}</tr></thead><tbody>
+        ${CR.map((n, k) => `<tr><th>${n === 25 ? 'Bull' : n}</th>${S.players.map((_, i) => `<td class="${st.marks[i][k] >= 3 ? 'closed' : ''}">${MARK[st.marks[i][k]]}</td>`).join('')}</tr>`).join('')}
+        <tr class="cr-pts"><th>Ptn</th>${st.pts.map((v) => `<td>${v}</td>`).join('')}</tr></tbody></table></div>`;
+    } else {
+      const rem = xRem(c), ev = xEval(c, cur, T.darts);
+      board = S.players.map((p, i) => `<div class="drow ${i === cur ? 'cur' : ''}" style="--pc:var(--p${i})"><span class="who">${esc(p)}${i === cur ? '<small class="dl">gooit</small>' : ''}</span><span class="dnum">${i === cur && T.darts.length ? (ev.bust ? rem[i] : rem[i] - ev.total) : rem[i]}</span></div>`).join('');
+      preview = T.darts.length ? `<p class="dprev ${ev.bust ? 'neg' : ''}">${ev.bust ? 'Kapot: de score blijft staan' : `−${ev.total} · nog ${rem[cur] - ev.total}`}</p>` : '';
+    }
+    const slots = [0, 1, 2].map((k) => { const d = T.darts[k]; return `<div class="dslot ${d ? 'on' : ''}"><span class="label">Pijl ${k + 1}</span><b>${d ? dLabel(d) : '—'}</b>${d && !cricket ? `<small>${d.n * d.m}</small>` : ''}</div>`; }).join('');
+    const nums = cricket ? [20, 19, 18, 17, 16, 15] : [...Array(20).keys()].map((k) => k + 1);
+    return `<div class="wrap">
+      ${gameHeader('Darts')}
+      <p class="label">Rondje ${nr} · ${priceTxt(c.price)} · ${mode}</p>
+      <section class="panel" style="gap:${cricket ? 12 : 0}px;${cricket ? '' : 'padding-block:6px'}">${board}</section>
+      <section class="panel dturn">
+        <div class="panel-head"><h2>${P(cur)} gooit</h2>${T.darts.length ? '<button class="link" data-act="dDel">Pijl wissen</button>' : ''}</div>
+        ${cricket ? '' : `<form id="dTypedForm" class="dtyped" autocomplete="off"><input class="input" id="dTyped" inputmode="numeric" placeholder="Totaal, bv. 78" aria-label="Totaal van de beurt" maxlength="4"><button class="btn soft" type="submit">Aftrekken</button></form><p class="err" id="dErr" style="min-height:0"></p>`}
+        <div class="dslots">${slots}</div>
+        ${preview}
+        <div class="seg3">${[[1, 'Enkel'], [2, 'Dubbel'], [3, 'Triple']].map(([m, nm]) => `<button class="opt ${T.mod === m ? 'on' : ''}" data-act="dMod" data-v="${m}"><span class="big">${nm}</span></button>`).join('')}</div>
+        <div class="dpad ${cricket ? 'cr' : ''}">${nums.map((n) => `<button class="dk" data-act="dHit" data-v="${n}">${n}</button>`).join('')}
+          <button class="dk bull" data-act="dHit" data-v="25">Bull</button><button class="dk miss" data-act="dHit" data-v="0">Mis</button></div>
+        <button class="btn primary block" data-act="dCommit" ${T.darts.length ? '' : 'disabled'}>Beurt klaar <span class="arr">→</span></button>
+      </section>
+      ${c.turns.length ? `<section class="panel"><div class="panel-head"><h2>Gespeeld</h2><button class="btn soft sm" data-act="dUndo">Laatste beurt ongedaan</button></div><div>${turnsHtml(c)}</div></section>` : ''}
     </div>${dock()}`;
   }
 
@@ -2060,7 +2200,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   function render() {
     const v = view();
     ui.view = ['draw', 'end', 'wround', 'hround', 'pround', 'start', 'nprice', 'npick', 'npct', 'hist'].includes(v) ? v : null;
-    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound, ngame: renderNGame, lgame: renderLGame, hist: renderHist };
+    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound, ngame: renderNGame, lgame: renderLGame, hist: renderHist, dgame: renderDGame };
     $app.innerHTML = screens[v]();
     renderModal();
     updateCalc();
@@ -2192,6 +2332,16 @@ if (typeof module !== 'undefined') module.exports = Logic;
     toastTimer = setTimeout(hideToast, 6000);
   }
 
+  // Na elke beurt bij darts: bewaren, en kijken of het rondje gedaan is
+  function dAfter(c, bust) {
+    S.game = 'darts';
+    const done = dDone(c);
+    if (done) { c.end = Date.now(); ui.result = 'darts'; }
+    save(); render();
+    if (done) { window.scrollTo({ top: 0, behavior: 'smooth' }); showToast('<b>Rondje gedaan</b>'); }
+    else if (bust) showToast('<b>Kapot</b> · de score blijft staan');
+  }
+
   const actions = {
     draw: startDraw,
     redraw: startDraw,
@@ -2214,7 +2364,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     playing(b) { ui.pick.playing = +b.dataset.v; render(); const s = document.getElementById('step3'); if (s) s.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); },
     result(b) { hideToast(); addHand(b.dataset.v); },
     statScope(b) { ui.statScope = b.dataset.v; render(); },
-    toastUndo() { hideToast(); if (S.game === 'wiezen') actions.wUndo(); else if (S.game === 'harten') actions.hUndo(); else if (S.game === 'pietjes') actions.pUndo(); else if (S.game === 'nappen') actions.nUndo(); else if (S.game === 'lucky') {} else actions.undo(); },
+    toastUndo() { hideToast(); if (S.game === 'wiezen') actions.wUndo(); else if (S.game === 'harten') actions.hUndo(); else if (S.game === 'pietjes') actions.pUndo(); else if (S.game === 'nappen') actions.nUndo(); else if (S.game === 'lucky') {} else if (S.game === 'darts') actions.dUndo(); else actions.undo(); },
     // Hartenjagen
     hNew() { ui.hr = { p: [0, 0, 0, 0], q: null, moon: null }; ui.view = 'hround'; render(); window.scrollTo(0, 0); keepAwake(); },
     hCancel() { ui.hr = null; ui.view = null; render(); window.scrollTo(0, 0); },
@@ -2258,6 +2408,33 @@ if (typeof module !== 'undefined') module.exports = Logic;
       ui.pr = null; ui.view = null; save(); render(); window.scrollTo({ top: 0, behavior: 'smooth' });
       showToast(done ? `<b>Rondje gedaan</b> · ${P(pTot(c).findIndex((v) => v <= 0))} is alles kwijt` : `<b>Beurt ${c.beurten.length}</b> bewaard`);
     },
+    // Darts
+    dModeSet(b) { ui.dmode = b.dataset.v; render(); },
+    dOutSet(b) { ui.dout = b.dataset.v === '1'; render(); },
+    dMod(b) { if (!ui.dt) ui.dt = { darts: [], mod: 1 }; ui.dt.mod = +b.dataset.v; render(); },
+    dDel() { if (ui.dt && ui.dt.darts.length) { ui.dt.darts.pop(); render(); } },
+    dHit(b) {
+      const c = openOf(S.dt); if (!c) return;
+      if (!ui.dt) ui.dt = { darts: [], mod: 1 };
+      const T = ui.dt, n = +b.dataset.v;
+      const m = n === 0 ? 0 : n === 25 ? Math.min(T.mod, 2) : T.mod;
+      T.darts.push({ n, m }); T.mod = 1;
+      const p = dCur(c);
+      let stop = T.darts.length >= 3;
+      if (c.mode === 'cricket') { if (crState(c, { p, darts: T.darts }).winner >= 0) stop = true; }
+      else { const ev = xEval(c, p, T.darts); if (ev.bust || ev.finished) stop = true; }
+      if (navigator.vibrate) try { navigator.vibrate(8); } catch (e) {}
+      if (stop) actions.dCommit(); else render();
+    },
+    dCommit() {
+      const c = openOf(S.dt), T = ui.dt; if (!c || !T || !T.darts.length) return;
+      const p = dCur(c);
+      const ev = c.mode === 'cricket' ? { total: 0 } : xEval(c, p, T.darts);
+      c.turns.push({ p, darts: T.darts.slice(), total: ev.total || 0, bust: !!ev.bust, at: Date.now() });
+      ui.dt = { darts: [], mod: 1 };
+      dAfter(c, ev.bust);
+    },
+    dUndo() { const r = lastOf(S.dt); if (!r || !r.turns.length) return; r.turns.pop(); r.end = null; ui.dt = { darts: [], mod: 1 }; if (ui.result === 'darts') ui.result = null; save(); render(); },
     // Lucky 7
     lBid(b) { const c = openOf(S.lk); if (!c) return; c.bids[c.ri][+b.dataset.i] = +b.dataset.v; S.game = 'lucky'; save(); render(); },
     lToResult() { const c = openOf(S.lk); if (!c) return; c.phase = 'result'; save(); render(); window.scrollTo({ top: 0, behavior: 'smooth' }); },
@@ -2342,7 +2519,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       const g = b.dataset.v; ui.flow.game = g;
       if (g === 'troeven') { startDraw(); return; }
       const n = S.players.length, stored = PG[g].st().pct;
-      ui.pct = (stored && stored.length === n ? stored : presetsFor(n)[0].v).slice(); ui.per = S.wz.per || 1; ui.boom = S.pj.boom || 9;
+      ui.pct = (stored && stored.length === n ? stored : presetsFor(n)[0].v).slice(); ui.per = S.wz.per || 1; ui.boom = S.pj.boom || 9; ui.dmode = S.dt.mode || '501'; ui.dout = !!S.dt.dout;
       ui.view = 'npct'; render(); window.scrollTo(0, 0);
     },
     npctStart() {
@@ -2353,6 +2530,11 @@ if (typeof module !== 'undefined') module.exports = Logic;
       if (g === 'wiezen') { S.wz.per = ui.per || 1; r.per = S.wz.per; r.games = []; }
       else if (g === 'pietjes') { S.pj.boom = ui.boom || 9; r.boom = S.pj.boom; r.beurten = []; }
       else if (g === 'nappen') { r.base = NP_START; r.log = []; }
+      else if (g === 'darts') {
+        S.dt.mode = ui.dmode || '501'; S.dt.dout = !!ui.dout;
+        r.mode = S.dt.mode; r.dout = r.mode !== 'cricket' && S.dt.dout; r.turns = []; r.s0 = S.dt.rondjes.length % S.players.length;
+        ui.dt = { darts: [], mod: 1 };
+      }
       else if (g === 'lucky') {
         const n = S.players.length;
         r.dealer0 = S.lk.rondjes.length % n; r.ri = 0; r.phase = 'bid';
@@ -2425,7 +2607,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       }
     },
     askReset() { ui.modal = 'askReset'; renderModal(); },
-    reset() { const archive = [...(S.archive || []), ...finished().map((r) => ({ teams: r.teams, winner: r.winner, date: r.end || r.start }))]; const rec = nightRecord(); const history = [...(S.history || []), ...(rec ? [rec] : [])]; const wz = freshWz(S.wz), hj = freshHj(S.hj), pj = freshPj(S.pj), np = freshNp(S.np), lk = freshLk(S.lk); S = fresh(S.players); S.archive = archive; S.wz = wz; S.hj = hj; S.pj = pj; S.np = np; S.lk = lk; S.history = history; ui.hOpen = null; ui.hDel = null; ui.modal = null; ui.view = 'start'; ui.payer = null; ui.bill = ''; ui.hr = null; ui.wr = null; save(); render(); window.scrollTo(0, 0); },
+    reset() { const archive = [...(S.archive || []), ...finished().map((r) => ({ teams: r.teams, winner: r.winner, date: r.end || r.start }))]; const rec = nightRecord(); const history = [...(S.history || []), ...(rec ? [rec] : [])]; const wz = freshWz(S.wz), hj = freshHj(S.hj), pj = freshPj(S.pj), np = freshNp(S.np), lk = freshLk(S.lk), dt = freshDt(S.dt); S = fresh(S.players); S.archive = archive; S.wz = wz; S.hj = hj; S.pj = pj; S.np = np; S.lk = lk; S.dt = dt; S.history = history; ui.hOpen = null; ui.hDel = null; ui.modal = null; ui.view = 'start'; ui.payer = null; ui.bill = ''; ui.hr = null; ui.wr = null; save(); render(); window.scrollTo(0, 0); },
   };
 
   document.addEventListener('click', (e) => {
@@ -2477,6 +2659,16 @@ if (typeof module !== 'undefined') module.exports = Logic;
       const v = calcValue();
       if (!v) { document.getElementById('priceErr').textContent = 'Geef een bedrag in, bijvoorbeeld 24,50.'; return; }
       current().price = v; S.lastPrice = v; ui.calc = { expr: '', target: null }; save(); render(); keepAwake();
+    } else if (f.id === 'dTypedForm') {
+      const c = openOf(S.dt), err = document.getElementById('dErr');
+      const v = Math.abs(parseInt(String(document.getElementById('dTyped').value).replace(/[^\d-]/g, ''), 10));
+      if (!c || isNaN(v)) { err.textContent = 'Geef een getal in, bijvoorbeeld 78.'; return; }
+      if (v > 180) { err.textContent = 'Met 3 pijlen kan je hoogstens 180 gooien.'; return; }
+      const p = dCur(c), rem = xRem(c)[p] - v;
+      const bust = rem < 0 || (c.dout && rem === 1);
+      c.turns.push({ p, darts: null, total: bust ? 0 : v, bust, at: Date.now() });
+      ui.dt = { darts: [], mod: 1 };
+      dAfter(c, bust);
     } else if (f.id === 'nPriceForm') {
       const v = calcValue();
       if (!v) { document.getElementById('priceErr').textContent = 'Geef een bedrag in, bijvoorbeeld 24,50.'; return; }
@@ -2513,7 +2705,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 <script>
 // Installeerbare app: offline werken en vanzelf de nieuwste versie laden.
 (() => {
-  const APP_VERSION = '20261125-113543';
+  const APP_VERSION = '20261125-114449';
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
