@@ -550,6 +550,28 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 .pkin span { color: var(--dim); font: 500 18px var(--f-serif); }
 .pkin input { width: 96px; border: 0; background: transparent; outline: none; font: 600 24px/1.2 var(--f-serif); text-align: right; font-variant-numeric: lining-nums tabular-nums; padding: 6px 0; }
 .pkin:focus-within { border-color: var(--gold); }
+/* Grote klok: over het hele scherm, om midden op tafel te leggen */
+.bigclock { position: fixed; inset: 0; z-index: 55; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2.4vmin; text-align: center;
+  padding: max(20px, env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) max(20px, env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));
+  background: radial-gradient(120% 80% at 20% 0%, rgba(94,240,192,.16), transparent 60%), radial-gradient(100% 80% at 100% 100%, rgba(182,140,255,.16), transparent 60%), var(--bg); }
+.bigclock .lvl { font: 600 clamp(12px, 2.6vmin, 22px)/1 var(--f-ui); letter-spacing: .18em; text-transform: uppercase; color: var(--dim); }
+.bigclock .blinds { font: 600 clamp(64px, 23vmin, 280px)/.95 var(--f-serif); font-variant-numeric: lining-nums tabular-nums; letter-spacing: -.02em; white-space: nowrap; }
+.bigclock .blinds small { font-size: .5em; color: var(--dim); margin: 0 .12em; }
+.bigclock .time { font: 600 clamp(52px, 19vmin, 240px)/1 var(--f-ui); font-variant-numeric: tabular-nums; color: var(--gold); text-shadow: 0 0 40px rgba(94,240,192,.25); }
+.bigclock .time.soon { color: var(--danger); text-shadow: 0 0 40px rgba(255,107,138,.35); animation: blink 1s steps(2) infinite; }
+.bigclock .time.paused { color: var(--dim); text-shadow: none; }
+.bigclock .bar { width: min(86vw, 1000px); height: clamp(6px, 1.2vmin, 12px); border-radius: 99px; background: rgba(255,255,255,.08); overflow: hidden; }
+.bigclock .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--t1), var(--t2)); border-radius: 99px; transition: width 1s linear; }
+.bigclock .next { font: 500 clamp(14px, 3.2vmin, 30px)/1.2 var(--f-ui); color: var(--dim); }
+.bigclock .next b { color: var(--ivory); font-weight: 600; }
+.bigclock .stats { display: flex; gap: clamp(18px, 6vmin, 70px); font: 500 clamp(12px, 2.4vmin, 20px)/1.2 var(--f-ui); color: var(--dim); }
+.bigclock .stats b { display: block; font: 600 clamp(20px, 5vmin, 46px)/1.1 var(--f-serif); color: var(--ivory); margin-top: 2px; }
+.bigclock .ctl { display: flex; gap: 10px; margin-top: 1vmin; }
+.bigclock .ctl .btn { min-width: 120px; }
+.bigclock .x { position: absolute; top: max(14px, env(safe-area-inset-top, 0px)); right: max(14px, env(safe-area-inset-right, 0px)); }
+.bigclock .time.last { font-size: clamp(30px, 9vmin, 110px); }
+@media (orientation: portrait) { .bigclock { gap: 2.6vh; } .bigclock .time { font-size: min(31vw, 17vh); } .bigclock .time.last { font-size: min(11vw, 7vh); } .bigclock .blinds { font-size: min(23vw, 14vh); } }
+@media (orientation: landscape) and (max-height: 520px) { .bigclock { gap: 1.6vmin; } .bigclock .blinds { font-size: 26vmin; } .bigclock .time { font-size: 21vmin; } .bigclock .time.last { font-size: 9vmin; } .bigclock .stats { display: none; } }
 /* Pokertoernooi */
 .pkclock { text-align: center; gap: 10px; }
 .pkclock .lvl { font: 600 12px/1 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
@@ -1192,7 +1214,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   // ---------- Poker (kassa) ----------
   // Iedereen koopt in met een vast bedrag (buy-in), en kan bijkopen. Op het einde vul je in met hoeveel elke speler stopt
   // (buy-out). Winst of verlies = buy-out − buy-in. Klopt de pot niet, dan wordt het verschil gelijk over de spelers verdeeld.
-  function freshPk(prev) { return { unit: prev && prev.unit ? prev.unit : 1000, mode: prev && prev.mode ? prev.mode : 'cash', pay: prev && prev.pay ? prev.pay : [75, 25, 0], lvlMin: prev && prev.lvlMin ? prev.lvlMin : 5, on: false, step: 'setup', who: [], buyin: [], buyout: [] }; }
+  function freshPk(prev) { return { unit: prev && prev.unit ? prev.unit : 1000, mode: prev && prev.mode ? prev.mode : 'cash', lvlMin: prev && prev.lvlMin ? prev.lvlMin : 5, on: false, step: 'setup', who: [], buyin: [], buyout: [] }; }
   function splitEqually(total, n) {
     if (n <= 0) return [];
     const sg = total < 0 ? -1 : 1, base = Math.floor(Math.abs(total) / n) * sg, arr = Array(n).fill(base);
@@ -1202,7 +1224,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   }
   // ---------- Pokertoernooi ----------
   // Iedereen start met 3.000 fiches. Om de zoveel minuten gaan de blinds omhoog. Wie eruit ligt kan terug inkopen.
-  // De pot (alle inkopen samen) wordt verdeeld volgens de percentages per plaats; eigen inkopen gaan er automatisch af.
+  // De pot wordt verdeeld volgens de bedragen per plaats; eigen inkopen gaan er automatisch af.
   const BL = [[25, 50], [50, 100], [150, 300], [250, 500], [500, 1000]];
   const STACK = 3000;
   const nf = (n) => Math.round(n).toLocaleString('nl-BE');
@@ -1217,7 +1239,6 @@ if (typeof module !== 'undefined') module.exports = Logic;
   const tPot = (K) => K.who.reduce((t, i) => t + (K.buyin[i] || 0), 0);
   const tReb = (K, i) => Math.max(0, Math.round((K.buyin[i] || 0) / K.unit) - 1);
   function tPrizes(K) {
-    // De gekozen bedragen gelden voor de pot bij de start; komt er geld bij (terug inkopen), dan groeit alles in dezelfde verhouding
     // De gekozen bedragen blijven; extra geld (terug inkopen, speler erbij) gaat half naar de 1ste en half naar de 2de. De 3de blijft gelijk.
     const pot = tPot(K), base = K.pay.reduce((x, y) => x + y, 0), extra = pot - base, half = Math.floor(extra / 2);
     const pr = [(K.pay[0] || 0) + extra - half, (K.pay[1] || 0) + half, K.pay[2] || 0];
@@ -1259,7 +1280,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (t.lv !== K.lastLvl) { const up = t.lv > K.lastLvl; K.lastLvl = t.lv; save(); if (up) blindAlarm(t.lv); if (ui.view === 'poker' && !ui.modal) render(); return; }
     const el = document.getElementById('pkTime'); if (!el) return;
     el.textContent = t.rem === null ? 'laatste niveau' : mmss(t.rem);
-    el.className = 'time' + (K.t.pausedAt ? ' paused' : t.rem !== null && t.rem < 30000 ? ' soon' : '');
+    el.className = 'time' + (K.t.pausedAt ? ' paused' : t.rem !== null && t.rem < 30000 ? ' soon' : '') + (t.rem === null ? ' last' : '');
     const bar = document.getElementById('pkBar'); if (bar) bar.style.width = (t.prog * 100).toFixed(1) + '%';
   }, 1000);
 
@@ -1383,7 +1404,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   async function keepAwake() {
     try { if (!lock && navigator.wakeLock) { lock = await navigator.wakeLock.request('screen'); lock.addEventListener('release', () => { lock = null; }); } } catch (e) {}
   }
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && current()) keepAwake(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && (current() || (S.pk && S.pk.on && S.pk.mode === 'tour' && S.pk.step === 'play'))) keepAwake(); });
 
   // ---------- Helpers ----------
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1639,7 +1660,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   }
 
   // ---------- Start van de avond ----------
-  const nightBusy = () => !!(openAny() || owedAll().n);
+  const nightBusy = () => !!(openAny() || owedAll().n || S.pk.on);
   function renderStart() {
     const names = ui.names || S.players, n = names.length, locked = nightBusy();
     return `<div class="wrap">
@@ -2020,21 +2041,35 @@ if (typeof module !== 'undefined') module.exports = Logic;
     }
     const t = tState(K), b = BL[t.lv], nx = BL[t.lv + 1];
     const chipsIn = (K.who.length + K.who.reduce((a, i) => a + tReb(K, i), 0)) * STACK;
+    const timeCls = K.t.pausedAt ? 'paused' : t.rem !== null && t.rem < 30000 ? 'soon' : '';
+    if (ui.bigClock) {
+      return `<div class="bigclock" role="dialog" aria-label="Grote klok">
+        <button class="btn ghost sm x" data-act="bigClock" data-v="0">✕ Sluiten</button>
+        <span class="lvl">Niveau ${t.lv + 1} van ${BL.length}${K.t.pausedAt ? ' · gepauzeerd' : ''}</span>
+        <div class="blinds">${nf(b[0])}<small>/</small>${nf(b[1])}</div>
+        <div class="time ${timeCls} ${t.rem === null ? 'last' : ''}" id="pkTime">${t.rem === null ? 'laatste niveau' : mmss(t.rem)}</div>
+        <div class="bar"><i id="pkBar" style="width:${(t.prog * 100).toFixed(1)}%"></i></div>
+        <span class="next">${nx ? `Daarna <b>${nf(nx[0])} / ${nf(nx[1])}</b>` : 'Blinds blijven nu zo'}</span>
+        <div class="stats"><div>Spelers<b>${alive.length}/${K.who.length}</b></div><div>Gem. stack<b>${nf(chipsIn / Math.max(1, alive.length))}</b></div><div>Pot<b>${euro(pot)}</b></div></div>
+        <div class="ctl"><button class="btn ${K.t.pausedAt ? 'primary' : 'soft'}" data-act="tPause">${K.t.pausedAt ? '▶ Verder' : 'Pauze'}</button></div>
+      </div>`;
+    }
     const board = [...alive.map((i) => `<button class="bust" style="--pc:var(--p${i})" data-act="tBust" data-v="${i}"><span class="who">${P(i)}<span class="meta">${tReb(K, i) ? `${tReb(K, i)}× terug ingekocht` : 'speelt'}</span></span><span class="tag">ligt eruit</span></button>`),
       ...K.out.slice().reverse().map((i) => `<button class="bust out" style="--pc:var(--p${i})" data-act="tBack" data-v="${i}"><span class="who">${P(i)}<span class="meta">${plc(K.who.length - 1 - K.out.indexOf(i))} · tik om terug te zetten</span></span><span class="tag">eruit</span></button>`)].join('');
     return `<div class="wrap">${head('Toernooi')}
       <section class="panel pkclock">
         <span class="lvl">Niveau ${t.lv + 1} van ${BL.length}</span>
         <div class="blinds">${nf(b[0])}<small>/</small>${nf(b[1])}</div>
-        <div class="time ${K.t.pausedAt ? 'paused' : t.rem !== null && t.rem < 30000 ? 'soon' : ''}" id="pkTime">${t.rem === null ? 'laatste niveau' : mmss(t.rem)}</div>
+        <div class="time ${timeCls}" id="pkTime">${t.rem === null ? 'laatste niveau' : mmss(t.rem)}</div>
         <div class="bar"><i id="pkBar" style="width:${(t.prog * 100).toFixed(1)}%"></i></div>
         <span class="next">${nx ? `Daarna ${nf(nx[0])} / ${nf(nx[1])}` : 'Blinds blijven nu zo'}${K.t.pausedAt ? ' · gepauzeerd' : ''}</span>
         <div class="ctl"><button class="btn ghost sm" data-act="tLvl" data-v="-1" ${t.lv ? '' : 'disabled'} aria-label="Vorig niveau">◀ Vorig</button><button class="btn ${K.t.pausedAt ? 'primary' : 'soft'} sm" data-act="tPause">${K.t.pausedAt ? '▶ Verder' : 'Pauze'}</button><button class="btn ghost sm" data-act="tLvl" data-v="1" ${nx ? '' : 'disabled'} aria-label="Volgend niveau">Volgend ▶</button></div>
+        <button class="btn primary block" data-act="bigClock" data-v="1">Grote klok</button>
       </section>
       <div class="pkstats"><div><span class="label">Spelers</span><b>${alive.length}/${K.who.length}</b></div><div><span class="label">Gem. stack</span><b>${nf(chipsIn / Math.max(1, alive.length))}</b></div><div><span class="label">Pot</span><b>${euro(pot)}</b></div></div>
       <section class="panel" style="gap:0;padding-block:6px"><div class="panel-head" style="padding:8px 0 4px"><h2>Wie ligt eruit?</h2><span class="label">tik op een naam</span></div>${board}</section>
       <section class="panel"><div class="panel-head"><h2>Prijzen</h2><span class="label">${euro(K.unit)} inkoop</span></div>
-        <div>${K.pay.map((p, k) => (p ? `<div class="srow"><span class="who">${plc(k)}</span><span class="owe">${euro(pr[k])}</span></div>` : '')).join('')}</div>
+        <div>${pr.map((p, k) => (p ? `<div class="srow"><span class="who">${plc(k)}</span><span class="owe">${euro(pr[k])}</span></div>` : '')).join('')}</div>
         <p class="hint">Wie terug inkoopt, betaalt opnieuw ${euro(K.unit)}. Dat geld gaat voor de helft naar de 1ste en voor de helft naar de 2de plaats. De 3de blijft gelijk. Eigen inkopen gaan van de winst af.</p></section>
       ${chipsHTML()}
       ${ui.pkAdd ? pkAddHTML() : `<button class="btn ghost block" data-act="pkAddOpen" ${S.players.length >= 8 && K.who.length >= S.players.length ? 'disabled' : ''}>+ Speler erbij</button>`}
@@ -2890,7 +2925,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       ui.flow = null; actions.pkOpen();
     },
     pkOpen() { hideToast(); ui.pkSel = null; ui.pkMode = null; ui.pkPay = null; ui.pkPayEdited = false; ui.pkUnitTxt = null; ui.pkLvl = null; ui.pkSure = false; ui.pkAdd = false; ui.view = 'poker'; render(); window.scrollTo(0, 0); },
-    pkBack() { ui.view = null; ui.pkSure = false; render(); window.scrollTo(0, 0); },
+    pkBack() { ui.bigClock = false; ui.view = null; ui.pkSure = false; render(); window.scrollTo(0, 0); },
     pkSel(b) { const i = +b.dataset.v; const sel = ui.pkSel || S.players.map((_, k) => k); ui.pkSel = sel.includes(i) ? sel.filter((x) => x !== i) : [...sel, i].sort((a, c) => a - c); render(); },
     pkMode(b) { ui.pkMode = b.dataset.v; render(); },
     pkLvl(b) { ui.pkLvl = +b.dataset.v; render(); },
@@ -2902,12 +2937,21 @@ if (typeof module !== 'undefined') module.exports = Logic;
         const pay = readPay();
         if (pay.reduce((a, c) => a + c, 0) !== sel.length * u) { document.getElementById('pkErr').textContent = `Verdeel precies ${euro(sel.length * u)} over de plaatsen.`; return; }
         if (!pay[0]) { document.getElementById('pkErr').textContent = 'De winnaar moet iets krijgen.'; return; }
+        if (pay[2] && sel.length < 3) { document.getElementById('pkErr').textContent = 'Met 2 spelers is er geen 3de plaats. Zet die op 0.'; return; }
         const now = Date.now();
         S.pk = { mode: 'tour', unit: u, on: true, step: 'play', who: sel, buyin: S.players.map((_, i) => (sel.includes(i) ? u : 0)), buyout: S.players.map(() => null), out: [], pay, lvlMin: ui.pkLvl || S.pk.lvlMin || 5, t: { start: now, pausedAt: null, off: 0 }, lastLvl: 0, start: now };
         audioCtx(); save(); render(); window.scrollTo(0, 0); keepAwake(); return;
       }
       S.pk = { unit: u, on: true, step: 'buyin', who: sel, buyin: S.players.map((_, i) => (sel.includes(i) ? u : 0)), buyout: S.players.map(() => null), start: Date.now() };
       save(); render(); window.scrollTo(0, 0); keepAwake();
+    },
+    bigClock(b) {
+      ui.bigClock = b.dataset.v === '1';
+      try {
+        if (ui.bigClock && document.documentElement.requestFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+        if (!ui.bigClock && document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+      } catch (e) {}
+      audioCtx(); keepAwake(); render(); window.scrollTo(0, 0);
     },
     tPause() { const K = S.pk, now = Date.now(); if (K.t.pausedAt) { K.t.off += now - K.t.pausedAt; K.t.pausedAt = null; keepAwake(); } else K.t.pausedAt = now; audioCtx(); save(); render(); },
     tLvl(b) { const K = S.pk, t = tState(K), lv = Math.max(0, Math.min(BL.length - 1, t.lv + +b.dataset.v)); tSetEl(K, lv * t.L); save(); render(); },
@@ -2916,7 +2960,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     tOut() {
       const K = S.pk, i = ui.pkBustI; ui.modal = null;
       if (!K.out.includes(i)) K.out.push(i);
-      if (tAlive(K).length <= 1) { hideToast(); K.step = 'done'; if (!K.t.pausedAt) K.t.pausedAt = Date.now(); partyDue = true; save(); render(); window.scrollTo(0, 0); return; }
+      if (tAlive(K).length <= 1) { hideToast(); ui.bigClock = false; K.step = 'done'; if (!K.t.pausedAt) K.t.pausedAt = Date.now(); partyDue = true; save(); render(); window.scrollTo(0, 0); return; }
       save(); render(); showToast(`<b>${P(i)}</b> wordt ${plc(tAlive(K).length)}`, false);
     },
     tBack(b) { const K = S.pk, i = +b.dataset.v; K.out = K.out.filter((x) => x !== i); save(); render(); showToast(`<b>${P(i)}</b> speelt terug mee`, false); },
@@ -3138,7 +3182,9 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (ui.view === 'draw' && ui.draw && e.target.closest('#stage')) ui.draw.skip = true;
   });
 
+  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && ui.bigClock) { ui.bigClock = false; render(); } });
   document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && ui.bigClock) { ui.bigClock = false; render(); return; }
     const m = /^sp(\d)$/.exec(e.target.id || '');
     const nx = m && document.getElementById('sp' + (+m[1] + 1));
     if (m && e.key === 'Enter' && nx) { e.preventDefault(); nx.focus(); }
@@ -3229,12 +3275,11 @@ if (typeof module !== 'undefined') module.exports = Logic;
       const names = [...document.querySelectorAll('[id^="sp"]')].map((el) => el.value.trim().replace(/\s+/g, ' '));
       const err = document.getElementById('startErr');
       const empty = names.findIndex((n) => !n);
-      if (empty >= 0) { err.textContent = 'Vul alle 4 de namen in.'; document.getElementById('sp' + empty).focus(); return; }
+      if (empty >= 0) { err.textContent = 'Vul alle namen in.'; document.getElementById('sp' + empty).focus(); return; }
       if (new Set(names.map((n) => n.toLowerCase())).size < names.length) { err.textContent = 'Geef elke speler een andere naam.'; return; }
       ui.names = null;
       S.players = names; S.ready = true; save();
-      const busy = current() || openOf(S.wz) || openOf(S.hj);
-      if (!busy && !owedAll().n) { actions.newRondje(); return; }
+      if (!openAny() && !owedAll().n && !S.pk.on) { actions.newRondje(); return; }
       ui.view = null; render(); window.scrollTo(0, 0);
     } else if (f.id === 'playersForm') {
       const names = S.players.map((_, i) => document.getElementById('pl' + i).value.trim());
