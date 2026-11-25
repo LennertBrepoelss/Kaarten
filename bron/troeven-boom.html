@@ -493,6 +493,18 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 .tile.cur { outline: 2px solid rgba(255,255,255,.75); outline-offset: 3px; }
 .g-troef { --tg: linear-gradient(150deg, #c39bff, #7b4fe0 70%, #5a35b8); --tglow: #7b4fe0; }
 .g-wiez { --tg: linear-gradient(150deg, #7fe6ff, #1fa8e0 70%, #1279b5); --tglow: #1fa8e0; }
+.g-nappen { --tg: linear-gradient(150deg, #c9f78a, #6fcf3b 70%, #3f9a1c); --tglow: #6fcf3b; }
+.nrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--hair); }
+.nrow:last-child { border-bottom: 0; }
+.nrow .who { font: 600 21px/1.1 var(--f-serif); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nrow .who::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--pc); margin-right: 10px; vertical-align: 3px; box-shadow: 0 0 10px var(--pc); }
+.nrow .meta { display: block; font: 500 12px/1.3 var(--f-ui); color: var(--dim); margin-top: 4px; }
+.nctl { display: flex; align-items: center; gap: 8px; }
+.nctl button { width: 52px; height: 52px; border-radius: 14px; border: 1px solid var(--hair-2); background: var(--surface-2); font: 500 28px/1 var(--f-ui); color: var(--ivory); touch-action: manipulation; }
+.nctl button.plus { color: var(--p2); border-color: color-mix(in srgb, var(--p2) 45%, transparent); }
+.nctl button.min { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+.nctl button:active { transform: scale(.94); }
+.nctl output { min-width: 52px; text-align: center; font: 600 36px/1 var(--f-serif); font-variant-numeric: lining-nums tabular-nums; }
 .g-pietjes { --tg: linear-gradient(150deg, #ffe08a, #f5a623 70%, #d97a0b); --tglow: #f5a623; }
 .tile.off { filter: grayscale(1); opacity: .32; box-shadow: none; }
 .tile.off .tstat { background: rgba(0,0,0,.45); }
@@ -856,6 +868,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (!Array.isArray(s.hj.rondjes)) s.hj.rondjes = [];
     delete s.hj.hands;
     if (!s.pj) s.pj = freshPj();
+    if (!s.np) s.np = freshNp();
+    if (!Array.isArray(s.np.rondjes)) s.np.rondjes = [];
     if (!Array.isArray(s.pj.rondjes)) s.pj.rondjes = [];
     if (!Array.isArray(s.history)) s.history = historyFromArchive(s);
     return s;
@@ -888,21 +902,29 @@ if (typeof module !== 'undefined') module.exports = Logic;
   }
   const pDone = (r) => !!r && r.beurten.length > 0 && pTot(r).some((v) => v <= 0);
 
+  // ---------- Nappen ----------
+  // Iedereen begint op 20. Punten erbij of eraf doe je zelf met + en −. Zodra iemand op 0 staat, is het rondje gedaan:
+  // die is 1ste, en hoe hoger je score dan nog is, hoe slechter je plaats.
+  const NP_START = 20;
+  function freshNp(prev) { return { pct: prev && prev.pct ? prev.pct : null, rondjes: [] }; }
+  const nTot = (r) => (r ? r.log : []).reduce((t, x) => { t[x.i] += x.v; return t; }, Array(S.players.length).fill(r ? r.base : NP_START));
+
   // Spellen die afrekenen met percentages per plaats
   const PG = {
     wiezen: { title: 'Wiezen', st: () => S.wz, tot: wTot },
     harten: { title: 'Hartenjagen', st: () => S.hj, tot: hTot },
     pietjes: { title: 'Pietjesbak', st: () => S.pj, tot: pTot, rank: (r) => pTot(r).map((v) => -v) },
+    nappen: { title: 'Nappen', st: () => S.np, tot: nTot, rank: (r) => nTot(r).map((v) => -v) },
   };
-  const PG_KEYS = ['wiezen', 'harten', 'pietjes'];
+  const PG_KEYS = ['wiezen', 'harten', 'pietjes', 'nappen'];
   const rankOf = (g, r) => (PG[g].rank ? PG[g].rank(r) : PG[g].tot(r));
-  const openAny = () => current() || openOf(S.wz) || openOf(S.hj) || openOf(S.pj);
+  const openAny = () => current() || openOf(S.wz) || openOf(S.hj) || openOf(S.pj) || openOf(S.np);
   const pg = () => PG[S.game] || PG.wiezen;
   const lastOf = (st) => st.rondjes[st.rondjes.length - 1] || null;
   const openOf = (st) => { const r = lastOf(st); return r && !r.end ? r : null; };
   const gCur = () => openOf(pg().st());
   const priceTxt = (c) => (c ? euro(c) : 'zonder geld');
-  const ptsLabel = (g, v) => (g === 'harten' ? `${v < 0 ? '−' + Math.abs(v) : v} over` : g === 'pietjes' ? `${v} streepje${v === 1 ? '' : 's'}` : `${sign(v)} ptn`);
+  const ptsLabel = (g, v) => (g === 'harten' ? `${v < 0 ? '−' + Math.abs(v) : v} over` : g === 'pietjes' ? `${v} streepje${v === 1 ? '' : 's'}` : g === 'nappen' ? `${v} ptn` : `${sign(v)} ptn`);
   // Wat elke speler betaalt voor de uitgespeelde rondjes van één spel (in cent)
   function gameOwed(g) {
     const owed = Array(S.players.length).fill(0); let total = 0, n = 0;
@@ -953,7 +975,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     return out;
   }
 
-  function fresh(players) { return { v: 1, players: players || [...DEFAULT_PLAYERS], rounds: [], lastPrice: null, updatedAt: 0, game: null, ready: false, wz: freshWz(), hj: freshHj(), pj: freshPj() }; }
+  function fresh(players) { return { v: 1, players: players || [...DEFAULT_PLAYERS], rounds: [], lastPrice: null, updatedAt: 0, game: null, ready: false, wz: freshWz(), hj: freshHj(), pj: freshPj(), np: freshNp() }; }
   function loadLocal() {
     try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 1 && Array.isArray(s.rounds)) return normalize(s); } catch (e) {}
     return null;
@@ -1024,6 +1046,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (openOf(S.hj)) return ui.view === 'hround' && ui.hr ? 'hround' : 'hgame';
     if (openOf(S.pj)) return ui.view === 'pround' && ui.pr ? 'pround' : 'pgame';
     if (ui.result === 'pietjes' && lastOf(S.pj)) return 'pgame';
+    if (openOf(S.np) || (ui.result === 'nappen' && lastOf(S.np))) return 'ngame';
     if (ui.result === 'wiezen' && lastOf(S.wz)) return 'wgame';
     if (ui.result === 'harten' && lastOf(S.hj)) return 'hgame';
     return 'hub';
@@ -1067,7 +1090,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       starts.push(done[0].start || done[0].id);
     }
     // Wiezen en hartenjagen: per uitgespeeld rondje telt de 1ste als gewonnen, wie het meest betaalt als verloren.
-    [['w', 'wiezen'], ['h', 'harten'], ['p', 'pietjes']].forEach(([key, g]) => {
+    [['w', 'wiezen'], ['h', 'harten'], ['p', 'pietjes'], ['n', 'nappen']].forEach(([key, g]) => {
       const rs = PG[g].st().rondjes.filter((r) => r.end && r.price != null);
       if (!rs.length) return;
       const won = S.players.map(() => 0), lost = S.players.map(() => 0);
@@ -1079,7 +1102,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       rec[key] = { n: rs.length, r: rs.length, won, lost };
       starts.push(rs[0].start);
     });
-    if (!rec.t && !rec.w && !rec.h && !rec.p) return null;
+    if (!rec.t && !rec.w && !rec.h && !rec.p && !rec.n) return null;
     rec.paid = settleAll(0, Logic.parsePrice(ui.bill)).per.map((c) => Math.round(c));
     if (starts.filter(Boolean).length) rec.date = Math.min(...starts.filter(Boolean));
     return rec;
@@ -1089,7 +1112,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const parts = [h.t && h.t.paid, h.w && h.w.paid, h.h && h.h.paid].filter(Boolean);
     return parts.length ? h.players.map((_, i) => parts.reduce((s, p) => s + p[i], 0)) : null;
   }
-  const HKEYS = ['t', 'w', 'h', 'p'];
+  const HKEYS = ['t', 'w', 'h', 'p', 'n'];
   const nightLost = (h) => h.players.map((_, i) => HKEYS.reduce((a, k) => a + (h[k] ? h[k].lost[i] || 0 : 0), 0));
   const nightWon = (h) => h.players.map((_, i) => HKEYS.reduce((a, k) => a + (h[k] ? h[k].won[i] || 0 : 0), 0));
   // Grote verliezer: wie het meest betaalde; zonder bedragen wie het meest verloor.
@@ -1128,20 +1151,21 @@ if (typeof module !== 'undefined') module.exports = Logic;
 
     const items = all.map((h, idx) => ({ h, idx })).reverse().map(({ h, idx }) => {
       const open = ui.hOpen === idx, paid = nightPaid(h), lo = nightLoser(h);
-      const games = [h.t ? `Troeven ${h.t.n} rondje${h.t.n > 1 ? 's' : ''}` : '', h.w ? `Wiezen ${h.w.r ? `${h.w.r} rondje${h.w.r > 1 ? 's' : ''}` : `${h.w.n} spelletje${h.w.n > 1 ? 's' : ''}`}` : '', h.h ? `Hartenjagen ${h.h.r ? `${h.h.r} rondje${h.h.r > 1 ? 's' : ''}` : `${h.h.n} ${h.h.n > 1 ? 'handen' : 'hand'}`}` : '', h.p ? `Pietjesbak ${h.p.r} rondje${h.p.r > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ');
+      const games = [h.t ? `Troeven ${h.t.n} rondje${h.t.n > 1 ? 's' : ''}` : '', h.w ? `Wiezen ${h.w.r ? `${h.w.r} rondje${h.w.r > 1 ? 's' : ''}` : `${h.w.n} spelletje${h.w.n > 1 ? 's' : ''}`}` : '', h.h ? `Hartenjagen ${h.h.r ? `${h.h.r} rondje${h.h.r > 1 ? 's' : ''}` : `${h.h.n} ${h.h.n > 1 ? 'handen' : 'hand'}`}` : '', h.p ? `Pietjesbak ${h.p.r} rondje${h.p.r > 1 ? 's' : ''}` : '', h.n ? `Nappen ${h.n.r} rondje${h.n.r > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ');
       const total = paid ? paid.reduce((a, b) => a + b, 0) : null;
       const loserTxt = lo ? `${lo.who.map((i) => esc(h.players[i])).join(' &amp; ')} · ${lo.byPaid ? euro(lo.val) : `${lo.val} verloren`}` : 'niemand';
       let body = '';
       if (open) {
-        const cols = [h.t ? '<th scope="col">Troeven</th>' : '', h.w ? '<th scope="col">Wiezen</th>' : '', h.h ? '<th scope="col">Harten</th>' : '', h.p ? '<th scope="col">Pietjes</th>' : '', '<th scope="col">Betaald</th>'].join('');
+        const cols = [h.t ? '<th scope="col">Troeven</th>' : '', h.w ? '<th scope="col">Wiezen</th>' : '', h.h ? '<th scope="col">Harten</th>' : '', h.p ? '<th scope="col">Pietjes</th>' : '', h.n ? '<th scope="col">Nappen</th>' : '', '<th scope="col">Betaald</th>'].join('');
         const rows = h.players.map((nm, i) => `<tr><th class="rowh" scope="row" style="color:var(--p${i})">${esc(nm)}${lo && lo.who.includes(i) ? ' <small class="dl">verliezer</small>' : ''}</th>
           ${h.t ? `<td><span class="w">${h.t.won[i]}</span><span class="l">–${h.t.lost[i]}</span></td>` : ''}
           ${h.w ? `<td><span class="w">${h.w.won[i]}</span><span class="l">–${h.w.lost[i]}</span>${h.w.pts ? `<small class="hpts ${pn(h.w.pts[i])}">${sign(h.w.pts[i])} ptn</small>` : ''}</td>` : ''}
           ${h.h ? `<td><span class="w">${h.h.won[i]}</span><span class="l">–${h.h.lost[i]}</span>${h.h.pts ? `<small class="hpts ${h.h.pts[i] <= 0 ? 'neg' : ''}">${h.h.pts[i]} over</small>` : ''}</td>` : ''}
           ${h.p ? `<td><span class="w">${h.p.won[i]}</span><span class="l">–${h.p.lost[i]}</span></td>` : ''}
+          ${h.n ? `<td><span class="w">${h.n.won[i]}</span><span class="l">–${h.n.lost[i]}</span></td>` : ''}
           <td>${paid ? euro(paid[i]) : '–'}</td></tr>`).join('');
         body = `<div class="hbody"><div class="h2h-wrap"><table class="h2h htab"><thead><tr><th></th>${cols}</tr></thead><tbody>${rows}</tbody></table></div>
-          <p class="hint">Gewonnen–verloren per rondje. Bij wiezen, hartenjagen en pietjesbak wint de 1ste en verliest wie het meest betaalt.${h.legacy ? ' Van deze avond zijn de bedragen niet bewaard.' : ''}${!h.paid && h.w && !h.w.paid ? ' De wiezen-rekening werd niet ingevuld.' : ''}${!h.paid && h.h && !h.h.paid ? ' De hartenjagen-rekening werd niet ingevuld.' : ''}</p>
+          <p class="hint">Gewonnen–verloren per rondje. Bij de andere spellen wint de 1ste en verliest wie het meest betaalt.${h.legacy ? ' Van deze avond zijn de bedragen niet bewaard.' : ''}${!h.paid && h.w && !h.w.paid ? ' De wiezen-rekening werd niet ingevuld.' : ''}${!h.paid && h.h && !h.h.paid ? ' De hartenjagen-rekening werd niet ingevuld.' : ''}</p>
           <button class="link" data-act="hDel" data-v="${idx}" style="align-self:flex-start;color:${ui.hDel === idx ? 'var(--danger)' : ''}">${ui.hDel === idx ? 'Tik nog eens om deze avond te verwijderen' : 'Avond verwijderen'}</button></div>`;
       }
       return `<div class="hitem ${open ? 'open' : ''}"><button class="hhead" data-act="hOpen" data-v="${idx}" aria-expanded="${open}">
@@ -1224,6 +1248,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     troeven: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M48 14v70" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity=".55"/>${[0, 1, 2, 3, 4, 5].map((k) => `<rect x="${24 + (k % 2) * 4}" y="${70 - k * 10}" width="${44 - (k % 2) * 8 - k * 2}" height="4.5" rx="2.2" fill="currentColor" opacity="${k > 3 ? .35 : 1}"/>`).join('')}<g transform="translate(58 8) rotate(12)"><rect width="26" height="36" rx="4" fill="#fff"/><text x="13" y="24" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-weight="700" font-size="18" fill="#2b1d55">B</text></g></svg>`,
     wiezen: `<svg viewBox="0 0 96 96" aria-hidden="true">${[-20, 0, 20].map((a, k) => `<g transform="rotate(${a} 48 84)"><rect x="32" y="22" width="32" height="46" rx="5" fill="#fff" opacity="${.55 + k * .22}"/></g>`).join('')}<g transform="rotate(20 48 84)"><path d="M54 32c-5 6-11 9-11 15a5 5 0 0 0 9 3l-2 6h8l-2-6a5 5 0 0 0 9-3c0-6-6-9-11-15z" fill="#07324a"/></g></svg>`,
     pietjes: `<svg viewBox="0 0 96 96" aria-hidden="true">${[[14, 40, -14], [40, 18, 8], [50, 50, 18]].map(([x, y, a], k) => `<g transform="rotate(${a} ${x + 16} ${y + 16})"><rect x="${x}" y="${y}" width="32" height="32" rx="7" fill="#fff" opacity="${.75 + k * .12}"/>${[[[16, 16]], [[9, 9], [23, 23]], [[9, 9], [16, 16], [23, 23]]][k].map(([cx, cy]) => `<circle cx="${x + cx}" cy="${y + cy}" r="3.4" fill="#5a3300"/>`).join('')}</g>`).join('')}</svg>`,
+    nappen: `<svg viewBox="0 0 96 96" aria-hidden="true"><circle cx="40" cy="50" r="27" fill="#fff"/><text x="40" y="60" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="28" fill="#1f4d10">20</text><circle cx="74" cy="26" r="13" fill="#fff" opacity=".9"/><path d="M74 19v14M67 26h14" stroke="#1f4d10" stroke-width="3.5" stroke-linecap="round"/><circle cx="76" cy="66" r="11" fill="#fff" opacity=".7"/><path d="M70 66h12" stroke="#1f4d10" stroke-width="3.5" stroke-linecap="round"/></svg>`,
     harten: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M48 80 20 52a16 16 0 0 1 28-20 16 16 0 0 1 28 20z" fill="#fff"/><path d="M14 28 70 62" stroke="#5a0f33" stroke-width="3.5" stroke-linecap="round"/><path d="M70 62l-9-1 5-7z" fill="#5a0f33"/><path d="M14 28l6 1-3 5z" fill="#5a0f33"/></svg>`,
   };
   const GAMES = [
@@ -1231,6 +1256,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     { k: 'wiezen', name: 'Wiezen', cls: 'g-wiez', min: 4, max: 4 },
     { k: 'harten', name: 'Hartenjagen', cls: 'g-hart', min: 4, max: 4 },
     { k: 'pietjes', name: 'Pietjesbak', cls: 'g-pietjes', min: 2, max: 8 },
+    { k: 'nappen', name: 'Nappen', cls: 'g-nappen', min: 2, max: 8 },
   ];
   function renderPick() {
     const n = S.players.length;
@@ -1423,6 +1449,31 @@ if (typeof module !== 'undefined') module.exports = Logic;
       ${stand}
       ${bs.length ? `<section class="panel"><div class="panel-head"><h2>Gespeeld</h2><button class="btn soft sm" data-act="pUndo">Laatste ongedaan</button></div><div>${hist}</div></section>` : ''}
       ${c ? avondPanel() : ''}
+    </div>${dock()}`;
+  }
+
+  // ---------- Nappen: stand met + en − ----------
+  function renderNGame() {
+    const N = S.np, c = openOf(N), last = lastOf(N), nr = owedAll().n + (c ? 1 : 0);
+    if (!c) {
+      return `<div class="wrap">
+        ${gameHeader('Nappen')}
+        <section><p class="label">Nappen · ${priceTxt(last.price)}</p><h1>Rondje <em>gedaan</em></h1></section>
+        ${doneButtons()}
+        <section class="panel"><div class="panel-head"><h2>${last.price ? 'Wie betaalt' : 'Uitslag'}</h2><button class="link" data-act="nUndo">Laatste ongedaan</button></div><div>${rondjeRows('nappen', last)}</div></section>
+      </div>${dock()}`;
+    }
+    const tot = nTot(c), changed = c.log.length > 0;
+    const { out, place, tied } = wPayPct(tot.map((v) => -v), c.pct);
+    const rows = S.players.map((p, i) => `<div class="nrow" style="--pc:var(--p${i})">
+      <span class="who">${esc(p)}${changed ? `<span class="meta">${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]}${c.price ? ` · ${euro(c.price * out[i] / 100)}` : ''}</span>` : ''}</span>
+      <div class="nctl"><button class="min" data-act="nStep" data-i="${i}" data-v="-1" aria-label="1 punt minder voor ${esc(p)}">−</button><output>${tot[i]}</output><button class="plus" data-act="nStep" data-i="${i}" data-v="1" aria-label="1 punt meer voor ${esc(p)}">+</button></div></div>`).join('');
+    return `<div class="wrap">
+      ${gameHeader('Nappen')}
+      <section><p class="label">Rondje ${nr} · ${priceTxt(c.price)}</p><h1>${changed ? 'Eerst op <em>0</em> wint' : `Iedereen op <em>${c.base}</em>`}</h1></section>
+      <section class="panel" style="gap:0;padding-block:6px">${rows}</section>
+      <button class="btn ghost block" data-act="nUndo" ${changed ? '' : 'disabled'}>Laatste ongedaan</button>
+      ${avondPanel()}
     </div>${dock()}`;
   }
 
@@ -1836,7 +1887,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   function render() {
     const v = view();
     ui.view = ['draw', 'end', 'wround', 'hround', 'pround', 'start', 'nprice', 'npick', 'npct'].includes(v) ? v : null;
-    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound };
+    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound, ngame: renderNGame };
     $app.innerHTML = screens[v]();
     renderModal();
     updateCalc();
@@ -1990,7 +2041,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     playing(b) { ui.pick.playing = +b.dataset.v; render(); const s = document.getElementById('step3'); if (s) s.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); },
     result(b) { hideToast(); addHand(b.dataset.v); },
     statScope(b) { ui.statScope = b.dataset.v; render(); },
-    toastUndo() { hideToast(); if (S.game === 'wiezen') actions.wUndo(); else if (S.game === 'harten') actions.hUndo(); else if (S.game === 'pietjes') actions.pUndo(); else actions.undo(); },
+    toastUndo() { hideToast(); if (S.game === 'wiezen') actions.wUndo(); else if (S.game === 'harten') actions.hUndo(); else if (S.game === 'pietjes') actions.pUndo(); else if (S.game === 'nappen') actions.nUndo(); else actions.undo(); },
     // Hartenjagen
     hNew() { ui.hr = { p: [0, 0, 0, 0], q: null, moon: null }; ui.view = 'hround'; render(); window.scrollTo(0, 0); keepAwake(); },
     hCancel() { ui.hr = null; ui.view = null; render(); window.scrollTo(0, 0); },
@@ -2034,6 +2085,16 @@ if (typeof module !== 'undefined') module.exports = Logic;
       ui.pr = null; ui.view = null; save(); render(); window.scrollTo({ top: 0, behavior: 'smooth' });
       showToast(done ? `<b>Rondje gedaan</b> · ${P(pTot(c).findIndex((v) => v <= 0))} is alles kwijt` : `<b>Beurt ${c.beurten.length}</b> bewaard`);
     },
+    nStep(b) {
+      const c = openOf(S.np); if (!c) return;
+      c.log.push({ i: +b.dataset.i, v: +b.dataset.v }); S.game = 'nappen';
+      const zero = nTot(c).findIndex((v) => v <= 0);
+      if (zero >= 0) { c.end = Date.now(); ui.result = 'nappen'; }
+      save(); render();
+      if (zero >= 0) { window.scrollTo({ top: 0, behavior: 'smooth' }); showToast(`<b>Rondje gedaan</b> · ${P(zero)} staat op 0`); }
+      if (navigator.vibrate) try { navigator.vibrate(zero >= 0 ? [30, 60, 30] : 10); } catch (e) {}
+    },
+    nUndo() { const r = lastOf(S.np); if (!r || !r.log.length) return; r.log.pop(); r.end = null; save(); render(); },
     pUndo() { const r = lastOf(S.pj); if (!r || !r.beurten.length) return; r.beurten.pop(); r.end = null; save(); render(); },
     // Delen en back-up
     async share() {
@@ -2095,6 +2156,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       const r = { price: ui.flow.price, pct: ui.pct.slice(), start: Date.now(), end: null };
       if (g === 'wiezen') { S.wz.per = ui.per || 1; r.per = S.wz.per; r.games = []; }
       else if (g === 'pietjes') { S.pj.boom = ui.boom || 9; r.boom = S.pj.boom; r.beurten = []; }
+      else if (g === 'nappen') { r.base = NP_START; r.log = []; }
       else r.hands = [];
       st.rondjes.push(r); S.game = g; ui.flow = null; ui.pct = null;
       if (g === 'wiezen') { ui.wr = { k: null, sel: [], made: null, diff: 0 }; ui.view = 'wround'; } else ui.view = null;
@@ -2162,7 +2224,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       }
     },
     askReset() { ui.modal = 'askReset'; renderModal(); },
-    reset() { const archive = [...(S.archive || []), ...finished().map((r) => ({ teams: r.teams, winner: r.winner, date: r.end || r.start }))]; const rec = nightRecord(); const history = [...(S.history || []), ...(rec ? [rec] : [])]; const wz = freshWz(S.wz), hj = freshHj(S.hj), pj = freshPj(S.pj); S = fresh(S.players); S.archive = archive; S.wz = wz; S.hj = hj; S.pj = pj; S.history = history; ui.hOpen = null; ui.hDel = null; ui.modal = null; ui.view = 'start'; ui.payer = null; ui.bill = ''; ui.hr = null; ui.wr = null; save(); render(); window.scrollTo(0, 0); },
+    reset() { const archive = [...(S.archive || []), ...finished().map((r) => ({ teams: r.teams, winner: r.winner, date: r.end || r.start }))]; const rec = nightRecord(); const history = [...(S.history || []), ...(rec ? [rec] : [])]; const wz = freshWz(S.wz), hj = freshHj(S.hj), pj = freshPj(S.pj), np = freshNp(S.np); S = fresh(S.players); S.archive = archive; S.wz = wz; S.hj = hj; S.pj = pj; S.np = np; S.history = history; ui.hOpen = null; ui.hDel = null; ui.modal = null; ui.view = 'start'; ui.payer = null; ui.bill = ''; ui.hr = null; ui.wr = null; save(); render(); window.scrollTo(0, 0); },
   };
 
   document.addEventListener('click', (e) => {
