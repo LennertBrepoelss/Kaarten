@@ -1,0 +1,2090 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-180.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Kaartavond"></head><body>
+<title>Troeven Boom</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#060914">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Manrope:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: één kolom (max 460px), aurora: poolnacht-blauw met noorderlicht in mint, cyaan en violet. Serif voor cijfers en namen, Manrope voor bediening. Vaste dock onderaan. */
+:root {
+  --bg: #060914;
+  --surface: rgba(17, 24, 52, 0.78);
+  --surface-2: #19224a;
+  --hair: rgba(190, 215, 255, 0.11);
+  --hair-2: rgba(190, 215, 255, 0.22);
+  --ivory: #eaf2ff;
+  --dim: #8a95b8;
+  --gold: #5ef0c0;
+  --gold-soft: rgba(94, 240, 192, 0.12);
+  --ink: #031510;
+  --t1: #b68cff;
+  --t1-bg: rgba(182, 140, 255, 0.13);
+  --t2: #4fd8ff;
+  --t2-bg: rgba(79, 216, 255, 0.11);
+  --danger: #ff6b8a;
+  --p0: #ffd166;
+  --p1: #b68cff;
+  --p2: #5ef0c0;
+  --p3: #ff86c0;
+  --f-serif: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
+  --f-ui: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ease: cubic-bezier(.22, .8, .2, 1);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { min-height: 100%; }
+body {
+  margin: 0;
+  background: radial-gradient(120% 70% at 50% 110%, #0d1433 0%, var(--bg) 60%) fixed, var(--bg);
+  color: var(--ivory);
+  font: 15px/1.5 var(--f-ui);
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: lining-nums;
+  -webkit-tap-highlight-color: transparent;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+
+/* Noorderlicht: drie trage gordijnen achter alles, plus een paar sterren */
+.aurora { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.aurora i { position: absolute; left: -30%; width: 160%; height: 60%; border-radius: 50%; mix-blend-mode: screen; opacity: .55; will-change: transform; }
+.aurora i:nth-child(1) { top: -22%; background: radial-gradient(50% 40% at 50% 60%, rgba(94,240,192,.55), transparent 70%); animation: veil1 22s ease-in-out infinite alternate; }
+.aurora i:nth-child(2) { top: -10%; background: radial-gradient(40% 35% at 35% 55%, rgba(79,216,255,.45), transparent 70%); animation: veil2 28s ease-in-out infinite alternate; }
+.aurora i:nth-child(3) { top: 2%; background: radial-gradient(38% 30% at 70% 45%, rgba(182,140,255,.42), transparent 70%); animation: veil3 34s ease-in-out infinite alternate; }
+.aurora::after { content: ""; position: absolute; inset: 0; opacity: .5;
+  background-image: radial-gradient(1px 1px at 12% 18%, #fff, transparent), radial-gradient(1px 1px at 78% 9%, #fff, transparent), radial-gradient(1.5px 1.5px at 64% 31%, #cfe6ff, transparent), radial-gradient(1px 1px at 33% 42%, #fff, transparent), radial-gradient(1px 1px at 88% 55%, #cfe6ff, transparent), radial-gradient(1px 1px at 22% 71%, #fff, transparent), radial-gradient(1.5px 1.5px at 51% 86%, #fff, transparent); }
+@keyframes veil1 { from { transform: translate(-6%, 0) skewX(-8deg) scaleY(.9); } to { transform: translate(8%, 4%) skewX(10deg) scaleY(1.15); } }
+@keyframes veil2 { from { transform: translate(10%, 2%) skewX(12deg); } to { transform: translate(-8%, -3%) skewX(-6deg) scaleY(1.2); } }
+@keyframes veil3 { from { transform: translate(-4%, 6%) skewX(-12deg) scaleY(1.1); } to { transform: translate(6%, -2%) skewX(8deg) scaleY(.85); } }
+.panel, .board, .opt, .gcard, .matchup, .payer, .key, .sheet { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 1.5px solid var(--gold); outline-offset: 3px; }
+
+.wrap {
+  max-width: 460px; margin: 0 auto;
+  padding-left: max(18px, env(safe-area-inset-left, 0px));
+  padding-right: max(18px, env(safe-area-inset-right, 0px));
+  padding-block: 14px calc(100px + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-direction: column; gap: 22px;
+  animation: enter .5s var(--ease);
+}
+@keyframes enter { from { opacity: 0; transform: translateY(6px); } }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; }
+.brand { font: italic 600 26px/1 var(--f-serif); letter-spacing: 0.01em; }
+.brand small { font: 600 10px/1 var(--f-ui); font-style: normal; letter-spacing: .2em; text-transform: uppercase; color: var(--dim); margin-left: 8px; vertical-align: 4px; }
+.label { margin: 0; font: 600 10.5px/1.3 var(--f-ui); letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); }
+h1 { margin: 6px 0 0; font: 600 40px/1.02 var(--f-serif); letter-spacing: -0.01em; text-wrap: balance; }
+h1 .of { font: 500 22px var(--f-serif); color: var(--dim); -webkit-text-fill-color: currentColor; }
+h1 em { font-style: italic; font-weight: 500; color: var(--gold); background: linear-gradient(90deg, var(--t1), var(--gold) 50%, var(--t2)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; padding-right: .08em; }
+h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
+.lead { margin: 10px 0 0; color: var(--dim); max-width: 40ch; font-size: 14.5px; }
+.muted { color: var(--dim); }
+.rule { height: 1px; background: linear-gradient(90deg, transparent, var(--hair-2), transparent); border: 0; margin: 0; }
+
+/* Knoppen */
+.btn {
+  border: 0; border-radius: 12px; min-height: 52px; padding: 12px 20px;
+  font: 600 15px/1.1 var(--f-ui); letter-spacing: 0.02em;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  transition: transform .15s var(--ease), background .2s ease, border-color .2s ease, opacity .2s ease;
+}
+.btn:active { transform: scale(0.98); }
+.btn.primary.xl { position: relative; overflow: hidden; }
+.btn.primary.xl::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,.45) 50%, transparent 65%); transform: translateX(-120%); animation: shine 3.6s ease-in-out infinite; pointer-events: none; }
+@keyframes shine { 0%, 55% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+.btn.primary { background: linear-gradient(115deg, #6ff5c6, #4fd8ff 55%, #a98bff); color: var(--ink); box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 10px 30px -12px rgba(94,240,192,.55); }
+.btn.ghost { background: transparent; color: var(--ivory); border: 1px solid var(--hair-2); }
+.btn.soft { background: var(--surface-2); color: var(--ivory); border: 1px solid var(--hair); }
+.btn.danger { background: transparent; color: var(--danger); border: 1px solid rgba(255,107,138,.45); }
+.btn.xl { min-height: 58px; font-size: 16px; width: 100%; }
+.btn.block { width: 100%; }
+.btn.sm { white-space: nowrap; min-height: 36px; padding: 8px 14px; font-size: 13px; border-radius: 10px; }
+.btn .arr { font-family: var(--f-serif); font-size: 20px; line-height: 0; transform: translateY(-1px); }
+.link { background: none; border: 0; padding: 4px 0; color: var(--dim); text-decoration: underline; text-decoration-color: var(--hair-2); text-underline-offset: 4px; font-size: 13px; }
+
+.panel { background: var(--surface); border: 1px solid var(--hair); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+
+/* Stand per speler */
+.srow { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: baseline; padding: 11px 0; border-bottom: 1px solid var(--hair); }
+.srow:last-child { border-bottom: 0; padding-bottom: 2px; }
+.srow .who::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--pc); margin-right: 10px; vertical-align: 3px; box-shadow: 0 0 10px var(--pc); }
+.srow .who { font: 600 21px/1.1 var(--f-serif); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.srow .wl { font-variant-numeric: tabular-nums; color: var(--dim); font-size: 12px; letter-spacing: .04em; }
+.srow .owe { font: 600 15px var(--f-ui); font-variant-numeric: tabular-nums; min-width: 74px; text-align: right; }
+.srow .owe.zero { color: var(--dim); font-weight: 400; }
+
+.rround { display: grid; grid-template-columns: 30px 1fr auto; gap: 12px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--hair); }
+.rround:last-child { border-bottom: 0; padding-bottom: 0; }
+.rround .no { font: italic 600 22px/1 var(--f-serif); color: var(--gold); }
+.rround .txt { min-width: 0; font-size: 13.5px; line-height: 1.45; }
+.rround .amt { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; font-size: 14px; }
+.rround .amt small { display: block; font-weight: 400; color: var(--dim); font-size: 12px; }
+
+/* Dock */
+.dock {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+  padding-left: max(18px, env(safe-area-inset-left, 0px));
+  padding-right: max(18px, env(safe-area-inset-right, 0px));
+  padding-top: 18px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, var(--bg) 60%, rgba(6,9,20,0));
+}
+.dock .inner { max-width: 460px; margin: 0 auto; }
+.dock .btn { background: rgba(13,18,40,.9); backdrop-filter: blur(8px); }
+
+/* Team kleuren */
+.t0 { --tc: var(--t1); --tb: var(--t1-bg); }
+.t1 { --tc: var(--t2); --tb: var(--t2-bg); }
+.tc { color: var(--tc); }
+.tl { font: 600 10.5px/1 var(--f-ui); letter-spacing: .2em; text-transform: uppercase; color: var(--tc); }
+
+/* Borden met de boom */
+.boards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.board {
+  position: relative; border-radius: 18px; padding: 16px 14px 16px; background: var(--surface);
+  border: 1px solid var(--hair); display: flex; flex-direction: column; gap: 14px; min-width: 0; overflow: hidden;
+  transition: border-color .3s ease, background .3s ease;
+}
+.board::before { content: ""; position: absolute; inset: 0 0 auto; height: 3px; background: var(--tc); box-shadow: 0 0 18px var(--tc); }
+.board { background: linear-gradient(180deg, var(--tb), var(--surface) 75%); }
+.board.hot { animation: hot 1.4s ease-in-out infinite; }
+@keyframes hot { 0%, 100% { box-shadow: 0 0 0 0 transparent; border-color: var(--hair); } 50% { box-shadow: 0 0 28px -4px var(--tc); border-color: var(--tc); } }
+.hotb { display: inline-block; margin-left: 8px; padding: 3px 8px; border-radius: 999px; background: var(--tc); color: #10140f; font: 800 9px/1 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; vertical-align: 1px; }
+.board.sel { border-color: color-mix(in srgb, var(--tc) 55%, transparent); background: linear-gradient(180deg, var(--tb), var(--surface) 70%); }
+.board .bnames { font: 600 18px/1.15 var(--f-serif); margin-top: 6px; min-height: 2.3em; overflow-wrap: anywhere; }
+.board .bbody { display: grid; grid-template-columns: auto 1fr; align-items: end; gap: 10px; }
+.board .num { font: 500 76px/0.8 var(--f-serif); font-variant-numeric: lining-nums tabular-nums; text-align: right; color: var(--ivory); text-shadow: 0 0 28px color-mix(in srgb, var(--tc) 45%, transparent); }
+.board .num.zero { color: var(--tc); }
+.board.bump .num { animation: settle .7s var(--ease); }
+@keyframes settle { 0% { opacity: .2; transform: translateY(-10px); filter: blur(3px); } 100% { opacity: 1; transform: none; filter: none; } }
+.board .delta { position: absolute; right: 14px; top: 12px; font: italic 700 30px/1 var(--f-serif); text-shadow: 0 0 16px var(--tc); color: var(--tc); animation: fadeup 1.8s var(--ease) forwards; pointer-events: none; }
+@keyframes fadeup { 0% { opacity: 0; transform: translateY(6px); } 15%, 65% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-6px); } }
+
+/* De boom: 10 horizontale streepjes op een stam, van onder naar boven. */
+.boom { position: relative; display: flex; flex-direction: column-reverse; align-items: center; gap: 6px; padding: 2px 0 0; width: 54px; }
+.boom::before { content: ""; position: absolute; left: 50%; top: -6px; bottom: -6px; width: 1px; background: var(--hair-2); transform: translateX(-.5px); }
+.boom i { position: relative; display: block; width: 54px; height: 3px; border-radius: 2px; background: var(--tc); box-shadow: 0 0 8px color-mix(in srgb, var(--tc) 55%, transparent); transform-origin: center; transition: opacity .4s ease, transform .4s var(--ease); }
+.boom i.off { opacity: .1; transform: scaleX(.35); }
+.boom i.x { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+.boom i.off { box-shadow: none; background: var(--ivory); }
+.boom i.leave { animation: leave .7s var(--ease) both; animation-delay: calc(var(--k) * 90ms); }
+.boom i.arrive { animation: arrive .6s var(--ease) both; animation-delay: calc(var(--k) * 90ms); }
+@keyframes leave { 0% { opacity: 1; transform: none; background: var(--tc); } 100% { opacity: .1; transform: scaleX(.35); } }
+@keyframes arrive { 0% { opacity: 0; transform: scaleX(0); } 100% { opacity: 1; transform: none; } }
+
+/* Invoer van een hand */
+.steps { display: flex; flex-direction: column; gap: 18px; }
+.step { display: flex; flex-direction: column; gap: 10px; transition: opacity .25s ease; }
+.step.wait { opacity: .3; pointer-events: none; }
+.slabel { display: flex; align-items: center; gap: 10px; }
+.slabel .no { font: italic 600 18px/1 var(--f-serif); color: var(--gold); width: 14px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stack { display: grid; gap: 8px; }
+.opt {
+  border: 1px solid var(--hair); background: var(--surface); border-radius: 14px; padding: 13px 14px; min-height: 62px;
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 4px; text-align: left;
+  transition: background .2s ease, border-color .2s ease, transform .12s ease;
+}
+.opt:active { transform: scale(.985); }
+.opt .big { font: 600 20px/1.1 var(--f-serif); }
+.opt small { color: var(--dim); font-size: 12px; line-height: 1.35; }
+.opt.on { border-color: var(--gold); background: var(--gold-soft); }
+.opt.team.on { border-color: color-mix(in srgb, var(--tc) 70%, transparent); background: var(--tb); }
+.opt.res { --rc: var(--gold); align-items: stretch; justify-content: center; gap: 6px; padding: 14px 18px; min-height: 64px; position: relative; overflow: hidden; }
+.opt.res::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--rc); opacity: .85; }
+.opt.res.lose { --rc: var(--danger); }
+.opt.res .kick { font: 700 10px/1.2 var(--f-ui); letter-spacing: .16em; text-transform: uppercase; color: var(--rc); }
+.opt.res .big { font-size: 23px; }
+.opt.res .big .tc { font-style: italic; }
+.effs { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 4px; }
+.eff2 { display: inline-flex; align-items: baseline; gap: 7px; white-space: nowrap; }
+.eff2 .tl { font-size: 9.5px; }
+.eff2 .sc { font: 600 19px/1 var(--f-serif); font-variant-numeric: lining-nums tabular-nums; color: var(--dim); }
+.eff2 .sc b { color: var(--tc); font-weight: 600; }
+.eff2 .sc .ar { color: var(--dim); margin: 0 3px; font-family: var(--f-ui); font-size: 13px; }
+
+/* Melding na elke hand, met ongedaan maken */
+.toast {
+  position: fixed; z-index: 15; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  width: min(430px, calc(100% - 32px)); display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: #182048; border: 1px solid var(--hair-2); border-radius: 14px; padding: 10px 10px 10px 16px;
+  box-shadow: 0 16px 40px -12px rgba(0,0,0,.7); animation: toastin .35s var(--ease);
+}
+.toast.out { animation: toastout .3s ease forwards; }
+@keyframes toastin { from { opacity: 0; transform: translate(-50%, 12px); } }
+@keyframes toastout { to { opacity: 0; transform: translate(-50%, 12px); } }
+.toast .tx { font-size: 13.5px; line-height: 1.35; min-width: 0; }
+.toast .tx b { font-weight: 600; }
+.bill-hint { font-size: 13px; color: var(--dim); margin: 0; }
+.bill-hint b { color: var(--ivory); font-weight: 600; }
+.breakdown { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; font-size: 13.5px; color: var(--dim); }
+.breakdown span:nth-child(even) { text-align: right; color: var(--ivory); font-variant-numeric: tabular-nums; }
+
+.hrow { display: grid; grid-template-columns: 20px 1fr auto; gap: 12px; align-items: baseline; font-size: 13px; padding: 10px 0; border-bottom: 1px solid var(--hair); }
+.hrow:last-child { border-bottom: 0; padding-bottom: 0; }
+.hrow .n { color: var(--dim); font: italic 600 16px var(--f-serif); }
+.hrow .sc { font: 600 18px var(--f-serif); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.hrow .sc .sep { color: var(--dim); margin: 0 4px; }
+
+.roundbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.pricechip { background: transparent; border: 1px solid var(--hair-2); border-radius: 999px; padding: 7px 14px; font-weight: 600; font-size: 13px; font-variant-numeric: tabular-nums; }
+
+/* Prijs */
+.money { display: flex; align-items: baseline; gap: 10px; border-bottom: 1px solid var(--hair-2); padding: 6px 2px 10px; transition: border-color .2s ease; }
+.money:focus-within { border-color: var(--gold); }
+.money span { font: 500 40px var(--f-serif); color: var(--dim); }
+.money input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; font: 600 64px/1 var(--f-serif); font-variant-numeric: lining-nums tabular-nums; }
+.money input::placeholder { color: rgba(233,241,255,.16); }
+.chip { border: 1px solid var(--hair-2); background: transparent; border-radius: 999px; padding: 8px 14px; font-weight: 600; font-size: 13px; }
+.chip.on { border-color: var(--gold); color: var(--gold); }
+.err { color: var(--danger); font-size: 13px; margin: 0; min-height: 1.2em; }
+.matchup { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; padding: 16px; border: 1px solid var(--hair); border-radius: 18px; background: var(--surface); }
+.matchup .side { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.matchup .side:last-child { text-align: right; align-items: flex-end; }
+.matchup .nm { font: 600 20px/1.15 var(--f-serif); overflow-wrap: anywhere; }
+.matchup .vs { font: italic 500 18px var(--f-serif); color: var(--dim); }
+
+/* Boeren trekken aan tafel. Spelers met de klok mee: 0 onder, 1 links, 2 boven, 3 rechts. */
+.table {
+  position: relative; height: 410px; border-radius: 26px; overflow: hidden; user-select: none; -webkit-user-select: none;
+  --cw: 54px; --ch: 76px;
+  background: radial-gradient(ellipse 70% 60% at 50% 50%, #1a2350 0%, #0d1330 75%), var(--surface);
+  border: 1px solid var(--hair); box-shadow: inset 0 0 60px rgba(0,0,0,.35);
+}
+.table::before { content: ""; position: absolute; inset: 10px; border-radius: 20px; border: 1px solid rgba(94,240,192,.12); pointer-events: none; }
+.seat { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 6px; z-index: 1; }
+.seat.p0 { bottom: 16px; left: 50%; transform: translateX(-50%); flex-direction: column-reverse; }
+.seat.p2 { top: 16px; left: 50%; transform: translateX(-50%); }
+.seat.p1 { left: 16px; top: 50%; transform: translateY(-50%); }
+.seat.p3 { right: 16px; top: 50%; transform: translateY(-50%); }
+.seat .nm { font: 600 18px/1 var(--f-serif); color: var(--dim); transition: color .4s ease; white-space: nowrap; display: flex; align-items: baseline; gap: 6px; }
+.seat .nm small { font: 600 8.5px/1 var(--f-ui); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+.seat .pile { width: var(--cw); height: var(--ch); border-radius: 7px; border: 1px dashed var(--hair); transition: border-color .4s ease, box-shadow .4s ease; }
+.seat.jack .nm { color: var(--gold); }
+.seat.jack .pile { border-color: transparent; }
+.seat.t0 .nm { color: var(--t1); } .seat.t1 .nm { color: var(--t2); }
+.deckpile { position: absolute; left: 50%; top: 50%; width: var(--cw); height: var(--ch); transform: translate(-50%, -50%); border-radius: 7px; transition: opacity .5s ease; }
+.deckpile.empty { opacity: 0; }
+.deckpile, .dcard .back {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(94,240,192,.22), transparent 55%),
+    repeating-linear-gradient(45deg, rgba(94,240,192,.17) 0 1px, transparent 1px 6px),
+    repeating-linear-gradient(-45deg, rgba(94,240,192,.17) 0 1px, transparent 1px 6px),
+    #0f1630;
+  box-shadow: inset 0 0 0 1px rgba(94,240,192,.55), inset 0 0 0 4px #0f1630, inset 0 0 0 5px rgba(94,240,192,.35), 0 8px 18px -6px rgba(0,0,0,.6);
+}
+.deckpile { box-shadow: inset 0 0 0 1px rgba(94,240,192,.55), inset 0 0 0 4px #0f1630, inset 0 0 0 5px rgba(94,240,192,.35), 2px 2px 0 -1px #0a1024, 4px 4px 0 -2px #0f1630, 0 10px 20px -6px rgba(0,0,0,.6); }
+.dealer-tag { position: absolute; left: 50%; top: calc(50% + 50px); transform: translateX(-50%); font: italic 500 14px var(--f-serif); color: var(--dim); white-space: nowrap; }
+.dcard { position: absolute; width: var(--cw); height: var(--ch); perspective: 600px; z-index: 5;
+  transition: left .42s var(--ease), top .42s var(--ease), transform .42s var(--ease); }
+.dcard.instant { transition: none; }
+.dcard .inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .45s cubic-bezier(.3,.7,.25,1); }
+.dcard.flipped .inner { transform: rotateY(180deg); }
+.dcard .back, .dcard .face { position: absolute; inset: 0; border-radius: 7px; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.dcard .face {
+  transform: rotateY(180deg); background: linear-gradient(160deg, #f8f2e4, #ebe1ca); color: #1d1f1c;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.08), 0 8px 18px -6px rgba(0,0,0,.6);
+  display: grid; place-items: center; font-family: var(--f-serif);
+}
+.dcard .face.red { color: #a2302a; }
+.dcard .ix { position: absolute; top: 5px; left: 6px; display: flex; flex-direction: column; align-items: center; font: 600 14px/0.95 var(--f-serif); font-variant-numeric: lining-nums; }
+.dcard .ix.br { top: auto; left: auto; bottom: 5px; right: 6px; transform: rotate(180deg); }
+.dcard .ix i { font-style: normal; font-size: 11px; }
+.dcard .mid { font: 500 28px/1 var(--f-serif); }
+.dcard .mid.court { font: italic 600 32px/1 var(--f-serif); }
+.dcard.isjack { z-index: 40; }
+.dcard.isjack::after { content: ""; position: absolute; inset: -6px; border-radius: 12px; border: 2px solid var(--gold); animation: burst .9s ease-out .35s both; pointer-events: none; }
+.dcard.isjack::before { content: ""; position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px; border-radius: 50%; animation: sparks .9s ease-out .35s both; pointer-events: none;
+  box-shadow: 0 -60px 0 var(--gold), 42px -42px 0 var(--t1), 60px 0 0 var(--gold), 42px 42px 0 var(--t2), 0 60px 0 var(--gold), -42px 42px 0 var(--t1), -60px 0 0 var(--gold), -42px -42px 0 var(--t2); }
+@keyframes burst { from { opacity: 1; transform: scale(.85); } to { opacity: 0; transform: scale(1.7); } }
+@keyframes sparks { from { opacity: 1; transform: scale(.2); } 70% { opacity: 1; } to { opacity: 0; transform: scale(1.15); } }
+.dcard.isjack .face { box-shadow: 0 0 0 2px var(--gold), 0 0 28px rgba(94,240,192,.55), 0 10px 22px -6px rgba(0,0,0,.6); }
+.dcard.isjack .mid { color: inherit; }
+.dealmsg { margin: 0; min-height: 2.6em; text-align: center; font: italic 500 21px/1.25 var(--f-serif); color: var(--ivory); text-wrap: balance; }
+.dealmsg b { font-weight: 600; color: var(--gold); }
+.draw-actions { display: grid; gap: 12px; animation: enter .5s var(--ease); }
+.skip { text-align: center; margin: 0; color: var(--dim); font-size: 12px; letter-spacing: .04em; }
+
+/* Statistieken */
+.panel-head:has(.tabs) { flex-wrap: wrap; row-gap: 10px; }
+.tabs { display: inline-flex; border: 1px solid var(--hair-2); border-radius: 999px; padding: 3px; gap: 2px; }
+.tabs button { white-space: nowrap; border: 0; background: transparent; border-radius: 999px; padding: 6px 12px; font: 600 12px var(--f-ui); color: var(--dim); }
+.tabs button.on { background: var(--gold-soft); color: var(--gold); }
+.sub { font: 600 10.5px/1.3 var(--f-ui); letter-spacing: .2em; text-transform: uppercase; color: var(--dim); margin: 6px 0 0; }
+.wrow { display: grid; grid-template-columns: 76px 1fr 64px; gap: 12px; align-items: center; padding: 6px 0; }
+.wrow .who { font: 600 18px/1.1 var(--f-serif); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wrow .bar { height: 6px; border-radius: 3px; background: var(--hair); overflow: hidden; }
+.wrow .bar i { display: block; height: 100%; background: var(--pc); border-radius: 3px; box-shadow: 0 0 10px color-mix(in srgb, var(--pc) 60%, transparent); }
+.wrow .who { color: var(--pc); }
+.wrow .n { text-align: right; font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.wrow .n b { color: var(--ivory); font-weight: 600; }
+.h2h-wrap { overflow-x: auto; }
+.h2h { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.h2h th { font: 600 10px var(--f-ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); padding: 6px 4px; text-align: center; }
+.h2h th.rowh { text-align: left; font: 600 16px var(--f-serif); letter-spacing: 0; text-transform: none; color: var(--ivory); white-space: nowrap; }
+.h2h td { text-align: center; padding: 8px 4px; border-top: 1px solid var(--hair); font-size: 14px; }
+.h2h td.self { color: var(--hair-2); }
+.h2h td .w { color: var(--ivory); font-weight: 600; } .h2h td .l { color: var(--dim); }
+.h2h td.up .w { color: var(--gold); }
+.duo { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--hair); }
+.duo:first-of-type { border-top: 0; }
+.duo .nm { font: 600 17px var(--f-serif); }
+.duo .n { font-size: 13px; color: var(--dim); }
+.duo .n b { color: var(--ivory); }
+.duo.best .nm { color: var(--gold); }
+.hint { font-size: 12px; color: var(--dim); margin: 0; }
+
+/* Rekenmachine */
+.calc { display: flex; flex-direction: column; gap: 12px; }
+.cdisp { display: flex; align-items: baseline; gap: 10px; border-bottom: 1px solid var(--gold); padding: 4px 2px 10px; min-height: 76px; }
+.cdisp .cur { font: 500 36px var(--f-serif); color: var(--dim); }
+.cdisp .expr { flex: 1; min-width: 0; text-align: right; font: 600 52px/1.1 var(--f-serif); font-variant-numeric: lining-nums tabular-nums; overflow-wrap: anywhere; }
+.cdisp .expr.long { font-size: 34px; }
+.cdisp .expr.ph { color: rgba(233,241,255,.18); }
+.cdisp .expr .op { color: var(--gold); margin: 0 .12em; font-weight: 500; }
+.cres { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; min-height: 22px; font-size: 13.5px; color: var(--dim); }
+.cres b { color: var(--ivory); font: 600 20px var(--f-serif); font-variant-numeric: lining-nums; }
+.keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.key {
+  min-height: 54px; border-radius: 14px; border: 1px solid var(--hair); background: var(--surface);
+  font: 500 26px/1 var(--f-serif); font-variant-numeric: lining-nums; display: grid; place-items: center;
+  transition: background .12s ease, transform .1s ease, border-color .12s ease; touch-action: manipulation;
+}
+.key:active, .key.hit { background: var(--surface-2); transform: scale(.96); border-color: var(--hair-2); }
+.key.op { color: var(--gold); background: transparent; border-color: rgba(94,240,192,.3); font: 400 24px/1 var(--f-ui); }
+.key.fn { font: 600 13px var(--f-ui); letter-spacing: .1em; color: var(--dim); background: transparent; }
+.key.eq { font: 400 26px/1 var(--f-ui); grid-row: span 2; background: var(--gold-soft); border-color: rgba(94,240,192,.5); color: var(--gold); }
+.key.zero { grid-column: span 2; }
+
+/* Modals */
+.overlay { position: fixed; inset: 0; z-index: 20; background: rgba(3, 5, 14, .76); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: grid; align-items: end; justify-items: center; animation: fade .25s ease; }
+@keyframes fade { from { opacity: 0; } }
+.sheet {
+  width: 100%; max-width: 460px; max-height: 92vh; overflow: auto; background: var(--surface); border: 1px solid var(--hair); border-bottom: 0;
+  border-radius: 24px 24px 0 0; padding: 26px max(20px, env(safe-area-inset-right, 0px)) calc(22px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));
+  display: flex; flex-direction: column; gap: 16px; animation: up .4s var(--ease);
+}
+@keyframes up { from { transform: translateY(30px); opacity: 0; } }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 12.5px; color: var(--dim); }
+.input { background: var(--bg); border: 1px solid var(--hair-2); border-radius: 12px; padding: 12px 14px; min-height: 48px; width: 100%; }
+.input:focus { border-color: var(--gold); outline: none; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.win { text-align: center; align-items: center; position: relative; overflow: hidden; padding-top: 34px; }
+.win::before { content: ""; position: absolute; left: 50%; top: -120px; width: 360px; height: 260px; transform: translateX(-50%); background: radial-gradient(closest-side, color-mix(in srgb, var(--tc) 30%, transparent), transparent); animation: glow 2.4s ease-in-out infinite alternate; pointer-events: none; }
+@keyframes glow { from { opacity: .55; } to { opacity: 1; } }
+.win .crest { font: italic 600 15px var(--f-serif); color: var(--tc); letter-spacing: .02em; }
+.win h2 { font: 600 40px/1.05 var(--f-serif); text-wrap: balance; position: relative; }
+.win h2 .tc { text-shadow: 0 0 30px color-mix(in srgb, var(--tc) 50%, transparent); }
+#confetti { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.win > *:not(#confetti) { position: relative; }
+.win .wl2 { width: 0; height: 1px; background: var(--tc); animation: draw 1s var(--ease) .2s forwards; }
+@keyframes draw { to { width: 120px; } }
+.win .pay { border: 1px solid var(--hair); border-radius: 16px; padding: 16px; width: 100%; display: flex; flex-direction: column; gap: 4px; }
+.win .pay b { font: 600 34px/1 var(--f-serif); font-variant-numeric: lining-nums; }
+
+/* Einde avond */
+.payers { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.payer { border: 1px solid var(--hair); background: var(--surface); border-radius: 14px; min-height: 62px; padding: 12px 14px; text-align: left; display: flex; flex-direction: column; gap: 3px; transition: border-color .2s ease, background .2s ease; }
+.payer .nm { font: 600 21px/1.1 var(--f-serif); }
+.payer small { font-size: 12px; color: var(--dim); }
+.payer.on { border-color: var(--gold); background: var(--gold-soft); }
+.tr { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--hair); }
+.tr:last-of-type { border-bottom: 0; }
+.tr .who { font: 600 21px/1.15 var(--f-serif); display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.tr .arrow { color: var(--gold); font: italic 500 16px/1.2 var(--f-serif); }
+.tr .amt { font: 600 17px var(--f-ui); font-variant-numeric: tabular-nums; }
+.total { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.total b { font: 600 34px var(--f-serif); font-variant-numeric: lining-nums tabular-nums; }
+.note { border: 1px solid rgba(94,240,192,.35); border-radius: 12px; padding: 11px 14px; font-size: 13.5px; color: var(--ivory); background: var(--gold-soft); }
+.sync { white-space: nowrap; font-size: 11px; color: var(--dim); display: inline-flex; align-items: center; gap: 6px; letter-spacing: .04em; }
+.sync::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--dim); }
+.sync.on::before { background: #5ef0c0; }
+.empty { color: var(--dim); font-size: 14px; margin: 0; }
+.btn:disabled { opacity: .35; pointer-events: none; }
+.top .btn { flex-shrink: 0; white-space: nowrap; }
+
+/* Start van de avond: spelers en keuze van het spel */
+.pfield { display: grid; grid-template-columns: 26px 1fr; align-items: center; gap: 10px; border-bottom: 1px solid var(--hair); transition: border-color .2s ease; }
+.pfield:last-child { border-bottom: 0; }
+.pfield:focus-within { border-color: var(--gold); }
+.pfield span { display: inline-flex; align-items: center; gap: 6px; font: italic 600 18px/1 var(--f-serif); color: var(--dim); font-variant-numeric: lining-nums; }
+.pfield span::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--pc); box-shadow: 0 0 8px var(--pc); }
+.pfield input { min-width: 0; width: 100%; border: 0; background: transparent; outline: none; font: 600 24px/1.2 var(--f-serif); padding: 12px 0; }
+.pfield input::placeholder { color: rgba(233,241,255,.2); }
+.gcards { display: grid; gap: 12px; }
+.gcard { text-align: left; border: 1px solid var(--hair); border-radius: 20px; padding: 20px 18px; display: grid; grid-template-columns: 1fr auto; gap: 8px 14px; align-items: center; transition: border-color .2s ease, transform .12s ease; }
+.gcard:active { transform: scale(.99); }
+.gcard:hover { border-color: var(--hair-2); }
+.gcard.troef { --tc: var(--t1); background: linear-gradient(135deg, var(--t1-bg), var(--surface) 62%); }
+.gcard.wiez { --tc: var(--t2); background: linear-gradient(135deg, var(--t2-bg), var(--surface) 62%); }
+.gcard .gname { font: italic 600 34px/1 var(--f-serif); color: var(--tc); }
+.gcard .garr { font: 500 28px/1 var(--f-serif); color: var(--tc); }
+.gcard .gdesc { grid-column: 1 / -1; color: var(--dim); font-size: 13.5px; line-height: 1.45; }
+.gcard .gstat { grid-column: 1 / -1; font: 600 10.5px/1.3 var(--f-ui); letter-spacing: .16em; text-transform: uppercase; color: var(--gold); }
+.names { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
+
+/* Wiezen: percentages, stand en invoer */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.pctrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--hair); }
+.pctrow:last-child { border-bottom: 0; }
+.pctrow .pl { font: 600 20px/1.15 var(--f-serif); min-width: 0; }
+.pctrow .pl small { display: block; font: 400 12px/1.35 var(--f-ui); color: var(--dim); margin-top: 3px; }
+.stepper { display: flex; align-items: center; gap: 6px; }
+.stepper button { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--hair-2); background: transparent; font: 500 22px/1 var(--f-ui); color: var(--gold); touch-action: manipulation; }
+.stepper button:active { background: var(--surface-2); }
+.stepper input { width: 52px; text-align: right; border: 0; border-bottom: 1px solid var(--hair-2); background: transparent; outline: none; font: 600 28px/1 var(--f-serif); font-variant-numeric: lining-nums tabular-nums; padding: 4px 2px; }
+.stepper input:focus { border-color: var(--gold); }
+.stepper .pc { font: 500 18px var(--f-serif); color: var(--dim); margin-right: 2px; }
+.stepper output { min-width: 34px; text-align: center; font: 600 24px var(--f-serif); font-variant-numeric: lining-nums tabular-nums; }
+.sumline { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-weight: 600; }
+.sumline .ok { color: var(--p2); } .sumline .bad { color: var(--danger); }
+.pctbar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; gap: 2px; background: var(--hair); }
+.pctbar i { background: var(--gold); opacity: calc(.35 + var(--o) * .65); }
+.pos { color: var(--p2); } .neg { color: var(--danger); }
+.srow .meta { display: block; font: 500 12px/1.3 var(--f-ui); color: var(--dim); margin-top: 4px; letter-spacing: .02em; }
+.srow small.dl, .hjrow small.dl { font: 700 9px/1 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--gold); margin-left: 8px; vertical-align: 4px; }
+.srow .pts { font: 600 28px/1 var(--f-serif); font-variant-numeric: lining-nums tabular-nums; text-align: right; }
+.srow .owe small { display: block; font-weight: 400; color: var(--dim); font-size: 12px; margin-top: 2px; }
+.opt.res.on { border-color: var(--gold); background: var(--gold-soft); }
+.opt.res.lose.on { border-color: var(--danger); background: rgba(255,107,107,.1); }
+.opt.who-on { border-color: var(--pc); background: color-mix(in srgb, var(--pc) 12%, transparent); }
+.dgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.dcell { display: flex; justify-content: space-between; gap: 8px; background: var(--surface-2); border-radius: 10px; padding: 10px 12px; font-size: 15px; min-width: 0; }
+.dcell span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dcell b { font: 600 19px/1 var(--f-serif); font-variant-numeric: lining-nums tabular-nums; }
+
+/* Hartenjagen */
+.gcard.hart { --tc: var(--p3); background: linear-gradient(135deg, rgba(255,134,192,.13), var(--surface) 62%); }
+.hjrow { display: flex; flex-direction: column; gap: 7px; padding: 12px 0; border-bottom: 1px solid var(--hair); }
+.hjrow:last-child { border-bottom: 0; }
+.hjtop { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.hjrow .who { font: 600 21px/1.1 var(--f-serif); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hjrow .who::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--pc); margin-right: 10px; vertical-align: 3px; box-shadow: 0 0 10px var(--pc); }
+.hjnum { font: 600 34px/1 var(--f-serif); font-variant-numeric: lining-nums tabular-nums; }
+.hjbar { height: 6px; border-radius: 3px; background: var(--hair); overflow: hidden; }
+.hjbar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--danger), var(--pc)); box-shadow: 0 0 10px color-mix(in srgb, var(--pc) 60%, transparent); transition: width .6s var(--ease); }
+.hjrow .meta { font: 500 12px/1.3 var(--f-ui); color: var(--dim); }
+.qv { width: 44px; height: 40px; border-radius: 10px; border: 1px solid var(--hair-2); background: transparent; font: 700 13px/1 var(--f-ui); color: var(--dim); }
+.qv.on { border-color: var(--p3); color: var(--p3); background: rgba(255,134,192,.13); box-shadow: 0 0 14px -4px var(--p3); }
+.stepper button:disabled, .stepper input:disabled { opacity: .35; }
+.pctrow .pl small b { font-weight: 700; color: var(--ivory); }
+.pctrow .pl small b.neg { color: var(--danger); }
+
+/* Kiesscherm: tegels per spel */
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tile { position: relative; aspect-ratio: 1 / 1.08; border: 0; border-radius: 22px; padding: 14px; overflow: hidden; text-align: left; color: #fff;
+  display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; min-width: 0;
+  background: var(--tg); box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 14px 30px -16px var(--tglow); transition: transform .15s var(--ease), box-shadow .2s ease; }
+.tile:active { transform: scale(.97); }
+.tile::after { content: ""; position: absolute; inset: 0; background: radial-gradient(80% 60% at 20% 0%, rgba(255,255,255,.28), transparent 60%); pointer-events: none; }
+.tile .tart { position: absolute; top: 10px; left: 10px; width: 58%; color: #fff; }
+.tile .tart svg { display: block; width: 100%; height: auto; filter: drop-shadow(0 6px 10px rgba(0,0,0,.18)); }
+.tile .tname { font: italic 600 25px/1.02 var(--f-serif); text-shadow: 0 2px 10px rgba(0,0,0,.2); overflow-wrap: anywhere; }
+.tile .tsub { font: 600 11px/1.3 var(--f-ui); letter-spacing: .04em; opacity: .85; }
+.tile .tstat { position: absolute; top: 12px; right: 12px; z-index: 1; font: 700 9.5px/1 var(--f-ui); letter-spacing: .12em; text-transform: uppercase; background: rgba(0,0,0,.28); padding: 5px 8px; border-radius: 999px; backdrop-filter: blur(4px); }
+.tile.cur { outline: 2px solid rgba(255,255,255,.75); outline-offset: 3px; }
+.g-troef { --tg: linear-gradient(150deg, #c39bff, #7b4fe0 70%, #5a35b8); --tglow: #7b4fe0; }
+.g-wiez { --tg: linear-gradient(150deg, #7fe6ff, #1fa8e0 70%, #1279b5); --tglow: #1fa8e0; }
+.g-hart { --tg: linear-gradient(150deg, #ff9fcd, #f0508f 70%, #c22e6a); --tglow: #f0508f; }
+.tile.soon { --tg: transparent; background: transparent; border: 1.5px dashed var(--hair-2); color: var(--dim); box-shadow: none; justify-content: center; align-items: center; text-align: center; }
+.tile.soon::after { display: none; }
+.tile.soon .tname { font-size: 19px; text-shadow: none; }
+
+/* Vorige avonden */
+.htab td, .htab th { white-space: nowrap; }
+.htab td { font-size: 13.5px; }
+.htab th.rowh small.dl { font: 700 8.5px/1 var(--f-ui); letter-spacing: .12em; text-transform: uppercase; color: var(--danger); margin-left: 4px; vertical-align: 3px; }
+.htab .hpts { display: block; font-size: 11px; margin-top: 2px; }
+.htab b.neg { font-weight: 600; }
+.hitem { border-top: 1px solid var(--hair); }
+.hitem:first-child { border-top: 0; }
+.hhead { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; text-align: left; background: none; border: 0; padding: 12px 0; }
+.hmain { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.hdate { font: 600 19px/1.15 var(--f-serif); }
+.hsub { font-size: 12.5px; color: var(--dim); }
+.hlos { font-size: 13px; color: var(--dim); }
+.hlos b { color: var(--danger); font-weight: 600; }
+.hhead .chev { color: var(--dim); font-size: 20px; transition: transform .2s ease; }
+.hitem.open .chev { transform: rotate(90deg); }
+.hbody { display: flex; flex-direction: column; gap: 10px; padding-bottom: 14px; }
+
+/* Cormorant heeft standaard oude cijfers; overal rechte cijfers (na alle font-shorthands) */
+h1, h2, .opt .big, .opt.res .eff span, .hrow .sc, .hrow .n, .rround .no, .slabel .no, .srow .who, .bnames, .board .delta, .tr .who, .payer .nm, .matchup .nm, .win .pay b, .total b, .money input, .brand, .gcard .gname, .pctrow .pl, .tile .tname { font-variant-numeric: lining-nums tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; transition-duration: .01ms !important; }
+}
+</style>
+
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+<div id="app"></div>
+<div id="modal"></div>
+
+<script>
+// Spelregels en afrekening voor Troeven op café. Pure functies, getest in test/logic.test.mjs.
+const Logic = (() => {
+  const START = 10;
+  // De drie mogelijke teamindelingen met 4 spelers (indexen in players).
+  const PAIRINGS = [
+    [[0, 1], [2, 3]],
+    [[0, 2], [1, 3]],
+    [[0, 3], [1, 2]],
+  ];
+
+  function pairingIndex(teams) {
+    if (!teams) return -1;
+    const a = [...teams[0]].sort().join();
+    const b = [...teams[1]].sort().join();
+    return PAIRINGS.findIndex(([x, y]) => {
+      const xs = x.join(), ys = y.join();
+      return (xs === a && ys === b) || (xs === b && ys === a);
+    });
+  }
+
+  // Lot teams. Nooit dezelfde indeling als het vorige rondje (er zijn er maar 3).
+  function drawTeams(prevTeams, rnd = Math.random) {
+    const prev = pairingIndex(prevTeams);
+    const options = PAIRINGS.map((_, i) => i).filter((i) => i !== prev);
+    const pick = PAIRINGS[options[Math.floor(rnd() * options.length)]];
+    let teams = pick.map((t) => (rnd() < 0.5 ? [t[0], t[1]] : [t[1], t[0]]));
+    if (rnd() < 0.5) teams = [teams[1], teams[0]];
+    return teams;
+  }
+
+  // Boeren trekken. Spel van 24 kaarten (9, 10, J, Q, K, A in 4 kleuren); J is de boer.
+  // De deler geeft om beurten één open kaart, te beginnen links van de deler (volgende index).
+  // Wie een boer krijgt, ligt eruit en krijgt geen kaarten meer. De eerste twee met een boer
+  // vormen Team I, de andere twee Team II.
+  const RANKS = ['9', '10', 'J', 'Q', 'K', 'A'];
+  const SUITS = ['s', 'h', 'k', 'r']; // schoppen, harten, klaveren, ruiten
+  function dealTeams(dealer, rnd = Math.random) {
+    const deck = [];
+    for (const s of SUITS) for (const r of RANKS) deck.push({ r, s });
+    for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
+    const deal = [], jacks = [];
+    let seat = (dealer + 1) % 4;
+    for (const card of deck) {
+      while (jacks.includes(seat)) seat = (seat + 1) % 4;
+      deal.push({ player: seat, card });
+      if (card.r === 'J') { jacks.push(seat); if (jacks.length === 2) break; }
+      seat = (seat + 1) % 4;
+    }
+    const rest = [0, 1, 2, 3].filter((p) => !jacks.includes(p));
+    return { dealer, deal, teams: [jacks, rest] };
+  }
+
+  // Statistieken over uitgespeelde rondjes (n spelers).
+  // per[i] = {won, played}; vs[i][j] = {won, lost} van i tegen tegenstander j; duos["i-j"] = {won, played}
+  function stats(rounds, n = 4) {
+    const per = Array.from({ length: n }, () => ({ won: 0, played: 0 }));
+    const vs = Array.from({ length: n }, () => Array.from({ length: n }, () => ({ won: 0, lost: 0 })));
+    const duos = {};
+    for (const r of rounds) {
+      if (r.winner === null || r.winner === undefined) continue;
+      r.teams.forEach((team, t) => {
+        const won = t === r.winner;
+        const key = [...team].sort((a, b) => a - b).join('-');
+        duos[key] = duos[key] || { won: 0, played: 0 };
+        duos[key].played++; if (won) duos[key].won++;
+        for (const i of team) {
+          per[i].played++; if (won) per[i].won++;
+          for (const j of r.teams[1 - t]) { if (won) vs[i][j].won++; else vs[i][j].lost++; }
+        }
+      });
+    }
+    return { per, vs, duos };
+  }
+
+  // hand = { card: 1|2, playing: 0|1, result: 'win' | 'clean' | 'lose' }
+  // win:   spelend team -1 (1ste kaart) of -2 (2de kaart)
+  // clean: gewonnen en de anderen haalden geen slag: -2 of -3
+  // lose:  het andere team -1 of -2, het spelende team krijgt er 1 streepje bij
+  function rawDelta(hand) {
+    const d = [0, 0];
+    const p = hand.playing, o = 1 - p;
+    if (hand.result === 'win') d[p] = -hand.card;
+    else if (hand.result === 'clean') d[p] = -(hand.card + 1);
+    else if (hand.result === 'lose') { d[o] = -hand.card; d[p] = +1; }
+    else throw new Error('Onbekend resultaat: ' + hand.result);
+    return d;
+  }
+
+  // Speel alle handen af. Nooit onder 0; wie eerst op 0 staat wint.
+  function replay(hands) {
+    let score = [START, START];
+    const steps = [];
+    let winner = null;
+    for (const hand of hands) {
+      if (winner !== null) break;
+      const before = score;
+      const d = rawDelta(hand);
+      score = [Math.max(0, before[0] + d[0]), Math.max(0, before[1] + d[1])];
+      steps.push({ hand, before, after: score, delta: [score[0] - before[0], score[1] - before[1]] });
+      if (score[0] === 0) winner = 0;
+      else if (score[1] === 0) winner = 1;
+    }
+    return { score, steps, winner };
+  }
+
+  function round2(c) { return Math.round(c); }
+
+  // Wat ieder verschuldigd is uit de gespeelde rondjes (in cent, kan halve cent zijn).
+  function shares(state) {
+    const s = state.players.map(() => 0);
+    const lost = state.players.map(() => 0);
+    const won = state.players.map(() => 0);
+    for (const r of state.rounds) {
+      if (r.winner === null || r.winner === undefined) continue;
+      const losers = r.teams[1 - r.winner];
+      for (const i of losers) { s[i] += r.price / 2; lost[i]++; }
+      for (const i of r.teams[r.winner]) won[i]++;
+    }
+    return { owed: s, lost, won };
+  }
+
+  // Einde avond: payer betaalde de hele rekening (bill, in cent).
+  // Zonder bill geldt het totaal van de rondjes. Het verschil tussen de echte rekening en
+  // de rondjes (te veel of te weinig) wordt gelijk over alle spelers verdeeld.
+  // Valt iemands aandeel negatief uit, dan krijgt die geld terug van de betaler.
+  function settle(state, payer, bill = null) {
+    const n = state.players.length;
+    const { owed } = shares(state);
+    const played = state.rounds.filter((r) => r.winner !== null && r.winner !== undefined);
+    const rounds = played.reduce((t, r) => t + r.price, 0);
+    const total = bill === null || bill === undefined ? rounds : bill;
+    const diff = total - rounds;
+    const per = owed.map((c) => c + diff / n);
+    const transfers = [];
+    per.forEach((c, i) => {
+      if (i === payer) return;
+      const amount = round2(c);
+      if (amount > 0) transfers.push({ from: i, to: payer, amount });
+      else if (amount < 0) transfers.push({ from: payer, to: i, amount: -amount });
+    });
+    return { total, rounds, diff, per, transfers };
+  }
+
+  function euro(cents) {
+    const v = (Math.round(cents) / 100).toFixed(2).replace('.', ',');
+    return '€ ' + v;
+  }
+
+  // "12,50" / "12.5" / "12" -> 1250 cent. null bij ongeldig.
+  function parsePrice(text) {
+    if (text === null || text === undefined) return null;
+    const t = String(text).trim().replace(/€/g, '').replace(/\s/g, '').replace(',', '.');
+    if (!/^\d+(\.\d{0,2})?$/.test(t)) return null;
+    const c = Math.round(parseFloat(t) * 100);
+    return c > 0 ? c : null;
+  }
+
+
+  // Rekenmachine: "4×2,80+3,20" -> 1440 cent. Volgorde: × en ÷ eerst. null bij ongeldig, 0 of negatief.
+  function calc(expr) {
+    const str = String(expr || '').replace(/\s/g, '');
+    if (!str) return null;
+    const toks = str.match(/\d+(?:,\d*)?|[+\-−×÷*/]/g);
+    if (!toks || toks.join('') !== str) return null;
+    const nums = [], ops = [];
+    for (let i = 0; i < toks.length; i++) {
+      const t = toks[i], isNum = /^\d/.test(t);
+      if (i % 2 === 0) { if (!isNum) return null; nums.push(parseFloat(t.replace(',', '.'))); }
+      else { if (isNum) return null; ops.push({ '−': '-', '*': '×', '/': '÷' }[t] || t); }
+    }
+    if (nums.length !== ops.length + 1) return null;
+    const n = [nums[0]], o = [];
+    for (let i = 0; i < ops.length; i++) {
+      const b = nums[i + 1], op = ops[i];
+      if (op === '×') n[n.length - 1] *= b;
+      else if (op === '÷') { if (b === 0) return null; n[n.length - 1] /= b; }
+      else { o.push(op); n.push(b); }
+    }
+    let r = n[0];
+    o.forEach((op, i) => { r = op === '+' ? r + n[i + 1] : r - n[i + 1]; });
+    const c = Math.round(r * 100 + 1e-9);
+    return c > 0 ? c : null;
+  }
+
+  return { dealTeams, stats, RANKS, SUITS, calc, START, PAIRINGS, pairingIndex, drawTeams, rawDelta, replay, shares, settle, euro, parsePrice };
+})();
+if (typeof module !== 'undefined') module.exports = Logic;
+
+</script>
+<script>
+(() => {
+  const KEY = 'troeven-boom-v1';
+  const DEFAULT_PLAYERS = ['Lennert', 'Mattijs', 'Sander', 'Inez'];
+  const TEAM = ['Team I', 'Team II'];
+  const RESULTS = [['win', 'Spelers winnen'], ['clean', 'Spelers winnen met elke slag'], ['lose', 'Spelers verliezen']];
+  const RESULT_LABEL = Object.fromEntries(RESULTS);
+  const QUIPS = {
+    win: ['Netjes gespeeld', 'Dat zit', 'Proper', 'Weer eentje minder', 'Zo moet dat'],
+    clean: ['Kapot gespeeld!', 'Alle slagen, chapeau', 'Afgeslacht', 'Geen kruimel voor hen', 'Wat een hand!'],
+    lose: ['Oei oei', 'Te hoog gemikt', 'Pijnlijk', 'Streepje erbij', 'Volgende keer beter'],
+  };
+  function confetti() {
+    const cv = document.getElementById('confetti');
+    if (!cv || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const box = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    cv.width = box.width * dpr; cv.height = box.height * dpr;
+    const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+    const css = getComputedStyle(document.documentElement);
+    const cols = ['--t1', '--t2', '--gold', '--p0', '--p1', '--p2', '--p3'].map((v) => css.getPropertyValue(v).trim());
+    const bits = Array.from({ length: 110 }, () => ({
+      x: box.width / 2 + (Math.random() - 0.5) * 60, y: box.height * 0.3,
+      vx: (Math.random() - 0.5) * 9, vy: -4 - Math.random() * 7, r: Math.random() * 6.3, vr: (Math.random() - 0.5) * 0.3,
+      w: 4 + Math.random() * 6, h: 2 + Math.random() * 3, c: cols[(Math.random() * cols.length) | 0],
+    }));
+    const t0 = performance.now();
+    (function frame(t) {
+      if (!document.body.contains(cv)) return;
+      ctx.clearRect(0, 0, box.width, box.height);
+      bits.forEach((b) => {
+        b.vy += 0.18; b.vx *= 0.99; b.x += b.vx; b.y += b.vy; b.r += b.vr;
+        ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.r); ctx.fillStyle = b.c; ctx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h); ctx.restore();
+      });
+      if (t - t0 < 4000) requestAnimationFrame(frame); else ctx.clearRect(0, 0, box.width, box.height);
+    })(t0);
+  }
+
+  const $app = document.getElementById('app');
+  const $modal = document.getElementById('modal');
+  const euro = Logic.euro;
+
+  // ---------- Wiezen ----------
+  // p = punten per tegenspeler. Samen spelen: elke speler +p, elke tegenspeler −p.
+  // Alleen spelen: elke tegenspeler betaalt p, de speler krijgt 3 × p.
+  // extra: +1 per slag boven min (bij alleen hoogstens cap extra), niet gehaald: −1 extra per slag te weinig.
+  const WBIDS = [
+    { k: 'vragen', n: 'Vragen + meegaan', need: '8 slagen samen', min: 8, duo: true, p: 2, extra: true },
+    { k: 'troel', n: 'Troel', need: '8 slagen samen', min: 8, duo: true, p: 4, extra: true },
+    { k: 'alleen', n: 'Alleen', need: '5 slagen', min: 5, p: 3, extra: true, cap: 3 },
+    { k: 'ab9', n: 'Abondance 9', need: '9 slagen', p: 8 },
+    { k: 'ab10', n: 'Abondance 10', need: '10 slagen', p: 10 },
+    { k: 'ab11', n: 'Abondance 11', need: '11 slagen', p: 12 },
+    { k: 'ab12', n: 'Abondance 12', need: '12 slagen', p: 14 },
+    { k: 'mis', n: 'Miserie', need: 'geen enkele slag', p: 5 },
+    { k: 'omis', n: 'Open miserie', need: 'geen slag, kaarten open', p: 15 },
+    { k: 'solo', n: 'Solo', need: 'alle 13 slagen', p: 30 },
+  ];
+  // Percentage van de rekening per plaats: [1ste, 2de, 3de, 4de].
+  const PCT_PRESETS = [
+    { n: 'Winnaar betaalt niets', v: [0, 20, 30, 50] },
+    { n: 'Iedereen betaalt mee', v: [10, 20, 30, 40] },
+    { n: 'Twee laatsten betalen', v: [0, 0, 40, 60] },
+    { n: 'Laatste betaalt alles', v: [0, 0, 0, 100] },
+  ];
+  const ORD = ['1ste', '2de', '3de', '4de'];
+  const wbid = (k) => WBIDS.find((b) => b.k === k);
+  const wpts = (k) => (S.wz.pts[k] ?? wbid(k).p);
+  function wValue(k, made, diff) {
+    const b = wbid(k);
+    let p = wpts(k);
+    if (b.extra) p += made ? (b.cap != null ? Math.min(diff, b.cap) : diff) : diff;
+    return p;
+  }
+  function wDelta(k, sel, made, diff) {
+    const b = wbid(k);
+    const v = (made ? 1 : -1) * wValue(k, made, diff);
+    return [0, 1, 2, 3].map((i) => (b.duo ? (sel.includes(i) ? v : -v) : (sel.includes(i) ? 3 * v : -v)));
+  }
+  const wTot = (r) => (r ? r.games : []).reduce((t, g) => t.map((x, i) => x + g.d[i]), [0, 0, 0, 0]);
+  // Plaats en percentage per speler. Gelijke punten delen het gemiddelde van hun plaatsen.
+  function wPayPct(tot, pct) {
+    const order = [0, 1, 2, 3].sort((a, b) => tot[b] - tot[a]);
+    const out = [0, 0, 0, 0], place = [0, 0, 0, 0], tied = [false, false, false, false];
+    let i = 0;
+    while (i < 4) {
+      let j = i;
+      while (j + 1 < 4 && tot[order[j + 1]] === tot[order[i]]) j++;
+      const avg = pct.slice(i, j + 1).reduce((a, b) => a + b, 0) / (j - i + 1);
+      for (let k = i; k <= j; k++) { out[order[k]] = avg; place[order[k]] = i; tied[order[k]] = j > i; }
+      i = j + 1;
+    }
+    return { out, place, order, tied };
+  }
+  const fmtPct = (v) => (Number.isInteger(v) ? v : v.toFixed(1).replace('.', ',')) + '%';
+  const pn = (n) => (n > 0 ? 'pos' : n < 0 ? 'neg' : '');
+  // Een rondje = { price, pct, per (wiezen), games of hands, start, end }. Elk rondje wordt apart betaald.
+  function freshWz(prev) { return { pct: prev && prev.pct ? prev.pct : null, pts: prev && prev.pts ? prev.pts : {}, per: prev && prev.per ? prev.per : 1, rondjes: [], dealer: 0 }; }
+  function normalize(s) {
+    if (!s.wz) s.wz = freshWz();
+    if (!s.wz.pts) s.wz.pts = {};
+    if (!s.wz.per) s.wz.per = 1;
+    if (!Array.isArray(s.wz.rondjes)) s.wz.rondjes = [];
+    delete s.wz.rounds;
+    if (s.game === undefined) s.game = s.rounds && s.rounds.length ? 'troeven' : null;
+    if (!s.hj) s.hj = freshHj();
+    if (!Array.isArray(s.hj.rondjes)) s.hj.rondjes = [];
+    delete s.hj.hands;
+    if (!Array.isArray(s.history)) s.history = historyFromArchive(s);
+    return s;
+  }
+
+  // ---------- Hartenjagen ----------
+  // Iedereen begint met 100. Per hand gaan de strafpunten eraf: elke ♥ 1 punt, de schoppen vrouw 13 (samen 26).
+  // Pakt iemand alles, dan gaat er bij de 3 anderen 26 af en bij hem niets. Wie eerst op 0 staat, verliest: het spel is gedaan.
+  const HJ_START = 100;
+  const PASS = ['3 kaarten doorgeven naar links', '3 kaarten doorgeven naar rechts', '3 kaarten doorgeven naar over', 'niet doorgeven'];
+  function freshHj(prev) { return { pct: prev && prev.pct ? prev.pct : null, rondjes: [], dealer: 0 }; }
+  const hTot = (r) => (r ? r.hands : []).reduce((t, h) => t.map((x, i) => x - h.p[i]), [HJ_START, HJ_START, HJ_START, HJ_START]);
+  const hDone = (r) => !!r && r.hands.length > 0 && hTot(r).some((v) => v <= 0);
+  function hjPts(R) {
+    if (R.moon !== null) return [0, 1, 2, 3].map((i) => (i === R.moon ? 0 : 26));
+    return R.p.map((v, i) => v + (R.q === i ? 13 : 0));
+  }
+
+  // Spellen die afrekenen met percentages per plaats
+  const PG = {
+    wiezen: { title: 'Wiezen', st: () => S.wz, tot: wTot },
+    harten: { title: 'Hartenjagen', st: () => S.hj, tot: hTot },
+  };
+  const pg = () => PG[S.game] || PG.wiezen;
+  const lastOf = (st) => st.rondjes[st.rondjes.length - 1] || null;
+  const openOf = (st) => { const r = lastOf(st); return r && !r.end ? r : null; };
+  const gCur = () => openOf(pg().st());
+  const ptsLabel = (g, v) => (g === 'harten' ? `${v < 0 ? '−' + Math.abs(v) : v} over` : `${sign(v)} ptn`);
+  // Wat elke speler betaalt voor de uitgespeelde rondjes van één spel (in cent)
+  function gameOwed(g) {
+    const owed = [0, 0, 0, 0]; let total = 0, n = 0;
+    PG[g].st().rondjes.forEach((r) => {
+      if (!r.end || !r.price) return;
+      const { out } = wPayPct(PG[g].tot(r), r.pct);
+      out.forEach((p, i) => { owed[i] += r.price * p / 100; });
+      total += r.price; n++;
+    });
+    return { owed, total, n };
+  }
+  // Alle spellen van de avond samen: troeven + wiezen + hartenjagen
+  function owedAll() {
+    const t = Logic.shares(S).owed, done = finished(), tTotal = done.reduce((a, r) => a + r.price, 0);
+    const w = gameOwed('wiezen'), h = gameOwed('harten');
+    return { owed: [0, 1, 2, 3].map((i) => t[i] + w.owed[i] + h.owed[i]), total: tTotal + w.total + h.total, n: done.length + w.n + h.n,
+      parts: [['Troeven', done.length, tTotal], ['Wiezen', w.n, w.total], ['Hartenjagen', h.n, h.total]] };
+  }
+  // Einde avond: payer betaalde de rekening. Verschil met de rondjes wordt gelijk verdeeld.
+  function settleAll(payer, bill) {
+    const A = owedAll();
+    const total = bill === null || bill === undefined ? A.total : bill;
+    const diff = total - A.total;
+    const per = A.owed.map((c) => c + diff / 4);
+    const transfers = [];
+    per.forEach((c, i) => {
+      if (i === payer) return;
+      const amount = Math.round(c);
+      if (amount > 0) transfers.push({ from: i, to: payer, amount });
+      else if (amount < 0) transfers.push({ from: payer, to: i, amount: -amount });
+    });
+    return { total, rounds: A.total, diff, per, transfers };
+  }
+  // Oudere avonden kenden alleen winnaars per rondje (geen bedragen): groepeer ze per avond.
+  function historyFromArchive(s) {
+    const out = [], arc = (s.archive || []).slice().sort((a, b) => a.date - b.date);
+    let group = [];
+    const flush = () => {
+      if (!group.length) return;
+      const st = Logic.stats(group, 4);
+      out.push({ date: group[0].date, players: (s.players || DEFAULT_PLAYERS).slice(), legacy: true,
+        t: { n: group.length, won: st.per.map((p) => p.won), lost: st.per.map((p) => p.played - p.won), paid: null } });
+      group = [];
+    };
+    arc.forEach((r) => { if (group.length && r.date - group[group.length - 1].date > 8 * 3600e3) flush(); group.push(r); });
+    flush();
+    return out;
+  }
+
+  function fresh(players) { return { v: 1, players: players || [...DEFAULT_PLAYERS], rounds: [], lastPrice: null, updatedAt: 0, game: null, wz: freshWz(), hj: freshHj() }; }
+  function loadLocal() {
+    try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 1 && Array.isArray(s.rounds)) return normalize(s); } catch (e) {}
+    return null;
+  }
+  function saveLocal() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+  let S = loadLocal() || fresh();
+  const ui = { view: null, pick: { card: null, playing: null }, modal: null, draw: null, calc: { expr: '', target: null }, payer: null, bill: '', statScope: 'night', flash: null, synced: false, pct: null, per: 1, wr: null, hr: null };
+
+  // ---------- Opslaan (lokaal + gedeelde opslag van de pagina) ----------
+  let docRef = null, writing = false, dirty = false;
+  function save() { S.updatedAt = Date.now(); saveLocal(); pushRemote(); }
+  async function pushRemote() {
+    if (!docRef) return;
+    if (writing) { dirty = true; return; }
+    writing = true;
+    try { await docRef.set({ json: JSON.stringify(S), updatedAt: S.updatedAt }); ui.synced = true; }
+    catch (e) { ui.synced = false; }
+    writing = false;
+    updateSync();
+    if (dirty) { dirty = false; pushRemote(); }
+  }
+  (async () => {
+    try {
+      if (!window.claude || !window.claude.use) return;
+      const db = await window.claude.use('db');
+      if (!db) return;
+      docRef = db.doc('troeven/avond');
+      docRef.onSnapshot((snap) => {
+        const d = snap.data();
+        if (d && typeof d.json === 'string') {
+          if ((d.updatedAt || 0) > (S.updatedAt || 0)) {
+            try { const st = JSON.parse(d.json); if (st && st.v === 1) { S = normalize(st); saveLocal(); ui.synced = true; if (ui.view !== 'draw') render(); return; } } catch (e) {}
+          } else if ((d.updatedAt || 0) < (S.updatedAt || 0)) { pushRemote(); }
+          ui.synced = true;
+        } else if (S.updatedAt) { pushRemote(); }
+        else ui.synced = true;
+        updateSync();
+      }, () => { ui.synced = false; updateSync(); });
+    } catch (e) {}
+  })();
+  function updateSync() { const el = document.querySelector('.sync'); if (el) { el.classList.toggle('on', ui.synced); el.textContent = ui.synced ? 'Bewaard' : 'Op dit toestel'; } }
+
+  // Scherm aan houden aan tafel
+  let lock = null;
+  async function keepAwake() {
+    try { if (!lock && navigator.wakeLock) { lock = await navigator.wakeLock.request('screen'); lock.addEventListener('release', () => { lock = null; }); } } catch (e) {}
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && current()) keepAwake(); });
+
+  // ---------- Helpers ----------
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const P = (i) => esc(S.players[i]);
+  const current = () => { const r = S.rounds[S.rounds.length - 1]; return r && (r.winner === null || r.winner === undefined) ? r : null; };
+  const finished = () => S.rounds.filter((r) => r.winner !== null && r.winner !== undefined);
+  const tName = (r, t) => r.teams[t].map(P).join(' &amp; ');
+  const sign = (n) => (n > 0 ? '+' + n : n < 0 ? '−' + Math.abs(n) : '0');
+  const today = () => new Date().toLocaleDateString('nl-BE', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  function view() {
+    if (ui.view === 'start' || ui.view === 'choose') return ui.view;
+    if (!S.game) return 'start';
+    if (S.game === 'wiezen' || S.game === 'harten') {
+      if (ui.view === 'end' || ui.view === 'wsetup' || (ui.view === 'wround' && ui.wr && S.game === 'wiezen' && gCur()) || (ui.view === 'hround' && ui.hr && S.game === 'harten' && gCur())) return ui.view;
+      if (!pg().st().pct) return 'wsetup';
+      const c = gCur();
+      if (c && c.price == null) return 'gprice';
+      return S.game === 'wiezen' ? 'wgame' : 'hgame';
+    }
+    if (ui.view === 'draw' || ui.view === 'end') return ui.view;
+    const r = current();
+    if (r) return r.price == null ? 'price' : 'game';
+    return 'home';
+  }
+
+  // De boom: n streepjes over, prev = stand vóór de laatste hand (voor de animatie).
+  function boom(n, prev) {
+    if (prev === undefined) prev = n;
+    const total = Math.max(10, n, prev);
+    let s = '';
+    const bars = [];
+    for (let i = 0; i < total; i++) {
+      let cls = i < n ? (i >= 10 ? 'x' : '') : 'off';
+      if (i >= n && i < prev) cls += ' leave';
+      if (i < n && i >= prev) cls += ' arrive';
+      bars.push(cls);
+    }
+    // vertraging: hoogste streepje eerst
+    const leaving = bars.map((c, i) => (c.includes('leave') ? i : -1)).filter((i) => i >= 0).reverse();
+    const arriving = bars.map((c, i) => (c.includes('arrive') ? i : -1)).filter((i) => i >= 0);
+    bars.forEach((cls, i) => {
+      if (i >= 10 && i >= n && !cls.includes('leave')) return; // geen lege extra streepjes tonen
+      const kk = cls.includes('leave') ? leaving.indexOf(i) : cls.includes('arrive') ? arriving.indexOf(i) : 0;
+      s += `<i class="${cls.trim()}" style="--k:${kk}"></i>`;
+    });
+    return `<div class="boom" aria-hidden="true">${s}</div>`;
+  }
+
+  const dock = () => `<div class="dock"><div class="inner"><button class="btn ghost block" data-act="end">Einde avond <span class="muted">·</span> afrekenen</button></div></div>`;
+  const syncChip = () => `<span class="sync ${ui.synced ? 'on' : ''}">${ui.synced ? 'Bewaard' : 'Op dit toestel'}</span>`;
+
+  // ---------- Geschiedenis van vorige avonden ----------
+  // Wordt bewaard bij "Nieuwe avond starten".
+  function nightRecord() {
+    const rec = { date: Date.now(), players: S.players.slice() };
+    const starts = [];
+    const done = finished();
+    if (done.length) {
+      const st = Logic.stats(done, 4);
+      rec.t = { n: done.length, won: st.per.map((p) => p.won), lost: st.per.map((p) => p.played - p.won) };
+      starts.push(done[0].start || done[0].id);
+    }
+    // Wiezen en hartenjagen: per uitgespeeld rondje telt de 1ste als gewonnen, wie het meest betaalt als verloren.
+    [['w', 'wiezen'], ['h', 'harten']].forEach(([key, g]) => {
+      const rs = PG[g].st().rondjes.filter((r) => r.end && r.price);
+      if (!rs.length) return;
+      const won = [0, 0, 0, 0], lost = [0, 0, 0, 0];
+      rs.forEach((r) => {
+        const { out, place } = wPayPct(PG[g].tot(r), r.pct);
+        const mx = Math.max(...out);
+        [0, 1, 2, 3].forEach((i) => { if (place[i] === 0) won[i]++; if (out[i] === mx && mx > 0) lost[i]++; });
+      });
+      rec[key] = { n: rs.length, r: rs.length, won, lost };
+      starts.push(rs[0].start);
+    });
+    if (!rec.t && !rec.w && !rec.h) return null;
+    rec.paid = settleAll(0, Logic.parsePrice(ui.bill)).per.map((c) => Math.round(c));
+    if (starts.filter(Boolean).length) rec.date = Math.min(...starts.filter(Boolean));
+    return rec;
+  }
+  function nightPaid(h) {
+    if (h.paid) return h.paid;
+    const parts = [h.t && h.t.paid, h.w && h.w.paid, h.h && h.h.paid].filter(Boolean);
+    return parts.length ? [0, 1, 2, 3].map((i) => parts.reduce((s, p) => s + p[i], 0)) : null;
+  }
+  const nightLost = (h) => [0, 1, 2, 3].map((i) => (h.t ? h.t.lost[i] : 0) + (h.w ? h.w.lost[i] : 0) + (h.h ? h.h.lost[i] : 0));
+  // Grote verliezer: wie het meest betaalde; zonder bedragen wie het meest verloor.
+  function nightLoser(h) {
+    const paid = nightPaid(h), score = paid || nightLost(h);
+    const max = Math.max(...score);
+    if (max <= 0) return null;
+    return { who: [0, 1, 2, 3].filter((i) => score[i] === max), byPaid: !!paid, val: max };
+  }
+  const hDate = (t) => { const s = new Date(t).toLocaleDateString('nl-BE', { weekday: 'long', day: 'numeric', month: 'long' }); return s.charAt(0).toUpperCase() + s.slice(1); };
+
+  function renderHistory() {
+    const all = S.history || [];
+    if (!all.length) {
+      return `<section class="panel"><h2>Vorige avonden</h2><p class="empty">Nog geen avonden bewaard. Een avond komt hier te staan zodra je op het einde "Nieuwe avond starten" kiest.</p></section>`;
+    }
+    // Alle avonden samen, per naam
+    const agg = {};
+    all.forEach((h) => {
+      const paid = nightPaid(h), lo = nightLoser(h);
+      h.players.forEach((nm, i) => {
+        const a = agg[nm] = agg[nm] || { nights: 0, loser: 0, paid: 0, paidKnown: false, won: 0, lost: 0 };
+        a.nights++;
+        if (lo && lo.who.includes(i)) a.loser++;
+        if (paid) { a.paid += paid[i]; a.paidKnown = true; }
+        a.won += (h.t ? h.t.won[i] : 0) + (h.w ? h.w.won[i] : 0) + (h.h ? h.h.won[i] : 0);
+        a.lost += nightLost(h)[i];
+      });
+    });
+    const names = Object.keys(agg).sort((a, b) => agg[b].loser - agg[a].loser || agg[b].paid - agg[a].paid);
+    const sumRows = names.map((nm) => { const a = agg[nm]; return `<tr><th class="rowh" scope="row">${esc(nm)}</th><td><span class="w">${a.won}</span><span class="l">–${a.lost}</span></td><td>${a.loser ? `<b class="neg">${a.loser}×</b>` : '<span class="l">0</span>'}</td><td>${a.paidKnown ? euro(a.paid) : '–'}</td></tr>`; }).join('');
+
+    const items = all.map((h, idx) => ({ h, idx })).reverse().map(({ h, idx }) => {
+      const open = ui.hOpen === idx, paid = nightPaid(h), lo = nightLoser(h);
+      const games = [h.t ? `Troeven ${h.t.n} rondje${h.t.n > 1 ? 's' : ''}` : '', h.w ? `Wiezen ${h.w.r ? `${h.w.r} rondje${h.w.r > 1 ? 's' : ''}` : `${h.w.n} spelletje${h.w.n > 1 ? 's' : ''}`}` : '', h.h ? `Hartenjagen ${h.h.r ? `${h.h.r} rondje${h.h.r > 1 ? 's' : ''}` : `${h.h.n} ${h.h.n > 1 ? 'handen' : 'hand'}`}` : ''].filter(Boolean).join(' · ');
+      const total = paid ? paid.reduce((a, b) => a + b, 0) : null;
+      const loserTxt = lo ? `${lo.who.map((i) => esc(h.players[i])).join(' &amp; ')} · ${lo.byPaid ? euro(lo.val) : `${lo.val} verloren`}` : 'niemand';
+      let body = '';
+      if (open) {
+        const cols = [h.t ? '<th scope="col">Troeven</th>' : '', h.w ? '<th scope="col">Wiezen</th>' : '', h.h ? '<th scope="col">Harten</th>' : '', '<th scope="col">Betaald</th>'].join('');
+        const rows = h.players.map((nm, i) => `<tr><th class="rowh" scope="row" style="color:var(--p${i})">${esc(nm)}${lo && lo.who.includes(i) ? ' <small class="dl">verliezer</small>' : ''}</th>
+          ${h.t ? `<td><span class="w">${h.t.won[i]}</span><span class="l">–${h.t.lost[i]}</span></td>` : ''}
+          ${h.w ? `<td><span class="w">${h.w.won[i]}</span><span class="l">–${h.w.lost[i]}</span>${h.w.pts ? `<small class="hpts ${pn(h.w.pts[i])}">${sign(h.w.pts[i])} ptn</small>` : ''}</td>` : ''}
+          ${h.h ? `<td><span class="w">${h.h.won[i]}</span><span class="l">–${h.h.lost[i]}</span>${h.h.pts ? `<small class="hpts ${h.h.pts[i] <= 0 ? 'neg' : ''}">${h.h.pts[i]} over</small>` : ''}</td>` : ''}
+          <td>${paid ? euro(paid[i]) : '–'}</td></tr>`).join('');
+        body = `<div class="hbody"><div class="h2h-wrap"><table class="h2h htab"><thead><tr><th></th>${cols}</tr></thead><tbody>${rows}</tbody></table></div>
+          <p class="hint">Gewonnen–verloren per rondje. Bij wiezen en hartenjagen wint de 1ste en verliest wie het meest betaalt.${h.legacy ? ' Van deze avond zijn de bedragen niet bewaard.' : ''}${!h.paid && h.w && !h.w.paid ? ' De wiezen-rekening werd niet ingevuld.' : ''}${!h.paid && h.h && !h.h.paid ? ' De hartenjagen-rekening werd niet ingevuld.' : ''}</p>
+          <button class="link" data-act="hDel" data-v="${idx}" style="align-self:flex-start;color:${ui.hDel === idx ? 'var(--danger)' : ''}">${ui.hDel === idx ? 'Tik nog eens om deze avond te verwijderen' : 'Avond verwijderen'}</button></div>`;
+      }
+      return `<div class="hitem ${open ? 'open' : ''}"><button class="hhead" data-act="hOpen" data-v="${idx}" aria-expanded="${open}">
+          <span class="hmain"><span class="hdate">${esc(hDate(h.date))}</span><span class="hsub">${games}${total ? ` · ${euro(total)}` : ''}</span>
+          <span class="hlos">Grote verliezer: <b>${loserTxt}</b></span></span><span class="chev">›</span></button>${body}</div>`;
+    }).join('');
+
+    return `<section class="panel"><div class="panel-head"><h2>Vorige avonden</h2><span class="label">${all.length} avond${all.length > 1 ? 'en' : ''}</span></div>
+      <p class="sub">Alle avonden samen</p>
+      <div class="h2h-wrap"><table class="h2h htab"><thead><tr><th></th><th scope="col">Won–verl.</th><th scope="col">Verliezer</th><th scope="col">Betaald</th></tr></thead><tbody>${sumRows}</tbody></table></div>
+      <p class="sub">Per avond · tik voor details</p>
+      <div>${items}</div></section>`;
+  }
+
+  // ---------- Start van de avond ----------
+  function renderStart() {
+    return `<div class="wrap">
+      <header class="top"><div class="brand">Kaartavond</div>${syncChip()}</header>
+      <section><p class="label">${esc(today())}</p><h1>Wie speelt er <em>mee</em>?</h1>
+        <p class="lead">Geef de 4 spelers in, in de volgorde waarin jullie rond de tafel zitten.</p></section>
+      <form id="startForm" class="steps" autocomplete="off">
+        <div class="panel" style="gap:0;padding-block:6px">${[0, 1, 2, 3].map((i) => `<label class="pfield" style="--pc:var(--p${i})"><span>${i + 1}</span><input id="sp${i}" value="${esc(S.players[i] || '')}" placeholder="Speler ${i + 1}" maxlength="18" enterkeyhint="${i < 3 ? 'next' : 'done'}"></label>`).join('')}</div>
+        <p class="err" id="startErr" style="min-height:0"></p>
+        <button class="btn primary xl" type="submit">Kies het spel <span class="arr">→</span></button>
+      </form>${renderHistory()}</div>`;
+  }
+
+  // Spellen op het kiesscherm. Een nieuw spel = één regel erbij + een tekening.
+  const GAME_ART = {
+    troeven: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M48 14v70" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity=".55"/>${[0, 1, 2, 3, 4, 5].map((k) => `<rect x="${24 + (k % 2) * 4}" y="${70 - k * 10}" width="${44 - (k % 2) * 8 - k * 2}" height="4.5" rx="2.2" fill="currentColor" opacity="${k > 3 ? .35 : 1}"/>`).join('')}<g transform="translate(58 8) rotate(12)"><rect width="26" height="36" rx="4" fill="#fff"/><text x="13" y="24" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-weight="700" font-size="18" fill="#2b1d55">B</text></g></svg>`,
+    wiezen: `<svg viewBox="0 0 96 96" aria-hidden="true">${[-20, 0, 20].map((a, k) => `<g transform="rotate(${a} 48 84)"><rect x="32" y="22" width="32" height="46" rx="5" fill="#fff" opacity="${.55 + k * .22}"/></g>`).join('')}<g transform="rotate(20 48 84)"><path d="M54 32c-5 6-11 9-11 15a5 5 0 0 0 9 3l-2 6h8l-2-6a5 5 0 0 0 9-3c0-6-6-9-11-15z" fill="#07324a"/></g></svg>`,
+    harten: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M48 80 20 52a16 16 0 0 1 28-20 16 16 0 0 1 28 20z" fill="#fff"/><path d="M14 28 70 62" stroke="#5a0f33" stroke-width="3.5" stroke-linecap="round"/><path d="M70 62l-9-1 5-7z" fill="#5a0f33"/><path d="M14 28l6 1-3 5z" fill="#5a0f33"/></svg>`,
+  };
+  const GAMES = [
+    { k: 'troeven', name: 'Troeven', sub: '2 tegen 2 · boom van 10', cls: 'g-troef' },
+    { k: 'wiezen', name: 'Wiezen', sub: 'punten · % per plaats', cls: 'g-wiez' },
+    { k: 'harten', name: 'Hartenjagen', sub: 'van 100 naar 0', cls: 'g-hart' },
+  ];
+  function renderChoose() {
+    const tDone = finished().length, tCur = current(), wN = S.wz.rondjes.filter((r) => r.end).length, hN = S.hj.rondjes.filter((r) => r.end).length;
+    const stat = {
+      troeven: tCur ? 'bezig' : tDone ? `${tDone} rondje${tDone > 1 ? 's' : ''}` : '',
+      wiezen: openOf(S.wz) ? 'bezig' : wN ? `${wN} rondje${wN > 1 ? 's' : ''}` : '',
+      harten: openOf(S.hj) ? 'bezig' : hN ? `${hN} rondje${hN > 1 ? 's' : ''}` : '',
+    };
+    const tiles = GAMES.map((g) => `<button class="tile ${g.cls} ${S.game === g.k ? 'cur' : ''}" data-act="pickGame" data-v="${g.k}">
+        <span class="tart">${GAME_ART[g.k]}</span>
+        ${stat[g.k] ? `<span class="tstat">${stat[g.k]}</span>` : ''}
+        <span class="tname">${g.name}</span><span class="tsub">${g.sub}</span></button>`).join('');
+    const soon = GAMES.length % 2 ? `<div class="tile soon" aria-hidden="true"><span class="tname">Meer spellen</span><span class="tsub">komen hier bij</span></div>` : '';
+    return `<div class="wrap">
+      <header class="top"><button class="btn ghost sm" data-act="toStart">← Spelers</button><span class="label names">${S.players.map(esc).join(' · ')}</span></header>
+      <section><p class="label">${esc(today())}</p><h1>Wat spelen <em>jullie</em>?</h1></section>
+      <div class="tiles">${tiles}${soon}</div>
+      ${renderHistory()}</div>`;
+  }
+
+  // ---------- Wiezen en hartenjagen: wie betaalt hoeveel per rondje ----------
+  const samePct = (a, b) => a.every((v, i) => v === b[i]);
+  function renderWSetup() {
+    if (!ui.pct) { ui.pct = (pg().st().pct || PCT_PRESETS[0].v).slice(); ui.per = S.wz.per || 1; }
+    const p = ui.pct, first = !pg().st().pct, wz = S.game === 'wiezen';
+    const sub = ['meeste punten', '', '', 'minste punten'];
+    const rows = p.map((v, i) => `<div class="pctrow"><span class="pl">${ORD[i]} plaats${sub[i] ? `<small>${sub[i]}</small>` : ''}</span>
+      <div class="stepper"><button type="button" data-act="pctStep" data-i="${i}" data-v="-5" aria-label="5 procent minder">−</button><input id="pct${i}" inputmode="numeric" maxlength="3" value="${v}" aria-label="Percentage ${ORD[i]} plaats"><span class="pc">%</span><button type="button" data-act="pctStep" data-i="${i}" data-v="5" aria-label="5 procent meer">+</button></div></div>`).join('');
+    const perBox = wz
+      ? `<section class="steps" style="gap:10px"><p class="label">Hoeveel spelletjes per rondje?</p>
+          <div class="chips">${[1, 4, 8, 12, 16].map((v) => `<button class="chip ${ui.per === v ? 'on' : ''}" data-act="perSet" data-v="${v}">${v === 1 ? '1 spelletje' : `${v} spelletjes`}</button>`).join('')}</div>
+          <p class="hint">${ui.per === 1 ? 'Na elk spelletje is het rondje gedaan en betaalt iedereen zijn deel.' : `Na ${ui.per} spelletjes is het rondje gedaan en betaalt iedereen zijn deel.`}</p></section>`
+      : '<p class="hint">Een rondje hartenjagen is gedaan zodra iemand op 0 staat. Dan betaalt iedereen zijn deel.</p>';
+    return `<div class="wrap">
+      <header class="top"><button class="btn ghost sm" data-act="${first ? 'toChoose' : 'wsetupCancel'}">← Terug</button><span class="label">${pg().title}</span></header>
+      <section><h1>Wie betaalt <em>hoeveel</em>?</h1><p class="lead">Na elk rondje betaalt elke plaats een deel van de prijs van het rondje. Kies een voorstel of geef zelf de percentages in.</p></section>
+      <div class="chips">${PCT_PRESETS.map((x, i) => `<button class="chip ${samePct(x.v, p) ? 'on' : ''}" data-act="pctPreset" data-v="${i}">${x.n}</button>`).join('')}</div>
+      <section class="panel" style="gap:0;padding-block:6px">${rows}</section>
+      <div id="pctSum">${pctSumHTML()}</div>
+      ${perBox}
+      ${first || !gCur() ? '' : '<p class="hint">Het rondje dat nu bezig is, telt nog met de oude afspraken.</p>'}
+      <button class="btn primary xl" data-act="pctSave" id="pctSave" ${p.reduce((a, b) => a + b, 0) === 100 ? '' : 'disabled'}>${first ? `Start ${pg().title.toLowerCase()}` : 'Bewaar'} <span class="arr">→</span></button>
+    </div>`;
+  }
+  function pctSumHTML() {
+    const p = ui.pct, sum = p.reduce((a, b) => a + b, 0);
+    const msg = sum === 100 ? '<span class="ok">Samen 100%</span>' : sum < 100 ? `<span class="bad">Nog ${100 - sum}% te verdelen</span>` : `<span class="bad">${sum - 100}% te veel</span>`;
+    const ex = sum === 100 ? `<p class="hint">Voorbeeld met een rondje van € 20: ${p.map((v, i) => `${ORD[i]} ${euro(2000 * v / 100)}`).join(' · ')}.</p>` : '';
+    const warn = p[0] > p[3] ? '<p class="hint" style="color:var(--danger)">Let op: de 1ste betaalt nu meer dan de laatste.</p>' : '';
+    return `<div class="steps" style="gap:8px"><div class="sumline"><span class="label">Totaal</span>${msg}</div>
+      <div class="pctbar">${p.map((v, i) => (v ? `<i style="flex:${v};--o:${i / 3}"></i>` : '')).join('')}</div>
+      ${ex}${warn}<p class="hint">Evenveel punten? Dan delen die spelers hun percentages.</p></div>`;
+  }
+  function updatePct() {
+    const s = document.getElementById('pctSum'); if (s) s.innerHTML = pctSumHTML();
+    const b = document.getElementById('pctSave'); if (b) b.disabled = ui.pct.reduce((a, c) => a + c, 0) !== 100;
+    document.querySelectorAll('.chip[data-act="pctPreset"]').forEach((c) => c.classList.toggle('on', samePct(PCT_PRESETS[+c.dataset.v].v, ui.pct)));
+  }
+
+  // ---------- Wiezen en hartenjagen: prijs van een rondje ----------
+  function renderGPrice() {
+    const g = pg(), st = g.st(), c = gCur(), nr = st.rondjes.length, last = S.lastPrice;
+    if (ui.calc.target !== 'gprice') ui.calc = { expr: last ? fmt(last) : '', target: 'gprice' };
+    const when = S.game === 'wiezen' ? (c.per === 1 ? 'Na dit spelletje' : `Na ${c.per} spelletjes`) : 'Zodra iemand op 0 staat';
+    return `<div class="wrap">
+      <header class="top"><button class="btn ghost sm" data-act="gCancel">← Annuleer</button><span class="label">${g.title} · rondje ${nr}</span></header>
+      <section><h1>Wat kost <em>het rondje</em>?</h1>
+        <p class="lead">${when} betaalt iedereen zijn deel: ${c.pct.map((v, i) => `${ORD[i]} ${v}%`).join(' · ')}.</p></section>
+      <form id="gPriceForm" class="steps" autocomplete="off">
+        ${calcHTML()}
+        ${last ? `<div><button type="button" class="chip" data-act="setprice" data-v="${last}">Zelfde als vorige · ${euro(last)}</button></div>` : ''}
+        <p class="err" id="priceErr" style="min-height:0"></p>
+        <button class="btn primary xl" type="submit">${S.game === 'wiezen' ? 'Naar het spelletje' : 'Start het rondje'} <span class="arr">→</span></button>
+      </form>
+    </div>`;
+  }
+
+  // Wat iedereen betaalt voor een uitgespeeld rondje
+  function rondjeRows(g, r) {
+    const tot = PG[g].tot(r);
+    const { out, place, order, tied } = wPayPct(tot, r.pct);
+    return order.map((i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${P(i)}<span class="meta">${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]} · ${ptsLabel(g, tot[i])} · ${fmtPct(out[i])}</span></span>
+      <span class="owe ${out[i] ? '' : 'zero'}">${euro(r.price * out[i] / 100)}</span></div>`).join('');
+  }
+  // Wat iedereen deze avond al moet betalen, over alle spellen samen
+  function avondPanel() {
+    const A = owedAll();
+    if (!A.n) return '';
+    return `<section class="panel"><div class="panel-head"><h2>Te betalen vanavond</h2><span class="label" style="white-space:nowrap">${euro(A.total)}</span></div>
+      <div>${S.players.map((p, i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${esc(p)}</span><span class="owe ${A.owed[i] ? '' : 'zero'}">${euro(A.owed[i])}</span></div>`).join('')}</div></section>`;
+  }
+  const gameHeader = (name) => `<header class="top"><div class="brand">${name}</div><div style="display:flex;gap:12px;align-items:center">${syncChip()}<button class="btn ghost sm" data-act="toChoose">Ander spel</button></div></header>`;
+
+  // ---------- Wiezen: stand ----------
+  function wRoundText(r) {
+    const b = wbid(r.k);
+    const extra = b.extra && r.diff ? ` (${r.made ? '+' : '−'}${r.diff})` : '';
+    return `${esc(b.n)} · ${r.sel.map(P).join(' &amp; ')} · ${r.made ? 'gehaald' : 'niet gehaald'}${extra}`;
+  }
+  function renderWGame() {
+    const W = S.wz, c = openOf(W), last = lastOf(W), nr = W.rondjes.length, r = c || last;
+    let head, main, stand = '';
+    if (c) {
+      const k = c.games.length, tot = wTot(c);
+      const { out, place, order, tied } = wPayPct(tot, c.pct);
+      head = `<p class="label">${esc(today())} · rondje ${nr} · ${euro(c.price)}</p>
+        <h1>Spelletje <em>${k + 1}</em>${c.per > 1 ? ` <span class="of">van ${c.per}</span>` : ''}</h1><p class="lead">${P(W.dealer)} deelt.</p>`;
+      main = `<button class="btn primary xl" data-act="wNew">Nieuw spelletje <span class="arr">→</span></button>`;
+      if (k) {
+        stand = `<section class="panel"><div class="panel-head"><h2>Stand van dit rondje</h2><button class="link" data-act="wNextDealer">Volgende deler</button></div>
+          <div>${order.map((i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${P(i)}${W.dealer === i ? '<small class="dl">deler</small>' : ''}
+            <span class="meta">${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]} · betaalt nu ${euro(c.price * out[i] / 100)}</span></span>
+            <span class="pts ${pn(tot[i])}">${sign(tot[i])}</span></div>`).join('')}</div></section>`;
+      }
+    } else if (last) {
+      head = `<p class="label">${esc(today())} · ${nr} rondje${nr > 1 ? 's' : ''}</p><h1>Rondje <em>${nr}</em> gedaan</h1><p class="lead">${P(W.dealer)} deelt het volgende spelletje.</p>`;
+      main = `<button class="btn primary xl" data-act="gNewRondje">Nieuw rondje <span class="arr">→</span></button>`;
+      stand = `<section class="panel"><div class="panel-head"><h2>Rondje ${nr} · ${euro(last.price)}</h2><span class="label">te betalen</span></div><div>${rondjeRows('wiezen', last)}</div></section>`;
+    } else {
+      head = `<p class="label">${esc(today())}</p><h1>Een nieuwe <em>wiesavond</em></h1><p class="lead">Elk rondje begint met de vraag wat het kost. Na het rondje betaalt iedereen zijn deel, volgens zijn plaats.</p>`;
+      main = `<button class="btn primary xl" data-act="gNewRondje">Nieuw rondje <span class="arr">→</span></button>`;
+    }
+    const games = r ? r.games : [];
+    const hist = games.map((g, i) => `<div class="hrow"><span class="n">${i + 1}</span><span>${wRoundText(g)}</span><span class="sc ${pn(g.d[g.sel[0]])}">${sign(g.d[g.sel[0]])}</span></div>`).reverse().join('');
+    return `<div class="wrap">
+      ${gameHeader('Wiezen')}
+      <section>${head}</section>
+      ${main}
+      ${stand}
+      ${avondPanel()}
+      ${games.length ? `<section class="panel"><div class="panel-head"><h2>Gespeeld</h2><button class="btn soft sm" data-act="wUndo">Laatste ongedaan</button></div><div>${hist}</div></section>` : ''}
+      <p class="hint" style="text-align:center">Per rondje: ${W.pct.map((v, i) => `${ORD[i]} ${v}%`).join(' · ')} · ${W.per === 1 ? '1 spelletje' : `${W.per} spelletjes`} · <button class="link" data-act="wEditPct">aanpassen</button></p>
+      <button class="link" data-act="wPts" style="align-self:center">Puntentabel bekijken of aanpassen</button>
+      ${renderHistory()}
+    </div>${dock()}`;
+  }
+
+  // ---------- Wiezen: een spelletje ingeven ----------
+  function renderWRound() {
+    const R = ui.wr, b = R.k ? wbid(R.k) : null, need = b ? (b.duo ? 2 : 1) : 0, c = openOf(S.wz);
+    const ready = !!b && R.sel.length === need;
+    const d = ready && R.made !== null ? wDelta(R.k, R.sel, R.made, R.diff) : null;
+    const who = ready ? (need === 2 ? 'Hebben ze het gehaald?' : `Heeft ${P(R.sel[0])} het gehaald?`) : 'Gehaald?';
+    const extra = b && b.extra && R.made !== null ? `<div class="pctrow"><span class="pl">${R.made ? 'Extra slagen' : 'Slagen te weinig'}<small>${R.made ? `boven de ${b.min}${b.cap ? `, telt tot ${b.cap} extra` : ''}` : `onder de ${b.min}`}</small></span>
+      <div class="stepper"><button type="button" data-act="wDiff" data-v="-1" aria-label="Minder">−</button><output>${R.diff}</output><button type="button" data-act="wDiff" data-v="1" aria-label="Meer">+</button></div></div>` : '';
+    return `<div class="wrap">
+      <header class="top"><button class="btn ghost sm" data-act="wCancel">← Annuleer</button><span class="label">Rondje ${S.wz.rondjes.length} · spelletje ${c ? c.games.length + 1 : 1} · ${P(S.wz.dealer)} deelt</span></header>
+      <section class="steps">
+        <div class="step"><div class="slabel"><span class="no">1</span><span class="label">Wat wordt er gespeeld?</span></div>
+          <div class="seg">${WBIDS.map((x) => `<button class="opt ${R.k === x.k ? 'on' : ''}" data-act="wBid" data-v="${x.k}"><span class="big">${x.n}</span><small>${x.need} · ${wpts(x.k)} ptn</small></button>`).join('')}</div></div>
+        <div class="step ${b ? '' : 'wait'}" id="wstep2"><div class="slabel"><span class="no">2</span><span class="label">${b && b.duo ? 'Welke 2 spelen samen?' : 'Wie speelt?'}</span></div>
+          <div class="seg">${S.players.map((p, i) => `<button class="opt ${R.sel.includes(i) ? 'who-on' : ''}" data-act="wPick" data-v="${i}" style="--pc:var(--p${i})"><span class="big">${esc(p)}</span></button>`).join('')}</div></div>
+        <div class="step ${ready ? '' : 'wait'}" id="wstep3"><div class="slabel"><span class="no">3</span><span class="label">${who}</span></div>
+          <div class="seg"><button class="opt res ${R.made === true ? 'on' : ''}" data-act="wMade" data-v="1"><span class="big">Gehaald</span></button><button class="opt res lose ${R.made === false ? 'on' : ''}" data-act="wMade" data-v="0"><span class="big">Niet gehaald</span></button></div>
+          ${extra}</div>
+      </section>
+      ${d ? `<section class="panel"><h2>Punten</h2><div class="dgrid">${d.map((v, j) => `<div class="dcell"><span>${P(j)}</span><b class="${pn(v)}">${sign(v)}</b></div>`).join('')}</div></section>` : ''}
+      <button class="btn primary xl" data-act="wSave" ${d ? '' : 'disabled'}>Bewaar spelletje <span class="arr">→</span></button>
+    </div>`;
+  }
+
+  // ---------- Hartenjagen: stand ----------
+  function renderHGame() {
+    const H = S.hj, c = openOf(H), last = lastOf(H), nr = H.rondjes.length, r = c || last;
+    let head, main, stand = '';
+    if (c) {
+      const n = c.hands.length, tot = hTot(c);
+      const { out, place, order, tied } = wPayPct(tot, c.pct);
+      head = `<p class="label">${esc(today())} · rondje ${nr} · ${euro(c.price)}</p>
+        <h1>${n ? `Hand <em>${n + 1}</em>` : 'Iedereen op <em>100</em>'}</h1>
+        <p class="lead">${P(H.dealer)} deelt · ${PASS[n % 4]}. Elke ♥ kost 1 punt, de schoppen vrouw 13. Wie eerst op 0 staat, verliest het rondje.</p>`;
+      main = `<button class="btn primary xl" data-act="hNew">Nieuwe hand <span class="arr">→</span></button>`;
+      stand = `<section class="panel"><div class="panel-head"><h2>Stand</h2><button class="link" data-act="hNextDealer">Volgende deler</button></div>
+        <div>${order.map((i) => `<div class="hjrow" style="--pc:var(--p${i})">
+          <div class="hjtop"><span class="who">${P(i)}${H.dealer === i ? '<small class="dl">deler</small>' : ''}</span><span class="hjnum">${tot[i]}</span></div>
+          <div class="hjbar"><i style="width:${Math.max(0, Math.min(100, tot[i]))}%"></i></div>
+          <span class="meta">${n ? `${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]} · betaalt nu ${euro(c.price * out[i] / 100)}` : 'nog niets gepakt'}</span></div>`).join('')}</div></section>`;
+    } else if (last) {
+      const tot = hTot(last);
+      const out0 = [0, 1, 2, 3].filter((i) => tot[i] <= 0).map(P).join(' &amp; ');
+      head = `<p class="label">${esc(today())} · ${nr} rondje${nr > 1 ? 's' : ''}</p><h1>Rondje <em>${nr}</em> gedaan</h1><p class="lead">${out0} staat op 0. In het volgende rondje begint iedereen weer op 100.</p>`;
+      main = `<button class="btn primary xl" data-act="gNewRondje">Nieuw rondje <span class="arr">→</span></button>`;
+      stand = `<section class="panel"><div class="panel-head"><h2>Rondje ${nr} · ${euro(last.price)}</h2><span class="label">te betalen</span></div><div>${rondjeRows('harten', last)}</div></section>`;
+    } else {
+      head = `<p class="label">${esc(today())}</p><h1>Iedereen op <em>100</em></h1><p class="lead">Elk rondje begint met de vraag wat het kost. Wie eerst op 0 staat, verliest het rondje. Dan betaalt iedereen zijn deel, volgens zijn plaats.</p>`;
+      main = `<button class="btn primary xl" data-act="gNewRondje">Nieuw rondje <span class="arr">→</span></button>`;
+    }
+    const hands = r ? r.hands : [];
+    const hist = hands.map((h, k) => {
+      const txt = h.moon !== null && h.moon !== undefined ? `<b>${P(h.moon)}</b> pakte alles, de anderen −26`
+        : h.p.map((v, i) => (v ? `${P(i)} −${v}${h.q === i ? ' (♠V)' : ''}` : '')).filter(Boolean).join(' · ') || 'niemand punten';
+      return `<div class="hrow"><span class="n">${k + 1}</span><span>${txt}</span><span></span></div>`;
+    }).reverse().join('');
+    return `<div class="wrap">
+      ${gameHeader('Hartenjagen')}
+      <section>${head}</section>
+      ${main}
+      ${stand}
+      ${avondPanel()}
+      ${hands.length ? `<section class="panel"><div class="panel-head"><h2>Gespeeld</h2><button class="btn soft sm" data-act="hUndo">Laatste ongedaan</button></div><div>${hist}</div></section>` : ''}
+      <p class="hint" style="text-align:center">Per rondje: ${H.pct.map((v, i) => `${ORD[i]} ${v}%`).join(' · ')} · <button class="link" data-act="wEditPct">aanpassen</button></p>
+      ${renderHistory()}
+    </div>${dock()}`;
+  }
+
+  // ---------- Hartenjagen: een hand ingeven ----------
+  function hRoundSum() {
+    const R = ui.hr;
+    if (R.moon !== null) return `<div class="sumline"><span class="label">Controle</span><span class="ok">${P(R.moon)} pakte alles: de anderen −26</span></div>`;
+    const hearts = R.p.reduce((a, b) => a + b, 0);
+    const ok = hearts === 13 && R.q !== null;
+    return `<div class="sumline"><span class="label">Controle</span><span class="${ok ? 'ok' : 'bad'}">♥ ${hearts} van 13 · ♠V ${R.q !== null ? P(R.q) : 'nog niet gekozen'}</span></div>
+      ${ok ? '' : '<p class="hint">Normaal zijn er 13 harten en 1 schoppen vrouw per hand. Je kan toch bewaren, bijvoorbeeld als jullie met andere regels spelen.</p>'}`;
+  }
+  function hAfter(i) {
+    const tot = hTot(openOf(S.hj)), pts = hjPts(ui.hr), v = tot[i] - pts[i];
+    return `${tot[i]} → <b class="${v <= 0 ? 'neg' : ''}">${v < 0 ? '−' + Math.abs(v) : v}</b>`;
+  }
+  function renderHRound() {
+    const R = ui.hr, c = openOf(S.hj), n = c ? c.hands.length : 0, moon = R.moon !== null, pts = hjPts(R);
+    const rows = S.players.map((p, i) => `<div class="pctrow" style="--pc:var(--p${i})"><span class="pl">${esc(p)}<small id="hto${i}">${hAfter(i)}</small></span>
+      <div class="stepper"><button type="button" data-act="hStep" data-i="${i}" data-v="-1" aria-label="1 hart minder" ${moon ? 'disabled' : ''}>−</button><input id="hp${i}" inputmode="numeric" maxlength="2" value="${moon ? pts[i] : R.p[i]}" ${moon ? 'disabled' : ''} aria-label="Harten van ${esc(p)}"><button type="button" data-act="hStep" data-i="${i}" data-v="1" aria-label="1 hart meer" ${moon ? 'disabled' : ''}>+</button><button type="button" class="qv ${R.q === i && !moon ? 'on' : ''}" data-act="hQueen" data-i="${i}" aria-label="Schoppen vrouw, 13 punten" ${moon ? 'disabled' : ''}>♠V</button></div></div>`).join('');
+    return `<div class="wrap">
+      <header class="top"><button class="btn ghost sm" data-act="hCancel">← Annuleer</button><span class="label">Rondje ${S.hj.rondjes.length} · hand ${n + 1} · ${P(S.hj.dealer)} deelt</span></header>
+      <section><p class="label">${PASS[n % 4]}</p><h1>Wie pakte <em>wat</em>?</h1>
+        <p class="lead">Tel per speler de harten. Tik op ♠V bij wie de schoppen vrouw pakte (13 punten).</p></section>
+      <section class="panel" style="gap:0;padding-block:6px">${rows}</section>
+      <div id="hsum" class="steps" style="gap:8px">${hRoundSum()}</div>
+      <div class="step"><span class="label">Pakte iemand alles? (13 ♥ én de ♠V)</span>
+        <div class="chips">${S.players.map((p, i) => `<button class="chip ${R.moon === i ? 'on' : ''}" data-act="hMoon" data-v="${i}">${esc(p)}</button>`).join('')}</div>
+        <p class="hint">Dan gaat er bij de 3 anderen 26 af en bij hem niets.</p></div>
+      <button class="btn primary xl" data-act="hSave" id="hSave" ${pts.some((v) => v > 0) ? '' : 'disabled'}>Bewaar hand <span class="arr">→</span></button>
+    </div>`;
+  }
+  function updateHRound() {
+    [0, 1, 2, 3].forEach((i) => { const el = document.getElementById('hto' + i); if (el) el.innerHTML = hAfter(i); });
+    const s = document.getElementById('hsum'); if (s) s.innerHTML = hRoundSum();
+    const b = document.getElementById('hSave'); if (b) b.disabled = !hjPts(ui.hr).some((v) => v > 0);
+  }
+
+  // ---------- Schermen ----------
+  function renderHome() {
+    const done = finished();
+    const { owed } = owedAll();
+    const nr = S.rounds.length + 1;
+    const total = done.reduce((t, r) => t + r.price, 0);
+    const rows = S.players.map((p, i) => `
+      <div class="srow" style="--pc:var(--p${i})"><span class="who">${esc(p)}</span>
+      <span class="owe ${owed[i] ? '' : 'zero'}">${euro(owed[i])}</span></div>`).join('');
+    const list = done.slice().reverse().map((r) => {
+      const idx = S.rounds.indexOf(r) + 1;
+      const isLast = r === S.rounds[S.rounds.length - 1];
+      return `<div class="rround"><span class="no">${idx}</span>
+        <div class="txt"><span class="t${r.winner} tc" style="font-weight:600">${tName(r, r.winner)}</span> wonnen<br><span class="muted">${tName(r, 1 - r.winner)} betalen</span>
+        ${isLast ? `<br><button class="link" data-act="reopen">Heropen dit rondje</button>` : ''}</div>
+        <div class="amt">${euro(r.price)}<small>${euro(r.price / 2)} p.p.</small></div></div>`;
+    }).join('');
+    return `<div class="wrap">
+      <header class="top"><div class="brand">Troeven</div>
+        <div style="display:flex;gap:12px;align-items:center"><span class="sync ${ui.synced ? 'on' : ''}">${ui.synced ? 'Bewaard' : 'Op dit toestel'}</span><button class="btn ghost sm" data-act="toChoose">Ander spel</button></div></header>
+      <section>
+        <p class="label">${esc(today())}${done.length ? ` · ${done.length} rondje${done.length > 1 ? 's' : ''} · ${euro(total)}` : ''}</p>
+        <h1>${done.length ? `Rondje <em>${nr}</em>` : 'Een nieuwe <em>avond</em>'}</h1>
+        <p class="lead">Elk rondje trekken jullie boeren: de eerste twee met een boer spelen samen. Wie eerst zijn boom van tien streepjes kwijt is, wint. De verliezers betalen het rondje.</p>
+      </section>
+      <button class="btn primary xl" data-act="draw">Trek boeren <span class="arr">→</span></button>
+      <section class="panel"><div class="panel-head"><h2>Stand van de avond</h2><span class="label">te betalen</span></div>
+        <div>${rows}</div></section>
+      ${renderStats()}
+      ${done.length ? `<section class="panel"><h2>Rondjes</h2><div>${list}</div></section>` : ''}
+      ${renderHistory()}
+    </div>${dock()}`;
+  }
+
+  const SUIT_GLYPH = { s: '♠︎', h: '♥︎', k: '♣︎', r: '♦︎' };
+  const cardFace = (c) => {
+    const red = c.s === 'h' || c.s === 'r';
+    const court = isNaN(+c.r);
+    const g = SUIT_GLYPH[c.s];
+    return `<div class="face ${red ? 'red' : ''}"><span class="ix">${c.r}<i>${g}</i></span>
+      <span class="mid ${court ? 'court' : ''}">${court ? c.r : g}</span><span class="ix br">${c.r}<i>${g}</i></span></div>`;
+  };
+
+  function renderDraw() {
+    const d = ui.draw;
+    const seats = S.players.map((p, i) => `<div class="seat p${i}" id="seat${i}"><span class="nm">${esc(p)}${i === d.dealer ? '<small>deler</small>' : ''}</span><div class="pile" id="pile${i}"></div></div>`).join('');
+    return `<div class="wrap">
+      <header class="top"><button class="btn ghost sm" data-act="home">← Terug</button><span class="label">Rondje ${S.rounds.length + 1}</span></header>
+      <section><p class="label">Boeren trekken</p><h1>Wie speelt <em>met wie</em>?</h1></section>
+      <div class="table" id="stage">${seats}<div class="deckpile" id="deck"></div><span class="dealer-tag">${P(d.dealer)} deelt</span></div>
+      <p class="dealmsg" id="dealmsg">De eerste twee met een boer spelen samen.</p>
+      <p class="skip" id="skipHint">Tik op de tafel om over te slaan</p>
+      <div class="draw-actions" id="drawActions" hidden>
+        <div id="drawTeams"></div>
+        <button class="btn primary xl" data-act="accept">Speel met deze teams <span class="arr">→</span></button>
+        <button class="btn ghost block" data-act="redraw">Opnieuw delen</button>
+      </div>
+    </div>`;
+  }
+
+  // ---------- Statistieken: wie wint van wie ----------
+  function statRounds() {
+    const night = finished();
+    return ui.statScope === 'all' ? [...(S.archive || []), ...night] : night;
+  }
+  function renderStats() {
+    const rounds = statRounds();
+    const all = ui.statScope === 'all';
+    const tabs = `<div class="tabs" role="tablist"><button class="${all ? '' : 'on'}" data-act="statScope" data-v="night">Vanavond</button><button class="${all ? 'on' : ''}" data-act="statScope" data-v="all">Alle avonden</button></div>`;
+    if (!rounds.length) {
+      return `<section class="panel"><div class="panel-head"><h2>Wie wint van wie</h2>${tabs}</div><p class="empty">Nog geen rondjes uitgespeeld${all ? '' : ' vanavond'}.</p></section>`;
+    }
+    const n = S.players.length;
+    const st = Logic.stats(rounds, n);
+    const pct = (w, p) => (p ? Math.round((w / p) * 100) : 0);
+    const order = S.players.map((_, i) => i).sort((a, b) => pct(st.per[b].won, st.per[b].played) - pct(st.per[a].won, st.per[a].played) || st.per[b].won - st.per[a].won);
+    const per = order.map((i) => {
+      const { won, played } = st.per[i];
+      return `<div class="wrow" style="--pc:var(--p${i})"><span class="who">${P(i)}</span><span class="bar"><i style="width:${pct(won, played)}%"></i></span><span class="n"><b>${won}</b> van ${played}</span></div>`;
+    }).join('');
+    const short = (i) => esc(S.players[i].slice(0, 3));
+    const head = S.players.map((_, j) => `<th scope="col" style="color:var(--p${j})">${short(j)}</th>`).join('');
+    const body = S.players.map((_, i) => `<tr><th class="rowh" scope="row" style="color:var(--p${i})">${P(i)}</th>${S.players.map((_, j) => {
+      if (i === j) return '<td class="self">·</td>';
+      const v = st.vs[i][j];
+      if (!v.won && !v.lost) return '<td class="self">–</td>';
+      return `<td class="${v.won > v.lost ? 'up' : ''}"><span class="w">${v.won}</span><span class="l">–${v.lost}</span></td>`;
+    }).join('')}</tr>`).join('');
+    const duos = Object.entries(st.duos).map(([k, v]) => ({ ids: k.split('-').map(Number), ...v }))
+      .sort((a, b) => b.won / b.played - a.won / a.played || b.played - a.played);
+    const duoHtml = duos.map((d, i) => `<div class="duo ${i === 0 && d.won ? 'best' : ''}"><span class="nm">${d.ids.map(P).join(' &amp; ')}</span><span class="n"><b>${d.won}</b> van ${d.played} gewonnen</span></div>`).join('');
+    return `<section class="panel"><div class="panel-head"><h2>Wie wint van wie</h2>${tabs}</div>
+      <p class="sub">Gewonnen rondjes</p><div>${per}</div>
+      <p class="sub">Onderling</p>
+      <div class="h2h-wrap"><table class="h2h"><thead><tr><th></th>${head}</tr></thead><tbody>${body}</tbody></table></div>
+      <p class="hint">Lees per rij: zoveel keer won die speler tegen de speler bovenaan, en zoveel keer verloor die.</p>
+      <p class="sub">Duo's</p><div>${duoHtml}</div>
+    </section>`;
+  }
+
+  const matchupTeams = (teams) => matchup({ teams });
+  function matchup(r) {
+    return `<div class="matchup">
+      <div class="side t0"><span class="tl">${TEAM[0]}</span><span class="nm">${r.teams[0].map(P).join('<br>')}</span></div>
+      <span class="vs">tegen</span>
+      <div class="side t1"><span class="tl">${TEAM[1]}</span><span class="nm">${r.teams[1].map(P).join('<br>')}</span></div></div>`;
+  }
+
+  // ---------- Rekenmachine voor de prijs ----------
+  const OPS = '+−×÷';
+  const fmt = (c) => (c / 100).toFixed(2).replace('.', ',');
+  const trimOp = (e) => e.replace(/[+−×÷,]+$/, '');
+  const calcValue = () => Logic.calc(trimOp(ui.calc.expr));
+  const KEY_LABEL = { 'C': 'Wissen', '⌫': 'Laatste teken weg', '÷': 'Delen', '×': 'Maal', '−': 'Min', '+': 'Plus', '=': 'Uitrekenen', ',': 'Komma' };
+
+  function calcHTML() {
+    const keys = [['C', 'fn'], ['⌫', 'fn'], ['÷', 'op'], ['×', 'op'],
+      ['7'], ['8'], ['9'], ['−', 'op'],
+      ['4'], ['5'], ['6'], ['+', 'op'],
+      ['1'], ['2'], ['3'], ['=', 'eq'],
+      ['0', 'zero'], [',']];
+    return `<div class="calc"><div class="cdisp"><span class="cur">€</span><span class="expr" id="cexpr" aria-live="polite"></span></div>
+      <div class="cres" id="cres"></div>
+      <div class="keys">${keys.map(([k, cls]) => `<button type="button" class="key ${cls || ''}" data-act="key" data-k="${k}" aria-label="${KEY_LABEL[k] || k}">${k}</button>`).join('')}</div></div>`;
+  }
+
+  function pressKey(k) {
+    let e = ui.calc.expr;
+    const lastNum = (e.match(/[\d,]*$/) || [''])[0];
+    const endsOp = e !== '' && OPS.includes(e.slice(-1));
+    if (k === 'C') e = '';
+    else if (k === '⌫') e = e.slice(0, -1);
+    else if (k === '=') { const v = Logic.calc(trimOp(e)); if (v) e = fmt(v); }
+    else if (OPS.includes(k)) {
+      if (!e) return;
+      if (endsOp) e = e.slice(0, -1) + k;
+      else { if (e.endsWith(',')) e = e.slice(0, -1); e += k; }
+    } else if (k === ',') {
+      if (lastNum.includes(',')) return;
+      e += lastNum ? ',' : '0,';
+    } else {
+      if (lastNum.includes(',') && lastNum.split(',')[1].length >= 2) return;
+      if (lastNum === '0') e = e.slice(0, -1);
+      if (e.length >= 40) return;
+      e += k;
+    }
+    ui.calc.expr = e;
+    updateCalc();
+  }
+
+  function updateCalc() {
+    const ex = document.getElementById('cexpr');
+    if (!ex) return;
+    const e = ui.calc.expr;
+    ex.classList.toggle('ph', !e);
+    ex.classList.toggle('long', e.length > 8);
+    ex.innerHTML = e ? esc(e).replace(/[+−×÷]/g, (m) => `<span class="op">${m}</span>`) : '0,00';
+    const t = trimOp(e), v = Logic.calc(t), hasOp = /[+−×÷]/.test(t);
+    const res = document.getElementById('cres');
+    if (ui.calc.target === 'gprice' && gCur()) {
+      const pc = gCur().pct;
+      if (!e) res.innerHTML = '<span>Iedereen betaalt een deel, volgens zijn plaats.</span>';
+      else if (!v) res.innerHTML = `<span>${hasOp ? 'Dat geeft geen geldig bedrag.' : ''}</span>`;
+      else res.innerHTML = `<span>${hasOp ? `Totaal ${euro(v)} · ` : ''}laatste betaalt</span><b>${euro(v * pc[3] / 100)}</b>`;
+    } else if (!e) res.innerHTML = '<span>De twee verliezers delen het rondje.</span>';
+    else if (!v) res.innerHTML = `<span>${hasOp ? 'Dat geeft geen geldig bedrag.' : ''}</span>`;
+    else if (hasOp) res.innerHTML = `<span>Totaal ${euro(v)}</span><b>${euro(v / 2)} <span class="muted" style="font:500 12px var(--f-ui)">per verliezer</span></b>`;
+    else res.innerHTML = `<span>Per verliezer</span><b>${euro(v / 2)}</b>`;
+    document.querySelectorAll('.chip[data-v]').forEach((c) => c.classList.toggle('on', +c.dataset.v === v));
+    ['priceErr', 'priceErr2'].forEach((id) => { const el = document.getElementById(id); if (el) el.textContent = ''; });
+  }
+
+  // Ook typen met een toetsenbord (laptop)
+  document.addEventListener('keydown', (ev) => {
+    if (!document.getElementById('cexpr')) return;
+    if (ev.target && ev.target.tagName === 'INPUT') return;
+    const map = { '.': ',', ',': ',', '+': '+', '-': '−', '*': '×', 'x': '×', '/': '÷', 'Backspace': '⌫', 'Delete': 'C', 'Escape': 'C', '=': '=' };
+    let k = /^\d$/.test(ev.key) ? ev.key : map[ev.key];
+    if (ev.key === 'Enter') { ev.preventDefault(); const f = document.querySelector('#editPriceForm, #priceForm, #gPriceForm'); if (f) f.requestSubmit(); return; }
+    if (!k) return;
+    ev.preventDefault();
+    pressKey(k);
+    const b = document.querySelector(`.key[data-k="${k}"]`);
+    if (b) { b.classList.add('hit'); setTimeout(() => b.classList.remove('hit'), 120); }
+  });
+
+  function renderPrice() {
+    const r = current();
+    const last = S.lastPrice;
+    if (ui.calc.target !== 'price') ui.calc = { expr: last ? fmt(last) : '', target: 'price' };
+    return `<div class="wrap">
+      <header class="top"><button class="btn ghost sm" data-act="cancelRound">← Annuleer</button><span class="label">Rondje ${S.rounds.length}</span></header>
+      <section><h1>Wat kost <em>het rondje</em>?</h1></section>
+      ${matchup(r)}
+      <form id="priceForm" class="steps" autocomplete="off">
+        ${calcHTML()}
+        ${last ? `<div><button type="button" class="chip" data-act="setprice" data-v="${last}">Zelfde als vorige · ${euro(last)}</button></div>` : ''}
+        <p class="err" id="priceErr" style="min-height:0"></p>
+        <button class="btn primary xl" type="submit">Start het rondje <span class="arr">→</span></button>
+      </form>
+    </div>`;
+  }
+
+  function renderGame() {
+    const r = current();
+    const rep = Logic.replay(r.hands);
+    const sc = rep.score;
+    const pk = ui.pick;
+    const flash = ui.flash; ui.flash = null;
+    const board = (t) => {
+      const prev = flash ? sc[t] - flash[t] : sc[t];
+      const hot = sc[t] > 0 && sc[t] <= 2;
+      return `<div class="board t${t} ${pk.playing === t ? 'sel' : ''} ${flash && flash[t] ? 'bump' : ''} ${hot ? 'hot' : ''}">
+        <div><span class="tl">${TEAM[t]}</span>${hot ? '<span class="hotb">bijna</span>' : ''}<div class="bnames">${tName(r, t)}</div></div>
+        <div class="bbody">${boom(sc[t], prev)}<div class="num ${sc[t] === 0 ? 'zero' : ''}" aria-label="${sc[t]} streepjes over">${sc[t]}</div></div>
+        ${flash && flash[t] ? `<span class="delta">${sign(flash[t])}</span>` : ''}</div>`;
+    };
+
+    let res;
+    if (pk.card && pk.playing !== null) {
+      res = RESULTS.map(([v, label]) => `<button class="opt res ${v === 'lose' ? 'lose' : ''}" data-act="result" data-v="${v}"><span class="big">${label}</span></button>`).join('');
+    } else {
+      res = RESULTS.map(([v, label]) => `<button class="opt res ${v === 'lose' ? 'lose' : ''}" disabled><span class="big">${label}</span></button>`).join('');
+    }
+
+    const hist = rep.steps.map((st, i) => {
+      const h = st.hand;
+      return `<div class="hrow"><span class="n">${i + 1}</span><span>${h.card === 1 ? '1ste' : '2de'} kaart · <span class="t${h.playing} tc">${TEAM[h.playing]}</span> speelt · ${RESULT_LABEL[h.result].toLowerCase()}</span>
+        <span class="sc"><span class="t0 tc">${st.after[0]}</span><span class="sep">/</span><span class="t1 tc">${st.after[1]}</span></span></div>`;
+    }).reverse().join('');
+
+    return `<div class="wrap">
+      <header class="roundbar"><span class="label">Rondje ${S.rounds.length}</span>
+        <div style="display:flex;gap:8px;align-items:center"><button class="pricechip" data-act="editPrice" aria-label="Prijs aanpassen">${euro(r.price)}</button><button class="btn ghost sm" data-act="menu" aria-label="Meer opties">Meer</button></div></header>
+      <div class="boards">${board(0)}${board(1)}</div>
+      <section class="steps">
+        <div class="step"><div class="slabel"><span class="no">1</span><span class="label">Welke kaart?</span></div>
+          <div class="seg">
+            <button class="opt ${pk.card === 1 ? 'on' : ''}" data-act="card" data-v="1"><span class="big">1ste kaart</span><small>−1, of −2 als zij geen slag halen</small></button>
+            <button class="opt ${pk.card === 2 ? 'on' : ''}" data-act="card" data-v="2"><span class="big">2de kaart</span><small>−2, of −3 als zij geen slag halen</small></button>
+          </div></div>
+        <div class="step ${pk.card ? '' : 'wait'}"><div class="slabel"><span class="no">2</span><span class="label">Wie speelt?</span></div>
+          <div class="seg">
+            ${[0, 1].map((t) => `<button class="opt team t${t} ${pk.playing === t ? 'on' : ''}" data-act="playing" data-v="${t}"><span class="tl">${TEAM[t]}</span><span class="big">${tName(r, t)}</span></button>`).join('')}
+          </div></div>
+        <div class="step ${pk.card && pk.playing !== null ? '' : 'wait'}" id="step3"><div class="slabel"><span class="no">3</span><span class="label">Resultaat</span></div><div class="stack">${res}</div></div>
+      </section>
+      ${rep.steps.length ? `<section class="panel"><div class="panel-head"><h2>Gespeeld</h2><button class="btn soft sm" data-act="undo">Laatste ongedaan</button></div><div>${hist}</div></section>` : ''}
+    </div>${dock()}`;
+  }
+
+  function renderEnd() {
+    const A = owedAll();
+    const done = { length: A.n };
+    const open = current() || openOf(S.wz) || openOf(S.hj);
+    const { owed } = A;
+    const parts = A.parts.filter((p) => p[1]);
+    const payerBtns = S.players.map((p, i) => `<button class="payer ${ui.payer === i ? 'on' : ''}" data-act="payer" data-v="${i}"><span class="nm">${esc(p)}</span><small>aandeel ${euro(owed[i])}</small></button>`).join('');
+    return `<div class="wrap">
+      <header class="top"><button class="btn ghost sm" data-act="home">← Terug</button><span class="label">Einde avond</span></header>
+      <section><p class="label">${done.length} rondje${done.length === 1 ? '' : 's'} gespeeld</p><h1>Wie heeft de <em>rekening</em> betaald?</h1>
+        ${parts.length ? `<p class="lead">${parts.map((p) => `${p[0]}: ${p[1]} rondje${p[1] > 1 ? 's' : ''} · ${euro(p[2])}`).join('<br>')}</p>` : ''}</section>
+      ${open ? `<div class="note">Een rondje dat nog bezig is, telt niet mee.</div>` : ''}
+      ${done.length ? `<div class="payers">${payerBtns}</div>
+      <div class="field"><label for="bill">Wat stond er op de rekening?</label>
+        <input class="input" id="bill" inputmode="decimal" placeholder="${fmt(roundsTotal())}" value="${esc(ui.bill)}" style="font:600 22px var(--f-serif);font-variant-numeric:lining-nums">
+        <p class="bill-hint" id="billHint">${billHint()}</p></div>
+      <div id="settle">${renderSettle()}</div>` : `<p class="empty">Nog geen rondjes uitgespeeld, dus niemand moet iets.</p>`}
+      <button class="btn ghost block" data-act="askReset">Nieuwe avond starten</button>
+    </div>`;
+  }
+
+  const roundsTotal = () => owedAll().total;
+  const billValue = () => Logic.parsePrice(ui.bill); // null = leeg of ongeldig
+  const signedEuro = (c) => (c > 0 ? '+ ' : c < 0 ? '− ' : '') + euro(Math.abs(c));
+
+  function billHint() {
+    const rt = roundsTotal();
+    if (!ui.bill.trim()) return `Leeg laten als het precies de rondjes waren: <b>${euro(rt)}</b>.`;
+    const b = billValue();
+    if (!b) return 'Geef een bedrag in, bijvoorbeeld 52,40.';
+    const diff = b - rt, n = S.players.length;
+    if (!diff) return `Precies wat de rondjes kostten.`;
+    return `${euro(Math.abs(diff))} ${diff > 0 ? 'meer' : 'minder'} dan de rondjes (${euro(rt)}): iedereen betaalt <b>${euro(Math.abs(diff) / n)} ${diff > 0 ? 'meer' : 'minder'}</b>.`;
+  }
+
+  function renderSettle() {
+    if (ui.payer === null) return `<p class="empty">Kies hierboven wie betaald heeft.</p>`;
+    const r = settleAll(ui.payer, billValue());
+    const n = S.players.length;
+    const trs = r.transfers.map((t) => `<div class="tr"><div class="who"><span>${P(t.from)}</span><span class="arrow">schrijft over naar ${P(t.to)}</span></div><div class="amt">${euro(t.amount)}</div></div>`).join('');
+    return `<section class="panel">
+      <div class="total"><span class="label">${P(ui.payer)} betaalde</span><b>${euro(r.total)}</b></div>
+      ${r.diff ? `<div class="breakdown"><span>Rondjes</span><span>${euro(r.rounds)}</span><span>Verschil met de rekening</span><span>${signedEuro(r.diff)}</span><span>Per persoon</span><span>${signedEuro(r.diff / n)}</span></div>` : ''}
+      <hr class="rule">
+      ${r.transfers.length ? `<div>${trs}</div>` : `<p class="empty">Niemand moet iets overschrijven.</p>`}
+      <p class="muted" style="margin:0;font-size:12.5px">${(() => {
+        const inc = r.transfers.reduce((t, x) => t + (x.to === ui.payer ? x.amount : -x.amount), 0);
+        const own = r.total - inc;
+        return own < 0
+          ? `${P(ui.payer)} krijgt in totaal ${euro(inc)} binnen, ${euro(-own)} meer dan de rekening.`
+          : `${P(ui.payer)} krijgt ${euro(inc)} binnen en betaalt zelf ${euro(own)} van de rekening.`;
+      })()}</p>
+      <button class="btn primary block" data-act="copy">Kopieer voor de groepschat</button>
+      <p class="muted" id="copyMsg" style="margin:0;font-size:13px;text-align:center"></p>
+    </section>`;
+  }
+
+  function settleText() {
+    const r = settleAll(ui.payer, billValue());
+    const lines = [`Kaartavond: afrekening (${owedAll().n} rondjes)`, `${S.players[ui.payer]} betaalde ${euro(r.total)}`];
+    if (r.diff) lines.push(`Rondjes ${euro(r.rounds)}, verschil ${signedEuro(r.diff)} gedeeld door ${S.players.length}`);
+    lines.push('');
+    r.transfers.forEach((t) => lines.push(`${S.players[t.from]} → ${S.players[t.to]}: ${euro(t.amount)}`));
+    if (!r.transfers.length) lines.push('Niemand moet iets overschrijven.');
+    return lines.join('\n');
+  }
+
+  // ---------- Modals ----------
+  function renderModal() {
+    const m = ui.modal;
+    if (!m) { $modal.innerHTML = ''; return; }
+    let body = '', cls = '';
+    if (m === 'players') {
+      body = `<h2>Spelers</h2><p class="muted" style="margin:0;font-size:14px">Pas de namen aan. Gespeelde rondjes blijven bewaard.</p>
+        <form id="playersForm" class="steps">${S.players.map((p, i) => `<div class="field"><label for="pl${i}">Speler ${i + 1}</label><input class="input" id="pl${i}" value="${esc(p)}" maxlength="18" required></div>`).join('')}
+        <div class="row2"><button type="button" class="btn ghost" data-act="close">Annuleer</button><button class="btn primary" type="submit">Bewaar</button></div></form>`;
+    } else if (m === 'winner') {
+      const r = S.rounds[S.rounds.length - 1];
+      const w = r.winner, l = 1 - w;
+      cls = `win t${w}`;
+      body = `<span class="crest">${TEAM[w]} · rondje ${S.rounds.length}</span>
+        <canvas id="confetti"></canvas><h2><span class="tc">${tName(r, w)}</span> <em style="font-weight:500">winnen!</em></h2><div class="wl2"></div>
+        <div class="pay"><span class="label">${tName(r, l)} betalen het rondje</span><b>${euro(r.price / 2)}</b><span class="muted" style="font-size:13px">per persoon, ${euro(r.price)} samen</span></div>
+        <button class="btn primary xl" data-act="next">Volgend rondje: boeren trekken <span class="arr">→</span></button>
+        <div class="row2" style="width:100%"><button class="btn ghost" data-act="toHome">Overzicht</button><button class="btn ghost" data-act="undoWin">Foutje, terug</button></div>`;
+    } else if (m === 'editPrice') {
+      body = `<h2>Prijs van dit rondje</h2><form id="editPriceForm" class="steps">${calcHTML()}
+        <p class="err" id="priceErr2"></p><div class="row2"><button type="button" class="btn ghost" data-act="close">Annuleer</button><button class="btn primary" type="submit">Bewaar</button></div></form>`;
+    } else if (m === 'menu') {
+      body = `<h2>Rondje ${S.rounds.length}</h2>
+        <button class="btn soft block" data-act="editPrice">Prijs aanpassen</button>
+        <button class="btn danger block" data-act="askCancel">Rondje stoppen, telt niet mee</button>
+        <button class="btn ghost block" data-act="close">Sluit</button>`;
+    } else if (m === 'askCancel') {
+      body = `<h2>Rondje stoppen?</h2><p class="muted" style="margin:0">De ${current().hands.length} gespeelde handen worden gewist en niemand betaalt dit rondje.</p>
+        <div class="row2"><button class="btn ghost" data-act="close">Nee</button><button class="btn danger" data-act="cancelRound">Ja, stoppen</button></div>`;
+    } else if (m === 'askReset') {
+      body = `<h2>Nieuwe avond starten?</h2><p class="muted" style="margin:0">De rondjes, spelletjes en bedragen van deze avond worden gewist, van alle spellen. Ze komen bij Vorige avonden. De spelersnamen en jullie afspraken over percentages en punten blijven.</p>
+        <div class="row2"><button class="btn ghost" data-act="close">Nee</button><button class="btn danger" data-act="reset">Ja, wissen</button></div>`;
+    } else if (m === 'wpts') {
+      body = `<h2>Puntentabel wiezen</h2><p class="muted" style="margin:0;font-size:13.5px">Samen spelen: elke speler krijgt de punten en elke tegenspeler verliest ze. Alleen spelen: elke tegenspeler betaalt de punten, dus je krijgt 3 keer zoveel. Bij vragen, troel en alleen telt elke extra slag +1 (bij alleen tot 3 extra). Niet gehaald: dezelfde punten in de min, plus 1 per slag te weinig.</p>
+        <div>${WBIDS.map((b) => `<div class="pctrow"><span class="pl">${b.n}<small>${b.need}</small></span><div class="stepper"><button type="button" data-act="wPtStep" data-k="${b.k}" data-v="-1" aria-label="Minder">−</button><output>${wpts(b.k)}</output><button type="button" data-act="wPtStep" data-k="${b.k}" data-v="1" aria-label="Meer">+</button></div></div>`).join('')}</div>
+        <div class="row2"><button class="btn ghost" data-act="wPtsReset">Standaard</button><button class="btn primary" data-act="close">Klaar</button></div>`;
+    }
+    $modal.innerHTML = `<div class="overlay" data-act="overlay"><div class="sheet ${cls}" role="dialog" aria-modal="true">${body}</div></div>`;
+    if (m === 'winner') confetti();
+    updateCalc();
+  }
+
+  function render() {
+    const v = view();
+    ui.view = ['draw', 'end', 'wsetup', 'wround', 'hround', 'choose', 'start'].includes(v) ? v : null;
+    const screens = { home: renderHome, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, choose: renderChoose, wsetup: renderWSetup, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, gprice: renderGPrice };
+    $app.innerHTML = screens[v]();
+    renderModal();
+    updateCalc();
+  }
+
+  // ---------- Boeren trekken: de deler legt kaart per kaart open ----------
+  const wait = (ms) => new Promise((res) => setTimeout(res, ms));
+  async function runDraw() {
+    const token = {}; ui.draw.token = token;
+    const alive = () => ui.draw && ui.draw.token === token && ui.view === 'draw';
+    const stage = document.getElementById('stage');
+    if (!stage) return;
+    const deck = document.getElementById('deck');
+    const msg = document.getElementById('dealmsg');
+    const { deal, teams } = ui.draw;
+    const rel = (el) => { const a = el.getBoundingClientRect(), b = stage.getBoundingClientRect(); return { x: a.left - b.left, y: a.top - b.top }; };
+    const deckPos = rel(deck);
+    const jacks = [];
+    let z = 6;
+
+    const place = (step, instant) => {
+      const { player, card } = step;
+      const el = document.createElement('div');
+      el.className = 'dcard' + (instant ? ' instant flipped' : '');
+      el.innerHTML = `<div class="inner"><div class="back"></div>${cardFace(card)}</div>`;
+      el.style.left = deckPos.x + 'px'; el.style.top = deckPos.y + 'px'; el.style.zIndex = z++;
+      stage.appendChild(el);
+      const p = rel(document.getElementById('pile' + player));
+      const tilt = (Math.random() - 0.5) * 10, dx = (Math.random() - 0.5) * 6, dy = (Math.random() - 0.5) * 6;
+      const go = () => { el.style.left = p.x + dx + 'px'; el.style.top = p.y + dy + 'px'; el.style.transform = `rotate(${tilt}deg)`; };
+      if (instant) go(); else { void el.offsetWidth; go(); setTimeout(() => el.classList.add('flipped'), 160); }
+      if (card.r === 'J') {
+        jacks.push(player);
+        el.classList.add('isjack');
+        document.getElementById('seat' + player).classList.add('jack');
+      }
+      return el;
+    };
+    const name = (i) => `<b>${P(i)}</b>`;
+    const finish = (instant) => {
+      if (instant) {
+        stage.querySelectorAll('.dcard').forEach((c) => c.remove());
+        jacks.length = 0;
+        // per speler alleen de laatste kaart tonen (de rest ligt eronder)
+        const lastOf = {};
+        deal.forEach((s) => { lastOf[s.player] = s; });
+        Object.values(lastOf).forEach((s) => place(s, true));
+      }
+      deck.classList.add('empty');
+      const tag = stage.querySelector('.dealer-tag'); if (tag) tag.hidden = true;
+      teams.forEach((t, ti) => t.forEach((p) => document.getElementById('seat' + p).classList.add('t' + ti)));
+      msg.innerHTML = `${name(teams[0][0])} en ${name(teams[0][1])} spelen samen`;
+      document.getElementById('skipHint').hidden = true;
+      document.getElementById('drawTeams').innerHTML = matchupTeams(teams);
+      const acts = document.getElementById('drawActions'); acts.hidden = false;
+      setTimeout(() => acts.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 400);
+    };
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { finish(true); return; }
+
+    await wait(500);
+    msg.innerHTML = `${name(ui.draw.dealer)} deelt…`;
+    for (let i = 0; i < deal.length; i++) {
+      if (!alive() || ui.draw.skip) break;
+      const step = deal[i];
+      const last = i === deal.length - 1;
+      place(step);
+      if (step.card.r === 'J') {
+        if (navigator.vibrate) try { navigator.vibrate(20); } catch (e) {}
+        msg.innerHTML = jacks.length === 1
+          ? `${name(step.player)} heeft de eerste boer. Wie krijgt de tweede?`
+          : `${name(step.player)} heeft de tweede boer!`;
+        await wait(last ? 1300 : 1500);
+      } else {
+        // na de eerste boer gaat het trager: spanning
+        await wait(jacks.length ? 720 : 440);
+      }
+    }
+    if (!alive()) return;
+    finish(ui.draw.skip);
+  }
+
+  function startDraw() {
+    ui.draw = { ...Logic.dealTeams(S.rounds.length % S.players.length), skip: false };
+    ui.view = 'draw'; ui.modal = null;
+    render();
+    window.scrollTo(0, 0);
+    keepAwake();
+    requestAnimationFrame(() => runDraw());
+  }
+
+  // ---------- Acties ----------
+  function addHand(result) {
+    const r = current();
+    const hand = { card: ui.pick.card, playing: ui.pick.playing, result };
+    const before = Logic.replay(r.hands).score;
+    r.hands.push(hand);
+    const rep = Logic.replay(r.hands);
+    ui.flash = [rep.score[0] - before[0], rep.score[1] - before[1]];
+    ui.pick = { card: null, playing: null };
+    if (rep.winner !== null) { r.winner = rep.winner; r.end = Date.now(); }
+    save();
+    if (rep.winner !== null) {
+      // eerst de laatste streepjes zien verdwijnen, dan de winnaar
+      const keep = r.winner; r.winner = null; render(); r.winner = keep;
+      setTimeout(() => { ui.modal = 'winner'; render(); }, 1100);
+    } else {
+      const fl = ui.flash; // render() verbruikt ui.flash
+      render(); window.scrollTo({ top: 0, behavior: 'smooth' });
+      const ch = [0, 1].filter((t) => fl[t]).map((t) => `${TEAM[t]} ${sign(fl[t])}`).join(', ');
+      const q = QUIPS[result][Math.floor(Math.random() * QUIPS[result].length)];
+      showToast(`<b>${q}</b> · ${ch}`);
+    }
+    if (navigator.vibrate) try { navigator.vibrate(rep.winner !== null ? [30, 60, 30] : 15); } catch (e) {}
+  }
+
+  let toastTimer = null;
+  function hideToast() {
+    clearTimeout(toastTimer);
+    const t = document.getElementById('toast');
+    if (t) { t.classList.add('out'); setTimeout(() => t.remove(), 300); }
+  }
+  function showToast(html) {
+    const old = document.getElementById('toast'); if (old) old.remove();
+    clearTimeout(toastTimer);
+    const t = document.createElement('div');
+    t.id = 'toast'; t.className = 'toast'; t.setAttribute('role', 'status');
+    t.innerHTML = `<span class="tx">${html}</span><button class="btn soft sm" data-act="toastUndo">Ongedaan</button>`;
+    document.body.appendChild(t);
+    toastTimer = setTimeout(hideToast, 6000);
+  }
+
+  const actions = {
+    draw: startDraw,
+    redraw: startDraw,
+    next: startDraw,
+    home() { ui.view = null; ui.draw = null; ui.modal = null; render(); },
+    toHome() { ui.modal = null; ui.view = null; render(); },
+    accept() {
+      S.rounds.push({ id: Date.now(), teams: ui.draw.teams, dealer: ui.draw.dealer, price: null, hands: [], winner: null, start: Date.now() });
+      ui.draw = null; ui.view = null; save(); render();
+    },
+    setprice(b) { ui.calc.expr = fmt(+b.dataset.v); updateCalc(); },
+    key(b) { pressKey(b.dataset.k); },
+    cancelRound() {
+      const r = current(); if (r) S.rounds.pop(); ui.calc = { expr: '', target: null };
+      ui.modal = null; ui.pick = { card: null, playing: null }; save(); render();
+    },
+    card(b) { ui.pick.card = +b.dataset.v; render(); },
+    playing(b) { ui.pick.playing = +b.dataset.v; render(); const s = document.getElementById('step3'); if (s) s.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); },
+    result(b) { hideToast(); addHand(b.dataset.v); },
+    statScope(b) { ui.statScope = b.dataset.v; render(); },
+    toastUndo() { hideToast(); if (S.game === 'wiezen') actions.wUndo(); else if (S.game === 'harten') actions.hUndo(); else actions.undo(); },
+    // Hartenjagen
+    hNew() { ui.hr = { p: [0, 0, 0, 0], q: null, moon: null }; ui.view = 'hround'; render(); window.scrollTo(0, 0); keepAwake(); },
+    hCancel() { ui.hr = null; ui.view = null; render(); window.scrollTo(0, 0); },
+    hStep(b) { const R = ui.hr, i = +b.dataset.i; if (R.moon !== null) return; R.p[i] = Math.max(0, Math.min(13, R.p[i] + +b.dataset.v)); const inp = document.getElementById('hp' + i); if (inp) inp.value = R.p[i]; updateHRound(); },
+    hQueen(b) { const R = ui.hr, i = +b.dataset.i; R.q = R.q === i ? null : i; document.querySelectorAll('.qv').forEach((x) => x.classList.toggle('on', +x.dataset.i === R.q)); updateHRound(); },
+    hMoon(b) { const R = ui.hr, i = +b.dataset.v; R.moon = R.moon === i ? null : i; render(); },
+    hSave() {
+      const R = ui.hr; if (!R) return;
+      const pts = hjPts(R);
+      if (!pts.some((v) => v > 0)) return;
+      const c = openOf(S.hj); if (!c) return;
+      c.hands.push({ p: pts, q: R.moon !== null ? null : R.q, moon: R.moon, at: Date.now() });
+      S.hj.dealer = (S.hj.dealer + 1) % 4;
+      const done = hDone(c); if (done) c.end = Date.now();
+      ui.hr = null; ui.view = null; save(); render(); window.scrollTo({ top: 0, behavior: 'smooth' });
+      showToast(done ? `<b>Rondje ${S.hj.rondjes.length} gedaan</b> · iemand staat op 0` : `<b>Hand ${c.hands.length}</b> bewaard`);
+    },
+    hUndo() { const r = lastOf(S.hj); if (!r || !r.hands.length) return; r.hands.pop(); r.end = null; S.hj.dealer = (S.hj.dealer + 3) % 4; save(); render(); },
+    // Nieuw rondje voor wiezen of hartenjagen: eerst de prijs
+    gNewRondje() {
+      const st = pg().st();
+      const r = { price: null, pct: st.pct.slice(), start: Date.now(), end: null };
+      if (S.game === 'wiezen') { r.per = S.wz.per; r.games = []; } else r.hands = [];
+      st.rondjes.push(r); ui.calc = { expr: '', target: null }; save(); render(); window.scrollTo(0, 0); keepAwake();
+    },
+    gCancel() { const st = pg().st(), c = openOf(st); if (c && c.price == null) st.rondjes.pop(); ui.calc = { expr: '', target: null }; save(); render(); },
+    perSet(b) { ui.per = +b.dataset.v; render(); },
+    hNextDealer() { S.hj.dealer = (S.hj.dealer + 1) % 4; save(); render(); },
+    // Start van de avond en keuze van het spel
+    toStart() { ui.view = 'start'; render(); window.scrollTo(0, 0); },
+    hOpen(b) { const i = +b.dataset.v; ui.hOpen = ui.hOpen === i ? null : i; ui.hDel = null; render(); },
+    hDel(b) { const i = +b.dataset.v; if (ui.hDel !== i) { ui.hDel = i; render(); return; } S.history.splice(i, 1); ui.hOpen = null; ui.hDel = null; save(); render(); },
+    toChoose() { hideToast(); ui.view = 'choose'; ui.modal = null; render(); window.scrollTo(0, 0); },
+    pickGame(b) {
+      S.game = b.dataset.v;
+      ui.view = PG[S.game] && !PG[S.game].st().pct ? 'wsetup' : null;
+      ui.pct = null; save(); render(); window.scrollTo(0, 0);
+    },
+    // Wiezen: percentages
+    pctPreset(b) { ui.pct = PCT_PRESETS[+b.dataset.v].v.slice(); render(); },
+    pctStep(b) { const i = +b.dataset.i; ui.pct[i] = Math.max(0, Math.min(100, ui.pct[i] + +b.dataset.v)); const inp = document.getElementById('pct' + i); if (inp) inp.value = ui.pct[i]; updatePct(); },
+    pctSave() { if (ui.pct.reduce((a, c) => a + c, 0) !== 100) return; pg().st().pct = ui.pct.slice(); if (S.game === 'wiezen') S.wz.per = ui.per || 1;
+      const c = gCur(); if (c && c.price == null) { c.pct = ui.pct.slice(); if (S.game === 'wiezen') c.per = S.wz.per; } ui.pct = null; ui.view = null; save(); render(); window.scrollTo(0, 0); },
+    wsetupCancel() { ui.pct = null; ui.view = null; render(); window.scrollTo(0, 0); },
+    wEditPct() { ui.pct = null; ui.view = 'wsetup'; render(); window.scrollTo(0, 0); },
+    // Wiezen: spelletjes
+    wNew() { ui.wr = { k: null, sel: [], made: null, diff: 0 }; ui.view = 'wround'; render(); window.scrollTo(0, 0); keepAwake(); },
+    wCancel() { ui.wr = null; ui.view = null; render(); window.scrollTo(0, 0); },
+    wBid(b) {
+      const R = ui.wr; R.k = b.dataset.v;
+      const need = wbid(R.k).duo ? 2 : 1;
+      if (R.sel.length > need) R.sel = R.sel.slice(-need);
+      R.made = null; R.diff = 0; render();
+      const s = document.getElementById('wstep2'); if (s) s.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    },
+    wPick(b) {
+      const R = ui.wr, i = +b.dataset.v, need = wbid(R.k).duo ? 2 : 1;
+      if (R.sel.includes(i)) R.sel = R.sel.filter((x) => x !== i);
+      else { R.sel.push(i); if (R.sel.length > need) R.sel.shift(); }
+      render();
+      if (R.sel.length === need) { const s = document.getElementById('wstep3'); if (s) s.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+    },
+    wMade(b) { const R = ui.wr, m = b.dataset.v === '1'; if (R.made !== m) R.diff = 0; R.made = m; render(); },
+    wDiff(b) { const R = ui.wr, bd = wbid(R.k); const max = R.made ? 13 - bd.min : bd.min; R.diff = Math.max(0, Math.min(max, R.diff + +b.dataset.v)); render(); },
+    wSave() {
+      const R = ui.wr; if (!R || R.made === null) return;
+      const bd = wbid(R.k);
+      const c = openOf(S.wz); if (!c) return;
+      c.games.push({ k: R.k, sel: R.sel.slice(), made: R.made, diff: bd.extra ? R.diff : 0, d: wDelta(R.k, R.sel, R.made, R.diff), at: Date.now() });
+      S.wz.dealer = (S.wz.dealer + 1) % 4;
+      const done = c.games.length >= c.per; if (done) c.end = Date.now();
+      ui.wr = null; ui.view = null; save(); render(); window.scrollTo({ top: 0, behavior: 'smooth' });
+      showToast(`<b>${esc(bd.n)}</b> · ${R.made ? 'gehaald' : 'niet gehaald'}${done ? ` · rondje ${S.wz.rondjes.length} gedaan` : ''}`);
+    },
+    wUndo() { const r = lastOf(S.wz); if (!r || !r.games.length) return; r.games.pop(); r.end = null; S.wz.dealer = (S.wz.dealer + 3) % 4; save(); render(); },
+    wNextDealer() { S.wz.dealer = (S.wz.dealer + 1) % 4; save(); render(); },
+    wPts() { ui.modal = 'wpts'; renderModal(); },
+    wPtStep(b) { const k = b.dataset.k; S.wz.pts[k] = Math.max(0, wpts(k) + +b.dataset.v); if (S.wz.pts[k] === wbid(k).p) delete S.wz.pts[k]; save(); renderModal(); },
+    wPtsReset() { S.wz.pts = {}; save(); renderModal(); },
+    undo() { const r = current(); if (r && r.hands.length) { r.hands.pop(); ui.pick = { card: null, playing: null }; save(); render(); } },
+    undoWin() { const r = S.rounds[S.rounds.length - 1]; r.hands.pop(); r.winner = null; r.end = null; ui.modal = null; save(); render(); },
+    reopen() { const r = S.rounds[S.rounds.length - 1]; if (r && r.winner !== null) { r.hands.pop(); r.winner = null; r.end = null; save(); render(); } },
+    editPrice() { ui.calc = { expr: fmt(current().price), target: 'edit' }; ui.modal = 'editPrice'; renderModal(); },
+    menu() { ui.modal = 'menu'; renderModal(); },
+    askCancel() { ui.modal = 'askCancel'; renderModal(); },
+    players() { ui.modal = 'players'; renderModal(); },
+    close() { ui.modal = null; renderModal(); },
+    overlay(b, e) { if (e.target === b && ui.modal !== 'winner') { ui.modal = null; renderModal(); } },
+    end() { ui.view = 'end'; render(); window.scrollTo(0, 0); },
+    payer(b) { ui.payer = +b.dataset.v; document.querySelectorAll('.payer').forEach((x) => x.classList.toggle('on', +x.dataset.v === ui.payer)); document.getElementById('settle').innerHTML = renderSettle(); },
+    async copy() {
+      const msg = document.getElementById('copyMsg');
+      const text = settleText();
+      try { await navigator.clipboard.writeText(text); msg.textContent = 'Gekopieerd. Plak het in jullie groepschat.'; }
+      catch (e) {
+        msg.innerHTML = '';
+        const ta = document.createElement('textarea'); ta.className = 'input'; ta.rows = 6; ta.value = text; ta.readOnly = true;
+        msg.appendChild(ta); ta.focus(); ta.select();
+        const p = document.createElement('p'); p.style.margin = '6px 0 0'; p.textContent = 'Kopiëren lukte niet automatisch. De tekst is geselecteerd, kopieer hem zelf.'; msg.appendChild(p);
+      }
+    },
+    askReset() { ui.modal = 'askReset'; renderModal(); },
+    reset() { const archive = [...(S.archive || []), ...finished().map((r) => ({ teams: r.teams, winner: r.winner, date: r.end || r.start }))]; const rec = nightRecord(); const history = [...(S.history || []), ...(rec ? [rec] : [])]; const wz = freshWz(S.wz), hj = freshHj(S.hj); S = fresh(S.players); S.archive = archive; S.wz = wz; S.hj = hj; S.history = history; ui.hOpen = null; ui.hDel = null; ui.modal = null; ui.view = 'start'; ui.payer = null; ui.bill = ''; ui.hr = null; ui.wr = null; save(); render(); window.scrollTo(0, 0); },
+  };
+
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-act]');
+    if (b && ['card', 'playing', 'result', 'undo'].includes(b.dataset.act) && !current()) return; // rondje net gedaan
+    if (b && actions[b.dataset.act]) { actions[b.dataset.act](b, e); return; }
+    if (ui.view === 'draw' && ui.draw && e.target.closest('#stage')) ui.draw.skip = true;
+  });
+
+  document.addEventListener('keydown', (e) => {
+    const m = /^sp(\d)$/.exec(e.target.id || '');
+    if (m && e.key === 'Enter' && +m[1] < 3) { e.preventDefault(); document.getElementById('sp' + (+m[1] + 1)).focus(); }
+  });
+
+  document.addEventListener('input', (e) => {
+    const pm = /^pct(\d)$/.exec(e.target.id || '');
+    if (pm && ui.pct) {
+      const v = parseInt(e.target.value.replace(/\D/g, ''), 10);
+      ui.pct[+pm[1]] = isNaN(v) ? 0 : Math.min(100, v);
+      updatePct();
+      return;
+    }
+    const hm = /^hp(\d)$/.exec(e.target.id || '');
+    if (hm && ui.hr) {
+      const v = parseInt(e.target.value.replace(/\D/g, ''), 10);
+      ui.hr.p[+hm[1]] = isNaN(v) ? 0 : Math.min(13, v);
+      updateHRound();
+      return;
+    }
+    if (e.target.id === 'bill') {
+      ui.bill = e.target.value;
+      document.getElementById('billHint').innerHTML = billHint();
+      const s = document.getElementById('settle'); if (s) s.innerHTML = renderSettle();
+    }
+  });
+
+  document.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const f = e.target;
+    if (f.id === 'priceForm') {
+      const v = calcValue();
+      if (!v) { document.getElementById('priceErr').textContent = 'Geef een bedrag in, bijvoorbeeld 24,50.'; return; }
+      current().price = v; S.lastPrice = v; ui.calc = { expr: '', target: null }; save(); render(); keepAwake();
+    } else if (f.id === 'gPriceForm') {
+      const v = calcValue(), c = gCur();
+      if (!v) { document.getElementById('priceErr').textContent = 'Geef een bedrag in, bijvoorbeeld 24,50.'; return; }
+      if (!c) return;
+      c.price = v; S.lastPrice = v; ui.calc = { expr: '', target: null };
+      if (S.game === 'wiezen' && !c.games.length) { ui.wr = { k: null, sel: [], made: null, diff: 0 }; ui.view = 'wround'; }
+      save(); render(); window.scrollTo(0, 0); keepAwake();
+    } else if (f.id === 'editPriceForm') {
+      const v = calcValue();
+      if (!v) { document.getElementById('priceErr2').textContent = 'Geef een bedrag in, bijvoorbeeld 24,50.'; return; }
+      current().price = v; S.lastPrice = v; ui.modal = null; save(); render();
+    } else if (f.id === 'startForm') {
+      const names = [0, 1, 2, 3].map((i) => document.getElementById('sp' + i).value.trim());
+      const err = document.getElementById('startErr');
+      const empty = names.findIndex((n) => !n);
+      if (empty >= 0) { err.textContent = 'Vul alle 4 de namen in.'; document.getElementById('sp' + empty).focus(); return; }
+      if (new Set(names.map((n) => n.toLowerCase())).size < 4) { err.textContent = 'Geef elke speler een andere naam.'; return; }
+      S.players = names; ui.view = 'choose'; save(); render(); window.scrollTo(0, 0);
+    } else if (f.id === 'playersForm') {
+      const names = S.players.map((_, i) => document.getElementById('pl' + i).value.trim());
+      if (names.some((n) => !n)) return;
+      S.players = names; ui.modal = null; save(); render();
+    }
+  });
+
+  render();
+  window.__troeven = { get state() { return S; }, ui };
+})();
+</script>
+
+<script>
+// Installeerbare app: offline werken en vanzelf de nieuwste versie laden.
+(() => {
+  const APP_VERSION = '20261125-101304';
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+  // Veilig om te herladen: niet midden in het ingeven van een hand, spelletje of tijdens het delen.
+  const safe = () => {
+    const t = window.__troeven; if (!t) return true;
+    const v = t.ui.view;
+    return !t.ui.modal && !['wround', 'hround', 'draw', 'wsetup'].includes(v);
+  };
+  let pending = false, bar = null;
+  function showBar() {
+    if (bar) return;
+    bar = document.createElement('div');
+    bar.className = 'toast'; bar.style.bottom = 'calc(16px + env(safe-area-inset-bottom, 0px))'; bar.style.zIndex = 30;
+    bar.innerHTML = '<span class="tx"><b>Nieuwe versie klaar</b> · laadt zodra je klaar bent</span><button class="btn soft sm" type="button">Nu laden</button>';
+    bar.querySelector('button').onclick = () => location.reload();
+    document.body.appendChild(bar);
+  }
+  async function check() {
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost') return;
+    try {
+      const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+      const { v } = await r.json();
+      if (v && v !== APP_VERSION) pending = true;
+    } catch (e) {}
+    if (pending) { if (safe()) location.reload(); else showBar(); }
+  }
+  // Ook herladen zodra je terugkeert naar een rustig scherm.
+  document.addEventListener('click', () => { if (pending && safe()) setTimeout(() => { if (safe()) location.reload(); }, 400); }, true);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+  setInterval(check, 20000);
+  setTimeout(check, 1500);
+})();
+
+</script>
+</body></html>
