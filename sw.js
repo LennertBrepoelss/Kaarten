@@ -1,5 +1,5 @@
 // Netwerk eerst: altijd de nieuwste versie als er internet is, anders de bewaarde kopie.
-const CACHE = 'kaartavond-20261125-121540';
+const CACHE = 'kaartavond-20261125-121907';
 self.addEventListener('install', (e) => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png']))); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', (e) => {
