@@ -493,6 +493,24 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 .tile.cur { outline: 2px solid rgba(255,255,255,.75); outline-offset: 3px; }
 .g-troef { --tg: linear-gradient(150deg, #c39bff, #7b4fe0 70%, #5a35b8); --tglow: #7b4fe0; }
 .g-wiez { --tg: linear-gradient(150deg, #7fe6ff, #1fa8e0 70%, #1279b5); --tglow: #1fa8e0; }
+.g-poker { --tg: linear-gradient(150deg, #ff8f9f, #d63a5c 60%, #7a1f45); --tglow: #d63a5c; }
+.pkrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--hair); }
+.pkrow:last-child { border-bottom: 0; }
+.pkrow .who { font: 600 20px/1.1 var(--f-serif); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pkrow .who::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--pc); margin-right: 10px; vertical-align: 3px; box-shadow: 0 0 10px var(--pc); }
+.pkrow .meta { display: block; font: 500 12px/1.3 var(--f-ui); color: var(--dim); margin-top: 4px; }
+.pkamt { font: 600 22px/1 var(--f-serif); font-variant-numeric: lining-nums tabular-nums; text-align: right; }
+.pkctl { grid-column: 1 / -1; display: grid; grid-template-columns: 52px 1fr; gap: 8px; }
+.pkctl button { height: 46px; border-radius: 12px; border: 1px solid var(--hair-2); background: var(--surface-2); font: 700 16px/1 var(--f-ui); color: var(--ivory); }
+.pkctl .min { color: var(--danger); font-size: 24px; }
+.pkctl .plus { color: var(--p2); border-color: color-mix(in srgb, var(--p2) 45%, transparent); }
+.pkctl button:disabled { opacity: .3; }
+.pkin { display: flex; align-items: baseline; gap: 6px; border-bottom: 1px solid var(--hair-2); }
+.pkin span { color: var(--dim); font: 500 18px var(--f-serif); }
+.pkin input { width: 96px; border: 0; background: transparent; outline: none; font: 600 24px/1.2 var(--f-serif); text-align: right; font-variant-numeric: lining-nums tabular-nums; padding: 6px 0; }
+.pkin:focus-within { border-color: var(--gold); }
+.totbar { display: flex; justify-content: space-between; gap: 12px; background: var(--surface); border: 1px solid var(--hair); border-radius: 16px; padding: 14px 16px; }
+.totbar b { display: block; font: 600 24px/1.1 var(--f-serif); font-variant-numeric: lining-nums tabular-nums; margin-top: 4px; }
 .g-darts { --tg: linear-gradient(150deg, #8af7e0, #22b8a8 65%, #127a8a); --tglow: #22b8a8; }
 .drow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--hair); }
 .drow:last-child { border-bottom: 0; }
@@ -948,6 +966,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (!s.np) s.np = freshNp();
     if (!s.lk) s.lk = freshLk();
     if (!s.dt) s.dt = freshDt();
+    if (!s.pk) s.pk = freshPk();
     if (!Array.isArray(s.dt.rondjes)) s.dt.rondjes = [];
     if (!Array.isArray(s.lk.rondjes)) s.lk.rondjes = [];
     if (!Array.isArray(s.np.rondjes)) s.np.rondjes = [];
@@ -1087,20 +1106,66 @@ if (typeof module !== 'undefined') module.exports = Logic;
       total: tTotal + gs.reduce((a, [, o]) => a + o.total, 0), n: done.length + gs.reduce((a, [, o]) => a + o.n, 0),
       parts: [['Troeven', done.length, tTotal], ...gs.map(([g, o]) => [PG[g].title, o.n, o.total])] };
   }
+  // ---------- Poker (kassa) ----------
+  // Iedereen koopt in met een vast bedrag (buy-in), en kan bijkopen. Op het einde vul je in met hoeveel elke speler stopt
+  // (buy-out). Winst of verlies = buy-out − buy-in. Klopt de pot niet, dan wordt het verschil gelijk over de spelers verdeeld.
+  function freshPk(prev) { return { unit: prev && prev.unit ? prev.unit : 1000, on: false, step: 'setup', who: [], buyin: [], buyout: [] }; }
+  function splitEqually(total, n) {
+    if (n <= 0) return [];
+    const sg = total < 0 ? -1 : 1, base = Math.floor(Math.abs(total) / n) * sg, arr = Array(n).fill(base);
+    let rem = total - base * n, k = 0;
+    while (rem !== 0) { arr[k % n] += sg; rem -= sg; k++; }
+    return arr;
+  }
+  // Winst/verlies per speler van de avond (in cent), null als de poker nog niet afgerekend is
+  function pokerNet() {
+    const K = S.pk;
+    if (!K || !K.on || K.step !== 'done') return null;
+    const idx = K.who;
+    const tin = idx.reduce((t, i) => t + K.buyin[i], 0), tout = idx.reduce((t, i) => t + (K.buyout[i] || 0), 0);
+    const sh = splitEqually(tout - tin, idx.length);
+    const net = S.players.map(() => 0);
+    idx.forEach((i, k) => { net[i] = (K.buyout[i] || 0) - K.buyin[i] - sh[k]; });
+    return net;
+  }
+  // Zo weinig mogelijk overschrijvingen: grootste schuld met grootste tegoed
+  function minTransfers(bal) {
+    const cr = bal.map((c, i) => ({ i, c })).filter((x) => x.c > 0).sort((a, b) => b.c - a.c);
+    const de = bal.map((c, i) => ({ i, c: -c })).filter((x) => x.c > 0).sort((a, b) => b.c - a.c);
+    const tx = []; let a = 0, b = 0;
+    while (a < de.length && b < cr.length) {
+      const amt = Math.min(de[a].c, cr[b].c);
+      if (amt > 0) tx.push({ from: de[a].i, to: cr[b].i, amount: amt });
+      de[a].c -= amt; cr[b].c -= amt;
+      if (de[a].c <= 0) a++;
+      if (cr[b].c <= 0) b++;
+    }
+    return tx;
+  }
+
   // Einde avond: payer betaalde de rekening. Verschil met de rondjes wordt gelijk verdeeld.
+  // Pokerwinst en -verlies komen erbij, en dan rekenen we alles in één keer af.
   function settleAll(payer, bill) {
     const A = owedAll();
     const total = bill === null || bill === undefined ? A.total : bill;
     const diff = total - A.total;
     const per = A.owed.map((c) => c + diff / S.players.length);
-    const transfers = [];
-    per.forEach((c, i) => {
-      if (i === payer) return;
-      const amount = Math.round(c);
-      if (amount > 0) transfers.push({ from: i, to: payer, amount });
-      else if (amount < 0) transfers.push({ from: payer, to: i, amount: -amount });
-    });
-    return { total, rounds: A.total, diff, per, transfers };
+    const poker = pokerNet();
+    let transfers = [];
+    if (!poker) {
+      per.forEach((c, i) => {
+        if (i === payer) return;
+        const amount = Math.round(c);
+        if (amount > 0) transfers.push({ from: i, to: payer, amount });
+        else if (amount < 0) transfers.push({ from: payer, to: i, amount: -amount });
+      });
+    } else {
+      const bal = per.map((c, i) => Math.round(-c + (i === payer ? total : 0) + poker[i]));
+      const off = bal.reduce((a, b) => a + b, 0);
+      if (off) bal[payer === null || payer === undefined ? 0 : payer] -= off;
+      transfers = minTransfers(bal);
+    }
+    return { total, rounds: A.total, diff, per, transfers, poker };
   }
   // Oudere avonden kenden alleen winnaars per rondje (geen bedragen): groepeer ze per avond.
   function historyFromArchive(s) {
@@ -1118,7 +1183,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     return out;
   }
 
-  function fresh(players) { return { v: 1, players: players || [...DEFAULT_PLAYERS], rounds: [], lastPrice: null, updatedAt: 0, game: null, ready: false, wz: freshWz(), hj: freshHj(), pj: freshPj(), np: freshNp(), lk: freshLk(), dt: freshDt() }; }
+  function fresh(players) { return { v: 1, players: players || [...DEFAULT_PLAYERS], rounds: [], lastPrice: null, updatedAt: 0, game: null, ready: false, wz: freshWz(), hj: freshHj(), pj: freshPj(), np: freshNp(), lk: freshLk(), dt: freshDt(), pk: freshPk() }; }
   function loadLocal() {
     try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 1 && Array.isArray(s.rounds)) return normalize(s); } catch (e) {}
     return null;
@@ -1180,7 +1245,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 
   // Een avond: spelers → (per rondje) prijs → spel → percentages (niet bij troeven) → spelen.
   function view() {
-    if (ui.view === 'start' || ui.view === 'end' || (ui.view === 'draw' && ui.draw) || (ui.view === 'hist' && ui.hist)) return ui.view;
+    if (ui.view === 'start' || ui.view === 'end' || (ui.view === 'draw' && ui.draw) || (ui.view === 'hist' && ui.hist) || ui.view === 'poker') return ui.view;
     if (ui.flow && ['nprice', 'npick', 'npct'].includes(ui.view)) return ui.view;
     if (!S.ready) return 'start';
     const r = current();
@@ -1247,7 +1312,12 @@ if (typeof module !== 'undefined') module.exports = Logic;
       rec[key] = { n: rs.length, r: rs.length, won, lost, paid: gameOwed(g).owed.map((c) => Math.round(c)) };
       starts.push(rs[0].start);
     });
-    if (!rec.t && !rec.w && !rec.h && !rec.p && !rec.n && !rec.l && !rec.d) return null;
+    const pnet = pokerNet();
+    if (pnet) {
+      rec.k = { n: 1, r: 1, won: pnet.map((v) => (v > 0 ? 1 : 0)), lost: pnet.map((v) => (v < 0 ? 1 : 0)), paid: pnet.map((v) => (v < 0 ? -v : 0)), net: pnet };
+      starts.push(S.pk.start);
+    }
+    if (!rec.t && !rec.w && !rec.h && !rec.p && !rec.n && !rec.l && !rec.d && !rec.k) return null;
     rec.paid = settleAll(0, Logic.parsePrice(ui.bill)).per.map((c) => Math.round(c));
     if (starts.filter(Boolean).length) rec.date = Math.min(...starts.filter(Boolean));
     return rec;
@@ -1257,7 +1327,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const parts = HKEYS.map((k) => h[k] && h[k].paid).filter(Boolean);
     return parts.length ? h.players.map((_, i) => parts.reduce((s, p) => s + p[i], 0)) : null;
   }
-  const HKEYS = ['t', 'w', 'h', 'p', 'n', 'l', 'd'];
+  const HKEYS = ['t', 'w', 'h', 'p', 'n', 'l', 'd', 'k'];
   const nightLost = (h) => h.players.map((_, i) => HKEYS.reduce((a, k) => a + (h[k] ? h[k].lost[i] || 0 : 0), 0));
   const nightWon = (h) => h.players.map((_, i) => HKEYS.reduce((a, k) => a + (h[k] ? h[k].won[i] || 0 : 0), 0));
   // Grote verliezer: wie het meest betaalde; zonder bedragen wie het meest verloor.
@@ -1326,7 +1396,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   }
 
   // ---------- Geschiedenis: spel → spelers → overzicht ----------
-  const HK = { troeven: 't', wiezen: 'w', harten: 'h', pietjes: 'p', nappen: 'n', lucky: 'l', darts: 'd' };
+  const HK = { troeven: 't', wiezen: 'w', harten: 'h', pietjes: 'p', nappen: 'n', lucky: 'l', darts: 'd', poker: 'k' };
   // Namen vergelijken zonder hoofdletters of spaties: "inez" en "Inez " zijn dezelfde speler.
   const nameKey = (p) => String(p).trim().toLowerCase();
   const groupKey = (players) => players.map(nameKey).sort().join('|');
@@ -1344,10 +1414,10 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const H = ui.hist, all = (S.history || []).map((h, idx) => ({ h, idx }));
     const head = (label) => `<header class="top"><button class="btn ghost sm" data-act="histBack">← Terug</button><span class="label">${label}</span></header>`;
     if (!H.game) {
-      const tiles = GAMES.map((g) => { const n = all.filter(({ h }) => h[HK[g.k]]).length; return `<button class="tile ${g.cls} ${n ? '' : 'off'}" data-act="histGame" data-v="${g.k}" ${n ? '' : 'disabled'}><span class="tart">${GAME_ART[g.k]}</span><span class="tstat">${n ? `${n} avond${n > 1 ? 'en' : ''}` : 'nog niets'}</span><span class="tname">${g.name}</span></button>`; }).join('');
+      const tiles = [...GAMES, POKER_TILE].map((g) => { const n = all.filter(({ h }) => h[HK[g.k]]).length; return `<button class="tile ${g.cls} ${n ? '' : 'off'}" data-act="histGame" data-v="${g.k}" ${n ? '' : 'disabled'}><span class="tart">${GAME_ART[g.k]}</span><span class="tstat">${n ? `${n} avond${n > 1 ? 'en' : ''}` : 'nog niets'}</span><span class="tname">${g.name}</span></button>`; }).join('');
       return `<div class="wrap">${head('Geschiedenis')}<section><h1>Welk <em>spel</em>?</h1></section><div class="tiles">${tiles}</div></div>`;
     }
-    const k = HK[H.game], gname = GAMES.find((g) => g.k === H.game).name;
+    const k = HK[H.game], gname = [...GAMES, POKER_TILE].find((g) => g.k === H.game).name;
     const recs = all.filter(({ h }) => h[k]);
     const groups = {};
     recs.forEach(({ h }) => { const key = groupKey(h.players); const g = (groups[key] = groups[key] || { players: h.players, n: 0, last: 0 }); g.n++; g.last = Math.max(g.last, h.date); if (h.players.reduce((t, p) => t + nameScore(p.trim()), 0) > g.players.reduce((t, p) => t + nameScore(p.trim()), 0)) g.players = h.players; });
@@ -1431,7 +1501,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       <header class="top"><div class="brand">Kaartavond</div><div style="display:flex;gap:12px;align-items:center">${syncChip()}<button class="btn ghost sm" data-act="toStart">Spelers</button></div></header>
       <section><p class="label">${esc(today())}</p><h1>${A.n ? `Rondje <em>${A.n + 1}</em>` : 'Een nieuwe <em>avond</em>'}</h1></section>
       <button class="btn primary xl" data-act="newRondje">Nieuw rondje <span class="arr">→</span></button>
-      <button class="btn ghost block" data-act="histOpen">Geschiedenis</button>
+      <div class="row2"><button class="btn ghost" data-act="pkOpen">♠ Poker${S.pk.on ? (S.pk.step === 'done' ? ' · klaar' : ' · bezig') : ''}</button><button class="btn ghost" data-act="histOpen">Geschiedenis</button></div>
       ${avondPanel()}
       ${items.length ? `<section class="panel"><h2>Rondjes</h2><div>${list}</div></section>` : ''}
       <section class="panel"><h2>Back-up</h2>
@@ -1462,6 +1532,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     troeven: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M48 14v70" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity=".55"/>${[0, 1, 2, 3, 4, 5].map((k) => `<rect x="${24 + (k % 2) * 4}" y="${70 - k * 10}" width="${44 - (k % 2) * 8 - k * 2}" height="4.5" rx="2.2" fill="currentColor" opacity="${k > 3 ? .35 : 1}"/>`).join('')}<g transform="translate(58 8) rotate(12)"><rect width="26" height="36" rx="4" fill="#fff"/><text x="13" y="24" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-weight="700" font-size="18" fill="#2b1d55">B</text></g></svg>`,
     wiezen: `<svg viewBox="0 0 96 96" aria-hidden="true">${[-20, 0, 20].map((a, k) => `<g transform="rotate(${a} 48 84)"><rect x="32" y="22" width="32" height="46" rx="5" fill="#fff" opacity="${.55 + k * .22}"/></g>`).join('')}<g transform="rotate(20 48 84)"><path d="M54 32c-5 6-11 9-11 15a5 5 0 0 0 9 3l-2 6h8l-2-6a5 5 0 0 0 9-3c0-6-6-9-11-15z" fill="#07324a"/></g></svg>`,
     pietjes: `<svg viewBox="0 0 96 96" aria-hidden="true">${[[14, 40, -14], [40, 18, 8], [50, 50, 18]].map(([x, y, a], k) => `<g transform="rotate(${a} ${x + 16} ${y + 16})"><rect x="${x}" y="${y}" width="32" height="32" rx="7" fill="#fff" opacity="${.75 + k * .12}"/>${[[[16, 16]], [[9, 9], [23, 23]], [[9, 9], [16, 16], [23, 23]]][k].map(([cx, cy]) => `<circle cx="${x + cx}" cy="${y + cy}" r="3.4" fill="#5a3300"/>`).join('')}</g>`).join('')}</svg>`,
+    poker: `<svg viewBox="0 0 96 96" aria-hidden="true"><g transform="rotate(-14 40 50)"><rect x="18" y="20" width="40" height="56" rx="6" fill="#fff" opacity=".8"/></g><g transform="rotate(10 56 50)"><rect x="34" y="18" width="40" height="56" rx="6" fill="#fff"/><path d="M54 32c-6 7-13 10-13 17a6 6 0 0 0 11 3l-2 7h9l-2-7a6 6 0 0 0 11-3c0-7-7-10-14-17z" fill="#3a0d1e"/></g><circle cx="74" cy="74" r="14" fill="#ffd166" stroke="#fff" stroke-width="3"/><circle cx="74" cy="74" r="7" fill="none" stroke="#7a4a00" stroke-width="2" stroke-dasharray="3 3"/></svg>`,
     darts: `<svg viewBox="0 0 96 96" aria-hidden="true"><circle cx="44" cy="52" r="32" fill="#fff"/><circle cx="44" cy="52" r="22" fill="none" stroke="#0b3b4a" stroke-width="5"/><circle cx="44" cy="52" r="11" fill="#0b3b4a"/><circle cx="44" cy="52" r="4" fill="#fff"/><path d="M47 49 84 12" stroke="#fff" stroke-width="4" stroke-linecap="round"/><path d="M84 12l-11 1 4 6zM84 12l-1 11-6-4z" fill="#fff"/></svg>`,
     lucky: `<svg viewBox="0 0 96 96" aria-hidden="true"><text x="40" y="76" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-weight="700" font-size="74" fill="#fff">7</text>${[[72, 22, 9], [80, 48, 6], [62, 8, 5]].map(([cx, cy, r]) => `<path d="M${cx} ${cy - r}l${r * .3} ${r * .7} ${r * .7} ${r * .3}-${r * .7} ${r * .3}-${r * .3} ${r * .7}-${r * .3}-${r * .7}-${r * .7}-${r * .3} ${r * .7}-${r * .3}z" fill="#fff" opacity=".9"/>`).join('')}</svg>`,
     nappen: `<svg viewBox="0 0 96 96" aria-hidden="true"><circle cx="40" cy="50" r="27" fill="#fff"/><text x="40" y="60" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="28" fill="#1f4d10">20</text><circle cx="74" cy="26" r="13" fill="#fff" opacity=".9"/><path d="M74 19v14M67 26h14" stroke="#1f4d10" stroke-width="3.5" stroke-linecap="round"/><circle cx="76" cy="66" r="11" fill="#fff" opacity=".7"/><path d="M70 66h12" stroke="#1f4d10" stroke-width="3.5" stroke-linecap="round"/></svg>`,
@@ -1476,6 +1547,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     { k: 'lucky', name: 'Lucky 7', cls: 'g-lucky', min: 3, max: 7 },
     { k: 'darts', name: 'Darts', cls: 'g-darts', min: 2, max: 8 },
   ];
+  const POKER_TILE = { k: 'poker', name: 'Poker', cls: 'g-poker' };
   function renderPick() {
     const n = S.players.length;
     const tiles = GAMES.map((g) => { const ok = n >= g.min && n <= g.max; return `<button class="tile ${g.cls} ${ok ? '' : 'off'}" data-act="flowGame" data-v="${g.k}" ${ok ? '' : 'disabled'}><span class="tart">${GAME_ART[g.k]}</span>${ok ? '' : `<span class="tstat">${g.min === g.max ? g.min : `${g.min}–${g.max}`} spelers</span>`}<span class="tname">${g.name}</span></button>`; }).join('');
@@ -1533,8 +1605,10 @@ if (typeof module !== 'undefined') module.exports = Logic;
   }
   // Wat iedereen deze avond al moet betalen, over alle spellen samen
   function avondPanel() {
-    const A = owedAll();
-    if (!A.n) return '';
+    const A = owedAll(), pk = pokerNet();
+    if (!A.n && !pk) return '';
+    if (!A.n) return `<section class="panel"><div class="panel-head"><h2>Poker</h2><span class="label">klaar</span></div>
+      <div>${S.players.map((p, i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${esc(p)}</span><span class="owe ${pk[i] ? (pk[i] > 0 ? 'pos' : 'neg') : 'zero'}">${pk[i] > 0 ? '+' : pk[i] < 0 ? '−' : ''}${euro(Math.abs(pk[i]))}</span></div>`).join('')}</div></section>`;
     return `<section class="panel"><div class="panel-head"><h2>Te betalen vanavond</h2><span class="label" style="white-space:nowrap">${euro(A.total)}</span></div>
       <div>${S.players.map((p, i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${esc(p)}</span><span class="owe ${A.owed[i] ? '' : 'zero'}">${euro(A.owed[i])}</span></div>`).join('')}</div></section>`;
   }
@@ -1672,6 +1746,63 @@ if (typeof module !== 'undefined') module.exports = Logic;
       ${bs.length ? `<section class="panel"><div class="panel-head"><h2>Gespeeld</h2><button class="btn soft sm" data-act="pUndo">Laatste ongedaan</button></div><div>${hist}</div></section>` : ''}
       ${c ? avondPanel() : ''}
     </div>${dock()}`;
+  }
+
+  // ---------- Poker: buy-in → buy-out → verrekening ----------
+  const cents = (t) => { const x = String(t || '').trim().replace(/€/g, '').replace(/\s/g, '').replace(',', '.'); if (!/^\d+(\.\d{0,2})?$/.test(x)) return null; return Math.round(parseFloat(x) * 100); };
+  function renderPoker() {
+    const K = S.pk, head = (label) => `<header class="top"><button class="btn ghost sm" data-act="pkBack">← ${K.on && K.step !== 'setup' ? 'Overzicht' : 'Terug'}</button><span class="label">${label}</span></header>`;
+    if (!K.on) {
+      const sel = ui.pkSel || S.players.map((_, i) => i);
+      return `<div class="wrap">${head('Poker')}
+        <section><h1>Wie <em>pokert</em> er mee?</h1></section>
+        <div class="chips">${S.players.map((p, i) => `<button class="chip ${sel.includes(i) ? 'on' : ''}" data-act="pkSel" data-v="${i}">${esc(p)}</button>`).join('')}</div>
+        <div class="field"><label for="pkUnit">Buy-in per keer</label><div class="money"><span>€</span><input id="pkUnit" inputmode="decimal" value="${fmt(K.unit)}"></div></div>
+        <p class="err" id="pkErr" style="min-height:0"></p>
+        <button class="btn primary xl" data-act="pkStart" ${sel.length >= 2 ? '' : 'disabled'}>${sel.length >= 2 ? `Start poker · ${sel.length} spelers` : 'Kies minstens 2 spelers'} <span class="arr">→</span></button>
+      </div>`;
+    }
+    const tin = K.who.reduce((t, i) => t + K.buyin[i], 0);
+    if (K.step === 'buyin') {
+      const rows = K.who.map((i) => `<div class="pkrow" style="--pc:var(--p${i})"><span class="who">${P(i)}<span class="meta">${Math.round(K.buyin[i] / K.unit)}× buy-in</span></span><span class="pkamt">${euro(K.buyin[i])}</span>
+        <div class="pkctl"><button class="min" data-act="pkBuy" data-i="${i}" data-v="-1" ${K.buyin[i] <= K.unit ? 'disabled' : ''} aria-label="Buy-in minder voor ${P(i)}">−</button><button class="plus" data-act="pkBuy" data-i="${i}" data-v="1">+ buy-in</button></div></div>`).join('');
+      return `<div class="wrap">${head('Poker · buy-ins')}
+        <section><h1>Buy-<em>ins</em></h1><p class="lead">${euro(K.unit)} per keer</p></section>
+        <section class="panel" style="gap:0;padding-block:6px">${rows}</section>
+        <div class="totbar"><div><span class="label">Spelers</span><b>${K.who.length}</b></div><div style="text-align:right"><span class="label">In de pot</span><b>${euro(tin)}</b></div></div>
+        <button class="btn primary xl" data-act="pkStep" data-v="buyout">Einde poker · buy-out <span class="arr">→</span></button>
+        <button class="btn ghost block" data-act="pkCancel">${ui.pkSure ? 'Tik nog eens: poker wissen' : 'Poker wissen'}</button>
+      </div>`;
+    }
+    if (K.step === 'buyout') {
+      const tout = K.who.reduce((t, i) => t + (K.buyout[i] || 0), 0), all = K.who.every((i) => K.buyout[i] !== null && K.buyout[i] !== undefined);
+      const rows = K.who.map((i) => `<div class="pkrow" style="--pc:var(--p${i})"><span class="who">${P(i)}<span class="meta">in ${euro(K.buyin[i])}</span></span>
+        <div class="pkin"><span>€</span><input id="pko${i}" inputmode="decimal" placeholder="0,00" value="${K.buyout[i] === null || K.buyout[i] === undefined ? '' : fmt(K.buyout[i])}" aria-label="Buy-out van ${P(i)}"></div></div>`).join('');
+      return `<div class="wrap">${head('Poker · buy-out')}
+        <section><h1>Buy-<em>out</em></h1><p class="lead">Met hoeveel stopt iedereen?</p></section>
+        <section class="panel" style="gap:0;padding-block:6px">${rows}</section>
+        <div class="totbar" id="pkTot">${pkTotHTML()}</div>
+        <button class="btn primary xl" data-act="pkStep" data-v="done" id="pkCalc" ${all ? '' : 'disabled'}>Bereken <span class="arr">→</span></button>
+        <button class="btn ghost block" data-act="pkStep" data-v="buyin">← Buy-ins</button>
+      </div>`;
+    }
+    // klaar: resultaat en wie wie betaalt (enkel poker)
+    const net = pokerNet();
+    const tout = K.who.reduce((t, i) => t + (K.buyout[i] || 0), 0), D = tout - tin;
+    const rows = K.who.slice().sort((a, b) => net[b] - net[a]).map((i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${P(i)}<span class="meta">in ${euro(K.buyin[i])} · uit ${euro(K.buyout[i] || 0)}</span></span><span class="pts ${pn(net[i])}">${net[i] > 0 ? '+' : net[i] < 0 ? '−' : ''}${euro(Math.abs(net[i])).replace('€ ', '€')}</span></div>`).join('');
+    const tx = minTransfers(net).map((t) => `<div class="tr"><div class="who"><span>${P(t.from)}</span><span class="arrow">betaalt ${P(t.to)}</span></div><div class="amt">${euro(t.amount)}</div></div>`).join('');
+    return `<div class="wrap">${head('Poker · resultaat')}
+      <section><h1>Poker <em>klaar</em></h1></section>
+      ${D ? `<div class="note">De pot klopt niet: ${euro(Math.abs(D))} ${D > 0 ? 'te veel' : 'te weinig'}. Dat verschil is gelijk over iedereen verdeeld.</div>` : ''}
+      <section class="panel"><h2>Winst en verlies</h2><div>${rows}</div></section>
+      <section class="panel"><h2>Wie betaalt wie</h2><div>${tx || '<p class="empty">Niemand moet iets betalen.</p>'}</div>
+        <p class="hint">Bij "Einde avond" komt dit samen met de café-rondjes in één afrekening.</p></section>
+      <button class="btn ghost block" data-act="pkStep" data-v="buyout">← Buy-out aanpassen</button>
+    </div>`;
+  }
+  function pkTotHTML() {
+    const K = S.pk, tin = K.who.reduce((t, i) => t + K.buyin[i], 0), tout = K.who.reduce((t, i) => t + (K.buyout[i] || 0), 0), D = tout - tin;
+    return `<div><span class="label">Buy-in</span><b>${euro(tin)}</b></div><div style="text-align:center"><span class="label">Buy-out</span><b>${euro(tout)}</b></div><div style="text-align:right"><span class="label">Verschil</span><b class="${D ? 'neg' : 'pos'}">${D ? (D > 0 ? '+' : '−') + euro(Math.abs(D)) : 'klopt'}</b></div>`;
   }
 
   // ---------- Darts ----------
@@ -2059,12 +2190,17 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const open = openAny();
     const { owed } = A;
     const parts = A.parts.filter((p) => p[1]);
+    const pk = pokerNet();
+    if (pk) parts.push(['Poker', 0, 0]);
+    const pkOpen = S.pk.on && S.pk.step !== 'done';
     const payerBtns = S.players.map((p, i) => `<button class="payer ${ui.payer === i ? 'on' : ''}" data-act="payer" data-v="${i}"><span class="nm">${esc(p)}</span><small>aandeel ${euro(owed[i])}</small></button>`).join('');
     return `<div class="wrap">
       <header class="top"><button class="btn ghost sm" data-act="home">← Terug</button><span class="label">Einde avond</span></header>
       <section><p class="label">${done.length} rondje${done.length === 1 ? '' : 's'} gespeeld</p><h1>Wie heeft de <em>rekening</em> betaald?</h1>
-        ${parts.length ? `<p class="lead">${parts.map((p) => `${p[0]}: ${p[1]} rondje${p[1] > 1 ? 's' : ''} · ${euro(p[2])}`).join('<br>')}</p>` : ''}</section>
+        ${parts.length ? `<p class="lead">${parts.map((p) => (p[0] === 'Poker' ? 'Poker: winst en verlies zitten mee in de afrekening' : `${p[0]}: ${p[1]} rondje${p[1] > 1 ? 's' : ''} · ${euro(p[2])}`)).join('<br>')}</p>` : ''}</section>
       ${open ? `<div class="note">Een rondje dat nog bezig is, telt niet mee.</div>` : ''}
+      ${pkOpen ? `<div class="note">De poker is nog niet afgerekend en telt niet mee. Vul eerst de buy-outs in.</div>` : ''}
+      ${!done.length && pk ? `<div id="settle">${renderSettle()}</div>` : ''}
       ${done.length ? `<div class="payers">${payerBtns}</div>
       <div class="field"><label for="bill">Wat stond er op de rekening?</label>
         <input class="input" id="bill" inputmode="decimal" placeholder="${fmt(roundsTotal())}" value="${esc(ui.bill)}" style="font:600 22px var(--f-serif);font-variant-numeric:lining-nums">
@@ -2089,16 +2225,19 @@ if (typeof module !== 'undefined') module.exports = Logic;
   }
 
   function renderSettle() {
-    if (ui.payer === null) return `<p class="empty">Kies hierboven wie betaald heeft.</p>`;
-    const r = settleAll(ui.payer, billValue());
+    const onlyPoker = !owedAll().n && pokerNet();
+    if (ui.payer === null && !onlyPoker) return `<p class="empty">Kies hierboven wie betaald heeft.</p>`;
+    if (onlyPoker && ui.payer === null) ui.payer = 0;
+    const r = settleAll(ui.payer, onlyPoker ? 0 : billValue());
     const n = S.players.length;
     const trs = r.transfers.map((t) => `<div class="tr"><div class="who"><span>${P(t.from)}</span><span class="arrow">schrijft over naar ${P(t.to)}</span></div><div class="amt">${euro(t.amount)}</div></div>`).join('');
     return `<section class="panel">
-      <div class="total"><span class="label">${P(ui.payer)} betaalde</span><b>${euro(r.total)}</b></div>
+      ${onlyPoker ? '<div class="total"><span class="label">Poker</span><b>Wie betaalt wie</b></div>' : `<div class="total"><span class="label">${P(ui.payer)} betaalde</span><b>${euro(r.total)}</b></div>`}
+      ${r.poker && !onlyPoker ? `<div class="breakdown"><span>Pokerwinst en -verlies</span><span>zit mee in de bedragen</span></div>` : ''}
       ${r.diff ? `<div class="breakdown"><span>Rondjes</span><span>${euro(r.rounds)}</span><span>Verschil met de rekening</span><span>${signedEuro(r.diff)}</span><span>Per persoon</span><span>${signedEuro(r.diff / n)}</span></div>` : ''}
       <hr class="rule">
       ${r.transfers.length ? `<div>${trs}</div>` : `<p class="empty">Niemand moet iets overschrijven.</p>`}
-      <p class="muted" style="margin:0;font-size:12.5px">${(() => {
+      <p class="muted" style="margin:0;font-size:12.5px">${r.poker ? 'Zo weinig mogelijk overschrijvingen voor de rondjes en de poker samen.' : (() => {
         const inc = r.transfers.reduce((t, x) => t + (x.to === ui.payer ? x.amount : -x.amount), 0);
         const own = r.total - inc;
         return own < 0
@@ -2123,7 +2262,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const serif = '"Cormorant Garamond", Georgia, serif', sans = 'Manrope, system-ui, sans-serif';
     x.fillStyle = '#eaf2ff'; x.font = `italic 600 92px ${serif}`; x.fillText('Kaartavond', 80, 190);
     x.fillStyle = '#8a95b8'; x.font = `600 30px ${sans}`; x.fillText(today().toUpperCase(), 84, 250);
-    x.fillStyle = '#eaf2ff'; x.font = `600 46px ${serif}`; x.fillText(`${S.players[ui.payer]} betaalde ${euro(r.total)}`, 80, 360);
+    x.fillStyle = '#eaf2ff'; x.font = `600 46px ${serif}`; x.fillText(r.total ? `${S.players[ui.payer]} betaalde ${euro(r.total)}${r.poker ? ' · met poker' : ''}` : 'Poker: wie betaalt wie', 80, 360);
     let y = 470;
     const rows = r.transfers.length ? r.transfers : [];
     rows.slice(0, 7).forEach((t) => {
@@ -2141,7 +2280,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 
   function settleText() {
     const r = settleAll(ui.payer, billValue());
-    const lines = [`Kaartavond: afrekening (${owedAll().n} rondjes)`, `${S.players[ui.payer]} betaalde ${euro(r.total)}`];
+    const lines = [`Kaartavond: afrekening (${owedAll().n} rondjes${r.poker ? ' + poker' : ''})`, r.total ? `${S.players[ui.payer]} betaalde ${euro(r.total)}` : 'Poker'];
     if (r.diff) lines.push(`Rondjes ${euro(r.rounds)}, verschil ${signedEuro(r.diff)} gedeeld door ${S.players.length}`);
     lines.push('');
     r.transfers.forEach((t) => lines.push(`${S.players[t.from]} → ${S.players[t.to]}: ${euro(t.amount)}`));
@@ -2199,8 +2338,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
 
   function render() {
     const v = view();
-    ui.view = ['draw', 'end', 'wround', 'hround', 'pround', 'start', 'nprice', 'npick', 'npct', 'hist'].includes(v) ? v : null;
-    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound, ngame: renderNGame, lgame: renderLGame, hist: renderHist, dgame: renderDGame };
+    ui.view = ['draw', 'end', 'wround', 'hround', 'pround', 'start', 'nprice', 'npick', 'npct', 'hist', 'poker'].includes(v) ? v : null;
+    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound, ngame: renderNGame, lgame: renderLGame, hist: renderHist, dgame: renderDGame, poker: renderPoker };
     $app.innerHTML = screens[v]();
     renderModal();
     updateCalc();
@@ -2408,6 +2547,20 @@ if (typeof module !== 'undefined') module.exports = Logic;
       ui.pr = null; ui.view = null; save(); render(); window.scrollTo({ top: 0, behavior: 'smooth' });
       showToast(done ? `<b>Rondje gedaan</b> · ${P(pTot(c).findIndex((v) => v <= 0))} is alles kwijt` : `<b>Beurt ${c.beurten.length}</b> bewaard`);
     },
+    // Poker
+    pkOpen() { hideToast(); ui.pkSel = null; ui.pkSure = false; ui.view = 'poker'; render(); window.scrollTo(0, 0); },
+    pkBack() { ui.view = null; ui.pkSure = false; render(); window.scrollTo(0, 0); },
+    pkSel(b) { const i = +b.dataset.v; const sel = ui.pkSel || S.players.map((_, k) => k); ui.pkSel = sel.includes(i) ? sel.filter((x) => x !== i) : [...sel, i].sort((a, c) => a - c); render(); },
+    pkStart() {
+      const sel = ui.pkSel || S.players.map((_, k) => k), u = cents(document.getElementById('pkUnit').value);
+      if (!u) { document.getElementById('pkErr').textContent = 'Geef een bedrag in, bijvoorbeeld 10.'; return; }
+      if (sel.length < 2) return;
+      S.pk = { unit: u, on: true, step: 'buyin', who: sel, buyin: S.players.map((_, i) => (sel.includes(i) ? u : 0)), buyout: S.players.map(() => null), start: Date.now() };
+      save(); render(); window.scrollTo(0, 0); keepAwake();
+    },
+    pkBuy(b) { const K = S.pk, i = +b.dataset.i; K.buyin[i] = Math.max(K.unit, K.buyin[i] + +b.dataset.v * K.unit); save(); render(); if (navigator.vibrate) try { navigator.vibrate(10); } catch (e) {} },
+    pkStep(b) { S.pk.step = b.dataset.v; save(); render(); window.scrollTo(0, 0); },
+    pkCancel() { if (!ui.pkSure) { ui.pkSure = true; render(); return; } S.pk = freshPk(S.pk); ui.pkSure = false; save(); ui.view = null; render(); },
     // Darts
     dModeSet(b) { ui.dmode = b.dataset.v; render(); },
     dOutSet(b) { ui.dout = b.dataset.v === '1'; render(); },
@@ -2607,7 +2760,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       }
     },
     askReset() { ui.modal = 'askReset'; renderModal(); },
-    reset() { const archive = [...(S.archive || []), ...finished().map((r) => ({ teams: r.teams, winner: r.winner, date: r.end || r.start }))]; const rec = nightRecord(); const history = [...(S.history || []), ...(rec ? [rec] : [])]; const wz = freshWz(S.wz), hj = freshHj(S.hj), pj = freshPj(S.pj), np = freshNp(S.np), lk = freshLk(S.lk), dt = freshDt(S.dt); S = fresh(S.players); S.archive = archive; S.wz = wz; S.hj = hj; S.pj = pj; S.np = np; S.lk = lk; S.dt = dt; S.history = history; ui.hOpen = null; ui.hDel = null; ui.modal = null; ui.view = 'start'; ui.payer = null; ui.bill = ''; ui.hr = null; ui.wr = null; save(); render(); window.scrollTo(0, 0); },
+    reset() { const archive = [...(S.archive || []), ...finished().map((r) => ({ teams: r.teams, winner: r.winner, date: r.end || r.start }))]; const rec = nightRecord(); const history = [...(S.history || []), ...(rec ? [rec] : [])]; const wz = freshWz(S.wz), hj = freshHj(S.hj), pj = freshPj(S.pj), np = freshNp(S.np), lk = freshLk(S.lk), dt = freshDt(S.dt), pk = freshPk(S.pk); S = fresh(S.players); S.archive = archive; S.wz = wz; S.hj = hj; S.pj = pj; S.np = np; S.lk = lk; S.dt = dt; S.pk = pk; S.history = history; ui.hOpen = null; ui.hDel = null; ui.modal = null; ui.view = 'start'; ui.payer = null; ui.bill = ''; ui.hr = null; ui.wr = null; save(); render(); window.scrollTo(0, 0); },
   };
 
   document.addEventListener('click', (e) => {
@@ -2643,6 +2796,14 @@ if (typeof module !== 'undefined') module.exports = Logic;
       const v = parseInt(e.target.value.replace(/\D/g, ''), 10);
       ui.hr.p[+hm[1]] = isNaN(v) ? 0 : Math.min(13, v);
       updateHRound();
+      return;
+    }
+    const po = /^pko(\d)$/.exec(e.target.id || '');
+    if (po) {
+      const v = e.target.value.trim() === '' ? null : cents(e.target.value);
+      S.pk.buyout[+po[1]] = v; save();
+      const t = document.getElementById('pkTot'); if (t) t.innerHTML = pkTotHTML();
+      const btn = document.getElementById('pkCalc'); if (btn) btn.disabled = !S.pk.who.every((i) => S.pk.buyout[i] !== null && S.pk.buyout[i] !== undefined);
       return;
     }
     if (e.target.id === 'bill') {
@@ -2705,7 +2866,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 <script>
 // Installeerbare app: offline werken en vanzelf de nieuwste versie laden.
 (() => {
-  const APP_VERSION = '20261125-114627';
+  const APP_VERSION = '20261125-115447';
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
