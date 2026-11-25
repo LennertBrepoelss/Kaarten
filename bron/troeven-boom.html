@@ -1,5 +1,5 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>Troeven Boom</title>
+<title>Spelletjes</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="theme-color" content="#060914">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1482,7 +1482,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   function renderStart() {
     const names = ui.names || S.players, n = names.length, locked = nightBusy();
     return `<div class="wrap">
-      <header class="top"><div class="brand">Kaartavond</div>${syncChip()}</header>
+      <header class="top"><div class="brand">Spelletjes</div>${syncChip()}</header>
       <section><p class="label">${esc(today())}</p><h1>Wie speelt er <em>mee</em>?</h1>
         <p class="lead">In volgorde rond de tafel.</p></section>
       <form id="startForm" class="steps" autocomplete="off">
@@ -1512,7 +1512,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const A = owedAll(), items = rondjesTonight();
     const list = items.map((x, k) => `<div class="rround"><span class="no">${k + 1}</span><div class="txt"><b>${x.game}</b><br><span class="muted">${x.txt}</span></div><div class="amt ${x.price ? '' : 'muted'}">${x.price ? euro(x.price) : 'gratis'}</div></div>`).reverse().join('');
     return `<div class="wrap">
-      <header class="top"><div class="brand">Kaartavond</div><div style="display:flex;gap:12px;align-items:center">${syncChip()}<button class="btn ghost sm" data-act="toStart">Spelers</button></div></header>
+      <header class="top"><div class="brand">Spelletjes</div><div style="display:flex;gap:12px;align-items:center">${syncChip()}<button class="btn ghost sm" data-act="toStart">Spelers</button></div></header>
       <section><p class="label">${esc(today())}</p><h1>${A.n ? `Rondje <em>${A.n + 1}</em>` : 'Een nieuwe <em>avond</em>'}</h1></section>
       <button class="btn primary xl" data-act="newRondje">Nieuw rondje <span class="arr">→</span></button>
       ${S.pk.on ? `<div class="row2"><button class="btn ghost" data-act="pkOpen">♠ Poker · ${S.pk.step === 'done' ? 'klaar' : 'bezig'}</button><button class="btn ghost" data-act="histOpen">Geschiedenis</button></div>` : '<button class="btn ghost block" data-act="histOpen">Geschiedenis</button>'}

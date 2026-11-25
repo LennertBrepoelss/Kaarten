@@ -1,7 +1,7 @@
 {
-  "name": "Kaartavond",
-  "short_name": "Kaartavond",
-  "description": "Troeven, wiezen en hartenjagen op café, met de afrekening van de rondjes.",
+  "name": "Spelletjes",
+  "short_name": "Spelletjes",
+  "description": "Spelletjes op café: kaarten, dobbelstenen, darts en poker, met de afrekening van de rondjes.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

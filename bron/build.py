@@ -10,7 +10,7 @@ head_extra = ('<link rel="manifest" href="manifest.webmanifest">'
               '<meta name="apple-mobile-web-app-capable" content="yes">'
               '<meta name="mobile-web-app-capable" content="yes">'
               '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">'
-              '<meta name="apple-mobile-web-app-title" content="Kaartavond">')
+              '<meta name="apple-mobile-web-app-title" content="Spelletjes">')
 assert src.count('</head>') == 1
 out = src.replace('</head>', head_extra + '</head>')
 updater = (root / 'updater.js').read_text(encoding='utf8').replace('__VERSION__', v)
