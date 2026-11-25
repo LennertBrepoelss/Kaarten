@@ -818,6 +818,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (!Array.isArray(s.wz.rondjes)) s.wz.rondjes = [];
     delete s.wz.rounds;
     if (s.game === undefined) s.game = s.rounds && s.rounds.length ? 'troeven' : null;
+    if (s.ready === undefined) s.ready = !!(s.game || (s.rounds && s.rounds.length));
     if (!s.hj) s.hj = freshHj();
     if (!Array.isArray(s.hj.rondjes)) s.hj.rondjes = [];
     delete s.hj.hands;
@@ -897,7 +898,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     return out;
   }
 
-  function fresh(players) { return { v: 1, players: players || [...DEFAULT_PLAYERS], rounds: [], lastPrice: null, updatedAt: 0, game: null, wz: freshWz(), hj: freshHj() }; }
+  function fresh(players) { return { v: 1, players: players || [...DEFAULT_PLAYERS], rounds: [], lastPrice: null, updatedAt: 0, game: null, ready: false, wz: freshWz(), hj: freshHj() }; }
   function loadLocal() {
     try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 1 && Array.isArray(s.rounds)) return normalize(s); } catch (e) {}
     return null;
@@ -905,7 +906,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   function saveLocal() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
 
   let S = loadLocal() || fresh();
-  const ui = { view: null, pick: { card: null, playing: null }, modal: null, draw: null, calc: { expr: '', target: null }, payer: null, bill: '', statScope: 'night', flash: null, synced: false, pct: null, per: 1, wr: null, hr: null };
+  const ui = { view: null, pick: { card: null, playing: null }, modal: null, draw: null, calc: { expr: '', target: null }, payer: null, bill: '', statScope: 'night', flash: null, synced: false, pct: null, per: 1, wr: null, hr: null, flow: null, result: null };
 
   // ---------- Opslaan (lokaal + gedeelde opslag van de pagina) ----------
   let docRef = null, writing = false, dirty = false;
@@ -957,20 +958,18 @@ if (typeof module !== 'undefined') module.exports = Logic;
   const sign = (n) => (n > 0 ? '+' + n : n < 0 ? '−' + Math.abs(n) : '0');
   const today = () => new Date().toLocaleDateString('nl-BE', { weekday: 'long', day: 'numeric', month: 'long' });
 
+  // Een avond: spelers → (per rondje) prijs → spel → percentages (niet bij troeven) → spelen.
   function view() {
-    if (ui.view === 'start' || ui.view === 'choose') return ui.view;
-    if (!S.game) return 'start';
-    if (S.game === 'wiezen' || S.game === 'harten') {
-      if (ui.view === 'end' || ui.view === 'wsetup' || (ui.view === 'wround' && ui.wr && S.game === 'wiezen' && gCur()) || (ui.view === 'hround' && ui.hr && S.game === 'harten' && gCur())) return ui.view;
-      if (!pg().st().pct) return 'wsetup';
-      const c = gCur();
-      if (c && c.price == null) return 'gprice';
-      return S.game === 'wiezen' ? 'wgame' : 'hgame';
-    }
-    if (ui.view === 'draw' || ui.view === 'end') return ui.view;
+    if (ui.view === 'start' || ui.view === 'end' || (ui.view === 'draw' && ui.draw)) return ui.view;
+    if (ui.flow && ['nprice', 'npick', 'npct'].includes(ui.view)) return ui.view;
+    if (!S.ready) return 'start';
     const r = current();
     if (r) return r.price == null ? 'price' : 'game';
-    return 'home';
+    if (openOf(S.wz)) return ui.view === 'wround' && ui.wr ? 'wround' : 'wgame';
+    if (openOf(S.hj)) return ui.view === 'hround' && ui.hr ? 'hround' : 'hgame';
+    if (ui.result === 'wiezen' && lastOf(S.wz)) return 'wgame';
+    if (ui.result === 'harten' && lastOf(S.hj)) return 'hgame';
+    return 'hub';
   }
 
   // De boom: n streepjes over, prev = stand vóór de laatste hand (voor de animatie).
@@ -1098,76 +1097,101 @@ if (typeof module !== 'undefined') module.exports = Logic;
     return `<div class="wrap">
       <header class="top"><div class="brand">Kaartavond</div>${syncChip()}</header>
       <section><p class="label">${esc(today())}</p><h1>Wie speelt er <em>mee</em>?</h1>
-        <p class="lead">Geef de 4 spelers in, in de volgorde waarin jullie rond de tafel zitten.</p></section>
+        <p class="lead">In volgorde rond de tafel.</p></section>
       <form id="startForm" class="steps" autocomplete="off">
         <div class="panel" style="gap:0;padding-block:6px">${[0, 1, 2, 3].map((i) => `<label class="pfield" style="--pc:var(--p${i})"><span>${i + 1}</span><input id="sp${i}" value="${esc(S.players[i] || '')}" placeholder="Speler ${i + 1}" maxlength="18" enterkeyhint="${i < 3 ? 'next' : 'done'}"></label>`).join('')}</div>
         <p class="err" id="startErr" style="min-height:0"></p>
-        <button class="btn primary xl" type="submit">Kies het spel <span class="arr">→</span></button>
-      </form>${renderHistory()}</div>`;
+        <button class="btn primary xl" type="submit">Verder <span class="arr">→</span></button>
+      </form></div>`;
   }
 
-  // Spellen op het kiesscherm. Een nieuw spel = één regel erbij + een tekening.
+  // ---------- Overzicht van de avond ----------
+  function rondjesTonight() {
+    const items = [];
+    finished().forEach((r) => items.push({ t: r.end || r.start, game: 'Troeven', price: r.price, txt: `${tName(r, 1 - r.winner)} betalen` }));
+    [['wiezen', 'Wiezen'], ['harten', 'Hartenjagen']].forEach(([g, name]) => PG[g].st().rondjes.forEach((r) => {
+      if (!r.end || !r.price) return;
+      const { out } = wPayPct(PG[g].tot(r), r.pct);
+      const mx = Math.max(...out);
+      const most = [0, 1, 2, 3].filter((i) => out[i] === mx);
+      items.push({ t: r.end, game: name, price: r.price, txt: `${most.map(P).join(' &amp; ')} ${most.length > 1 ? 'betalen' : 'betaalt'} het meest` });
+    }));
+    return items.sort((a, b) => a.t - b.t);
+  }
+  function renderHub() {
+    const A = owedAll(), items = rondjesTonight();
+    const list = items.map((x, k) => `<div class="rround"><span class="no">${k + 1}</span><div class="txt"><b>${x.game}</b><br><span class="muted">${x.txt}</span></div><div class="amt">${euro(x.price)}</div></div>`).reverse().join('');
+    return `<div class="wrap">
+      <header class="top"><div class="brand">Kaartavond</div><div style="display:flex;gap:12px;align-items:center">${syncChip()}<button class="btn ghost sm" data-act="toStart">Spelers</button></div></header>
+      <section><p class="label">${esc(today())}</p><h1>${A.n ? `Rondje <em>${A.n + 1}</em>` : 'Een nieuwe <em>avond</em>'}</h1></section>
+      <button class="btn primary xl" data-act="newRondje">Nieuw rondje <span class="arr">→</span></button>
+      ${avondPanel()}
+      ${items.length ? `<section class="panel"><h2>Rondjes</h2><div>${list}</div></section>` : ''}
+      ${renderHistory()}
+    </div>${A.n ? dock() : ''}`;
+  }
+
+  // ---------- Nieuw rondje: 1. prijs ----------
+  function renderNPrice() {
+    const last = S.lastPrice;
+    if (ui.calc.target !== 'nprice') ui.calc = { expr: last ? fmt(last) : '', target: 'nprice' };
+    return `<div class="wrap">
+      <header class="top"><button class="btn ghost sm" data-act="flowBack">← Terug</button><span class="label">Rondje ${owedAll().n + 1}</span></header>
+      <section><h1>Wat kost <em>het rondje</em>?</h1></section>
+      <form id="nPriceForm" class="steps" autocomplete="off">
+        ${calcHTML()}
+        ${last ? `<div><button type="button" class="chip" data-act="setprice" data-v="${last}">Zelfde als vorige · ${euro(last)}</button></div>` : ''}
+        <p class="err" id="priceErr" style="min-height:0"></p>
+        <button class="btn primary xl" type="submit">Kies het spel <span class="arr">→</span></button>
+      </form></div>`;
+  }
+
+  // ---------- Nieuw rondje: 2. spel ----------
+  // Een nieuw spel = één regel in GAMES + een tekening in GAME_ART.
   const GAME_ART = {
     troeven: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M48 14v70" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity=".55"/>${[0, 1, 2, 3, 4, 5].map((k) => `<rect x="${24 + (k % 2) * 4}" y="${70 - k * 10}" width="${44 - (k % 2) * 8 - k * 2}" height="4.5" rx="2.2" fill="currentColor" opacity="${k > 3 ? .35 : 1}"/>`).join('')}<g transform="translate(58 8) rotate(12)"><rect width="26" height="36" rx="4" fill="#fff"/><text x="13" y="24" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-weight="700" font-size="18" fill="#2b1d55">B</text></g></svg>`,
     wiezen: `<svg viewBox="0 0 96 96" aria-hidden="true">${[-20, 0, 20].map((a, k) => `<g transform="rotate(${a} 48 84)"><rect x="32" y="22" width="32" height="46" rx="5" fill="#fff" opacity="${.55 + k * .22}"/></g>`).join('')}<g transform="rotate(20 48 84)"><path d="M54 32c-5 6-11 9-11 15a5 5 0 0 0 9 3l-2 6h8l-2-6a5 5 0 0 0 9-3c0-6-6-9-11-15z" fill="#07324a"/></g></svg>`,
     harten: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M48 80 20 52a16 16 0 0 1 28-20 16 16 0 0 1 28 20z" fill="#fff"/><path d="M14 28 70 62" stroke="#5a0f33" stroke-width="3.5" stroke-linecap="round"/><path d="M70 62l-9-1 5-7z" fill="#5a0f33"/><path d="M14 28l6 1-3 5z" fill="#5a0f33"/></svg>`,
   };
   const GAMES = [
-    { k: 'troeven', name: 'Troeven', sub: '2 tegen 2 · boom van 10', cls: 'g-troef' },
-    { k: 'wiezen', name: 'Wiezen', sub: 'punten · % per plaats', cls: 'g-wiez' },
-    { k: 'harten', name: 'Hartenjagen', sub: 'van 100 naar 0', cls: 'g-hart' },
+    { k: 'troeven', name: 'Troeven', cls: 'g-troef' },
+    { k: 'wiezen', name: 'Wiezen', cls: 'g-wiez' },
+    { k: 'harten', name: 'Hartenjagen', cls: 'g-hart' },
   ];
-  function renderChoose() {
-    const tDone = finished().length, tCur = current(), wN = S.wz.rondjes.filter((r) => r.end).length, hN = S.hj.rondjes.filter((r) => r.end).length;
-    const stat = {
-      troeven: tCur ? 'bezig' : tDone ? `${tDone} rondje${tDone > 1 ? 's' : ''}` : '',
-      wiezen: openOf(S.wz) ? 'bezig' : wN ? `${wN} rondje${wN > 1 ? 's' : ''}` : '',
-      harten: openOf(S.hj) ? 'bezig' : hN ? `${hN} rondje${hN > 1 ? 's' : ''}` : '',
-    };
-    const tiles = GAMES.map((g) => `<button class="tile ${g.cls} ${S.game === g.k ? 'cur' : ''}" data-act="pickGame" data-v="${g.k}">
-        <span class="tart">${GAME_ART[g.k]}</span>
-        ${stat[g.k] ? `<span class="tstat">${stat[g.k]}</span>` : ''}
-        <span class="tname">${g.name}</span><span class="tsub">${g.sub}</span></button>`).join('');
-    const soon = GAMES.length % 2 ? `<div class="tile soon" aria-hidden="true"><span class="tname">Meer spellen</span><span class="tsub">komen hier bij</span></div>` : '';
+  function renderPick() {
+    const tiles = GAMES.map((g) => `<button class="tile ${g.cls}" data-act="flowGame" data-v="${g.k}"><span class="tart">${GAME_ART[g.k]}</span><span class="tname">${g.name}</span></button>`).join('');
+    const soon = GAMES.length % 2 ? '<div class="tile soon" aria-hidden="true"><span class="tname">Binnenkort</span></div>' : '';
     return `<div class="wrap">
-      <header class="top"><button class="btn ghost sm" data-act="toStart">← Spelers</button><span class="label names">${S.players.map(esc).join(' · ')}</span></header>
-      <section><p class="label">${esc(today())}</p><h1>Wat spelen <em>jullie</em>?</h1></section>
-      <div class="tiles">${tiles}${soon}</div>
-      ${renderHistory()}</div>`;
+      <header class="top"><button class="btn ghost sm" data-act="flowBack">← Terug</button><span class="label">Rondje ${owedAll().n + 1} · ${euro(ui.flow.price)}</span></header>
+      <section><h1>Welk <em>spel</em>?</h1></section>
+      <div class="tiles">${tiles}${soon}</div></div>`;
   }
 
-  // ---------- Wiezen en hartenjagen: wie betaalt hoeveel per rondje ----------
+  // ---------- Nieuw rondje: 3. wie betaalt hoeveel (wiezen en hartenjagen) ----------
   const samePct = (a, b) => a.every((v, i) => v === b[i]);
-  function renderWSetup() {
-    if (!ui.pct) { ui.pct = (pg().st().pct || PCT_PRESETS[0].v).slice(); ui.per = S.wz.per || 1; }
-    const p = ui.pct, first = !pg().st().pct, wz = S.game === 'wiezen';
+  function renderNPct() {
+    const g = ui.flow.game, p = ui.pct, wz = g === 'wiezen';
     const sub = ['meeste punten', '', '', 'minste punten'];
-    const rows = p.map((v, i) => `<div class="pctrow"><span class="pl">${ORD[i]} plaats${sub[i] ? `<small>${sub[i]}</small>` : ''}</span>
+    const rows = p.map((v, i) => `<div class="pctrow"><span class="pl">${ORD[i]}${sub[i] ? `<small>${sub[i]}</small>` : ''}</span>
       <div class="stepper"><button type="button" data-act="pctStep" data-i="${i}" data-v="-5" aria-label="5 procent minder">−</button><input id="pct${i}" inputmode="numeric" maxlength="3" value="${v}" aria-label="Percentage ${ORD[i]} plaats"><span class="pc">%</span><button type="button" data-act="pctStep" data-i="${i}" data-v="5" aria-label="5 procent meer">+</button></div></div>`).join('');
-    const perBox = wz
-      ? `<section class="steps" style="gap:10px"><p class="label">Hoeveel spelletjes per rondje?</p>
-          <div class="chips">${[1, 4, 8, 12, 16].map((v) => `<button class="chip ${ui.per === v ? 'on' : ''}" data-act="perSet" data-v="${v}">${v === 1 ? '1 spelletje' : `${v} spelletjes`}</button>`).join('')}</div>
-          <p class="hint">${ui.per === 1 ? 'Na elk spelletje is het rondje gedaan en betaalt iedereen zijn deel.' : `Na ${ui.per} spelletjes is het rondje gedaan en betaalt iedereen zijn deel.`}</p></section>`
-      : '<p class="hint">Een rondje hartenjagen is gedaan zodra iemand op 0 staat. Dan betaalt iedereen zijn deel.</p>';
     return `<div class="wrap">
-      <header class="top"><button class="btn ghost sm" data-act="${first ? 'toChoose' : 'wsetupCancel'}">← Terug</button><span class="label">${pg().title}</span></header>
-      <section><h1>Wie betaalt <em>hoeveel</em>?</h1><p class="lead">Na elk rondje betaalt elke plaats een deel van de prijs van het rondje. Kies een voorstel of geef zelf de percentages in.</p></section>
+      <header class="top"><button class="btn ghost sm" data-act="flowBack">← Terug</button><span class="label">${PG[g].title} · ${euro(ui.flow.price)}</span></header>
+      <section><h1>Wie betaalt <em>hoeveel</em>?</h1></section>
       <div class="chips">${PCT_PRESETS.map((x, i) => `<button class="chip ${samePct(x.v, p) ? 'on' : ''}" data-act="pctPreset" data-v="${i}">${x.n}</button>`).join('')}</div>
       <section class="panel" style="gap:0;padding-block:6px">${rows}</section>
       <div id="pctSum">${pctSumHTML()}</div>
-      ${perBox}
-      ${first || !gCur() ? '' : '<p class="hint">Het rondje dat nu bezig is, telt nog met de oude afspraken.</p>'}
-      <button class="btn primary xl" data-act="pctSave" id="pctSave" ${p.reduce((a, b) => a + b, 0) === 100 ? '' : 'disabled'}>${first ? `Start ${pg().title.toLowerCase()}` : 'Bewaar'} <span class="arr">→</span></button>
+      ${wz ? `<section class="steps" style="gap:10px"><p class="label">Spelletjes per rondje</p>
+        <div class="chips">${[1, 4, 8, 12, 16].map((v) => `<button class="chip ${ui.per === v ? 'on' : ''}" data-act="perSet" data-v="${v}">${v}</button>`).join('')}</div></section>` : ''}
+      <button class="btn primary xl" data-act="npctStart" id="pctSave" ${p.reduce((a, b) => a + b, 0) === 100 ? '' : 'disabled'}>Start rondje <span class="arr">→</span></button>
     </div>`;
   }
   function pctSumHTML() {
     const p = ui.pct, sum = p.reduce((a, b) => a + b, 0);
-    const msg = sum === 100 ? '<span class="ok">Samen 100%</span>' : sum < 100 ? `<span class="bad">Nog ${100 - sum}% te verdelen</span>` : `<span class="bad">${sum - 100}% te veel</span>`;
-    const ex = sum === 100 ? `<p class="hint">Voorbeeld met een rondje van € 20: ${p.map((v, i) => `${ORD[i]} ${euro(2000 * v / 100)}`).join(' · ')}.</p>` : '';
-    const warn = p[0] > p[3] ? '<p class="hint" style="color:var(--danger)">Let op: de 1ste betaalt nu meer dan de laatste.</p>' : '';
+    const msg = sum === 100 ? '<span class="ok">100%</span>' : sum < 100 ? `<span class="bad">nog ${100 - sum}%</span>` : `<span class="bad">${sum - 100}% te veel</span>`;
+    const price = ui.flow && ui.flow.price;
     return `<div class="steps" style="gap:8px"><div class="sumline"><span class="label">Totaal</span>${msg}</div>
       <div class="pctbar">${p.map((v, i) => (v ? `<i style="flex:${v};--o:${i / 3}"></i>` : '')).join('')}</div>
-      ${ex}${warn}<p class="hint">Evenveel punten? Dan delen die spelers hun percentages.</p></div>`;
+      ${sum === 100 && price ? `<p class="hint">${p.map((v, i) => `${ORD[i]} ${euro(price * v / 100)}`).join(' · ')}</p>` : ''}</div>`;
   }
   function updatePct() {
     const s = document.getElementById('pctSum'); if (s) s.innerHTML = pctSumHTML();
@@ -1175,30 +1199,12 @@ if (typeof module !== 'undefined') module.exports = Logic;
     document.querySelectorAll('.chip[data-act="pctPreset"]').forEach((c) => c.classList.toggle('on', samePct(PCT_PRESETS[+c.dataset.v].v, ui.pct)));
   }
 
-  // ---------- Wiezen en hartenjagen: prijs van een rondje ----------
-  function renderGPrice() {
-    const g = pg(), st = g.st(), c = gCur(), nr = st.rondjes.length, last = S.lastPrice;
-    if (ui.calc.target !== 'gprice') ui.calc = { expr: last ? fmt(last) : '', target: 'gprice' };
-    const when = S.game === 'wiezen' ? (c.per === 1 ? 'Na dit spelletje' : `Na ${c.per} spelletjes`) : 'Zodra iemand op 0 staat';
-    return `<div class="wrap">
-      <header class="top"><button class="btn ghost sm" data-act="gCancel">← Annuleer</button><span class="label">${g.title} · rondje ${nr}</span></header>
-      <section><h1>Wat kost <em>het rondje</em>?</h1>
-        <p class="lead">${when} betaalt iedereen zijn deel: ${c.pct.map((v, i) => `${ORD[i]} ${v}%`).join(' · ')}.</p></section>
-      <form id="gPriceForm" class="steps" autocomplete="off">
-        ${calcHTML()}
-        ${last ? `<div><button type="button" class="chip" data-act="setprice" data-v="${last}">Zelfde als vorige · ${euro(last)}</button></div>` : ''}
-        <p class="err" id="priceErr" style="min-height:0"></p>
-        <button class="btn primary xl" type="submit">${S.game === 'wiezen' ? 'Naar het spelletje' : 'Start het rondje'} <span class="arr">→</span></button>
-      </form>
-    </div>`;
-  }
-
   // Wat iedereen betaalt voor een uitgespeeld rondje
   function rondjeRows(g, r) {
     const tot = PG[g].tot(r);
     const { out, place, order, tied } = wPayPct(tot, r.pct);
-    return order.map((i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${P(i)}<span class="meta">${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]} · ${ptsLabel(g, tot[i])} · ${fmtPct(out[i])}</span></span>
-      <span class="owe ${out[i] ? '' : 'zero'}">${euro(r.price * out[i] / 100)}</span></div>`).join('');
+    return order.map((i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${P(i)}<span class="meta">${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]} · ${ptsLabel(g, tot[i])}</span></span>
+      <span class="owe ${out[i] ? '' : 'zero'}">${euro(r.price * out[i] / 100)}<small>${fmtPct(out[i])}</small></span></div>`).join('');
   }
   // Wat iedereen deze avond al moet betalen, over alle spellen samen
   function avondPanel() {
@@ -1207,7 +1213,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
     return `<section class="panel"><div class="panel-head"><h2>Te betalen vanavond</h2><span class="label" style="white-space:nowrap">${euro(A.total)}</span></div>
       <div>${S.players.map((p, i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${esc(p)}</span><span class="owe ${A.owed[i] ? '' : 'zero'}">${euro(A.owed[i])}</span></div>`).join('')}</div></section>`;
   }
-  const gameHeader = (name) => `<header class="top"><div class="brand">${name}</div><div style="display:flex;gap:12px;align-items:center">${syncChip()}<button class="btn ghost sm" data-act="toChoose">Ander spel</button></div></header>`;
+  const gameHeader = (name) => `<header class="top"><div class="brand">${name}</div>${syncChip()}</header>`;
+  const doneButtons = () => `<button class="btn primary xl" data-act="newRondje">Nieuw rondje <span class="arr">→</span></button><button class="btn ghost block" data-act="home">Overzicht</button>`;
 
   // ---------- Wiezen: stand ----------
   function wRoundText(r) {
@@ -1216,27 +1223,24 @@ if (typeof module !== 'undefined') module.exports = Logic;
     return `${esc(b.n)} · ${r.sel.map(P).join(' &amp; ')} · ${r.made ? 'gehaald' : 'niet gehaald'}${extra}`;
   }
   function renderWGame() {
-    const W = S.wz, c = openOf(W), last = lastOf(W), nr = W.rondjes.length, r = c || last;
+    const W = S.wz, c = openOf(W), last = lastOf(W), nr = owedAll().n + (c ? 1 : 0), r = c || last;
     let head, main, stand = '';
     if (c) {
       const k = c.games.length, tot = wTot(c);
       const { out, place, order, tied } = wPayPct(tot, c.pct);
-      head = `<p class="label">${esc(today())} · rondje ${nr} · ${euro(c.price)}</p>
-        <h1>Spelletje <em>${k + 1}</em>${c.per > 1 ? ` <span class="of">van ${c.per}</span>` : ''}</h1><p class="lead">${P(W.dealer)} deelt.</p>`;
+      head = `<p class="label">Rondje ${nr} · ${euro(c.price)} · ${P(W.dealer)} deelt</p>
+        <h1>Spelletje <em>${k + 1}</em>${c.per > 1 ? ` <span class="of">van ${c.per}</span>` : ''}</h1>`;
       main = `<button class="btn primary xl" data-act="wNew">Nieuw spelletje <span class="arr">→</span></button>`;
       if (k) {
-        stand = `<section class="panel"><div class="panel-head"><h2>Stand van dit rondje</h2><button class="link" data-act="wNextDealer">Volgende deler</button></div>
+        stand = `<section class="panel"><div class="panel-head"><h2>Stand</h2><button class="link" data-act="wNextDealer">Volgende deler</button></div>
           <div>${order.map((i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${P(i)}${W.dealer === i ? '<small class="dl">deler</small>' : ''}
-            <span class="meta">${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]} · betaalt nu ${euro(c.price * out[i] / 100)}</span></span>
+            <span class="meta">${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]} · ${euro(c.price * out[i] / 100)}</span></span>
             <span class="pts ${pn(tot[i])}">${sign(tot[i])}</span></div>`).join('')}</div></section>`;
       }
-    } else if (last) {
-      head = `<p class="label">${esc(today())} · ${nr} rondje${nr > 1 ? 's' : ''}</p><h1>Rondje <em>${nr}</em> gedaan</h1><p class="lead">${P(W.dealer)} deelt het volgende spelletje.</p>`;
-      main = `<button class="btn primary xl" data-act="gNewRondje">Nieuw rondje <span class="arr">→</span></button>`;
-      stand = `<section class="panel"><div class="panel-head"><h2>Rondje ${nr} · ${euro(last.price)}</h2><span class="label">te betalen</span></div><div>${rondjeRows('wiezen', last)}</div></section>`;
     } else {
-      head = `<p class="label">${esc(today())}</p><h1>Een nieuwe <em>wiesavond</em></h1><p class="lead">Elk rondje begint met de vraag wat het kost. Na het rondje betaalt iedereen zijn deel, volgens zijn plaats.</p>`;
-      main = `<button class="btn primary xl" data-act="gNewRondje">Nieuw rondje <span class="arr">→</span></button>`;
+      head = `<p class="label">Wiezen · ${euro(last.price)}</p><h1>Rondje <em>gedaan</em></h1>`;
+      main = doneButtons();
+      stand = `<section class="panel"><div class="panel-head"><h2>Wie betaalt</h2></div><div>${rondjeRows('wiezen', last)}</div></section>`;
     }
     const games = r ? r.games : [];
     const hist = games.map((g, i) => `<div class="hrow"><span class="n">${i + 1}</span><span>${wRoundText(g)}</span><span class="sc ${pn(g.d[g.sel[0]])}">${sign(g.d[g.sel[0]])}</span></div>`).reverse().join('');
@@ -1245,11 +1249,9 @@ if (typeof module !== 'undefined') module.exports = Logic;
       <section>${head}</section>
       ${main}
       ${stand}
-      ${avondPanel()}
       ${games.length ? `<section class="panel"><div class="panel-head"><h2>Gespeeld</h2><button class="btn soft sm" data-act="wUndo">Laatste ongedaan</button></div><div>${hist}</div></section>` : ''}
-      <p class="hint" style="text-align:center">Per rondje: ${W.pct.map((v, i) => `${ORD[i]} ${v}%`).join(' · ')} · ${W.per === 1 ? '1 spelletje' : `${W.per} spelletjes`} · <button class="link" data-act="wEditPct">aanpassen</button></p>
-      <button class="link" data-act="wPts" style="align-self:center">Puntentabel bekijken of aanpassen</button>
-      ${renderHistory()}
+      ${c ? avondPanel() : ''}
+      <button class="link" data-act="wPts" style="align-self:center">Puntentabel</button>
     </div>${dock()}`;
   }
 
@@ -1262,7 +1264,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const extra = b && b.extra && R.made !== null ? `<div class="pctrow"><span class="pl">${R.made ? 'Extra slagen' : 'Slagen te weinig'}<small>${R.made ? `boven de ${b.min}${b.cap ? `, telt tot ${b.cap} extra` : ''}` : `onder de ${b.min}`}</small></span>
       <div class="stepper"><button type="button" data-act="wDiff" data-v="-1" aria-label="Minder">−</button><output>${R.diff}</output><button type="button" data-act="wDiff" data-v="1" aria-label="Meer">+</button></div></div>` : '';
     return `<div class="wrap">
-      <header class="top"><button class="btn ghost sm" data-act="wCancel">← Annuleer</button><span class="label">Rondje ${S.wz.rondjes.length} · spelletje ${c ? c.games.length + 1 : 1} · ${P(S.wz.dealer)} deelt</span></header>
+      <header class="top"><button class="btn ghost sm" data-act="wCancel">← Terug</button><span class="label">Spelletje ${c ? c.games.length + 1 : 1} · ${P(S.wz.dealer)} deelt</span></header>
       <section class="steps">
         <div class="step"><div class="slabel"><span class="no">1</span><span class="label">Wat wordt er gespeeld?</span></div>
           <div class="seg">${WBIDS.map((x) => `<button class="opt ${R.k === x.k ? 'on' : ''}" data-act="wBid" data-v="${x.k}"><span class="big">${x.n}</span><small>${x.need} · ${wpts(x.k)} ptn</small></button>`).join('')}</div></div>
@@ -1279,29 +1281,24 @@ if (typeof module !== 'undefined') module.exports = Logic;
 
   // ---------- Hartenjagen: stand ----------
   function renderHGame() {
-    const H = S.hj, c = openOf(H), last = lastOf(H), nr = H.rondjes.length, r = c || last;
+    const H = S.hj, c = openOf(H), last = lastOf(H), nr = owedAll().n + (c ? 1 : 0), r = c || last;
     let head, main, stand = '';
     if (c) {
       const n = c.hands.length, tot = hTot(c);
       const { out, place, order, tied } = wPayPct(tot, c.pct);
-      head = `<p class="label">${esc(today())} · rondje ${nr} · ${euro(c.price)}</p>
+      head = `<p class="label">Rondje ${nr} · ${euro(c.price)}</p>
         <h1>${n ? `Hand <em>${n + 1}</em>` : 'Iedereen op <em>100</em>'}</h1>
-        <p class="lead">${P(H.dealer)} deelt · ${PASS[n % 4]}. Elke ♥ kost 1 punt, de schoppen vrouw 13. Wie eerst op 0 staat, verliest het rondje.</p>`;
+        <p class="lead">${P(H.dealer)} deelt · ${PASS[n % 4]}</p>`;
       main = `<button class="btn primary xl" data-act="hNew">Nieuwe hand <span class="arr">→</span></button>`;
       stand = `<section class="panel"><div class="panel-head"><h2>Stand</h2><button class="link" data-act="hNextDealer">Volgende deler</button></div>
         <div>${order.map((i) => `<div class="hjrow" style="--pc:var(--p${i})">
           <div class="hjtop"><span class="who">${P(i)}${H.dealer === i ? '<small class="dl">deler</small>' : ''}</span><span class="hjnum">${tot[i]}</span></div>
           <div class="hjbar"><i style="width:${Math.max(0, Math.min(100, tot[i]))}%"></i></div>
-          <span class="meta">${n ? `${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]} · betaalt nu ${euro(c.price * out[i] / 100)}` : 'nog niets gepakt'}</span></div>`).join('')}</div></section>`;
-    } else if (last) {
-      const tot = hTot(last);
-      const out0 = [0, 1, 2, 3].filter((i) => tot[i] <= 0).map(P).join(' &amp; ');
-      head = `<p class="label">${esc(today())} · ${nr} rondje${nr > 1 ? 's' : ''}</p><h1>Rondje <em>${nr}</em> gedaan</h1><p class="lead">${out0} staat op 0. In het volgende rondje begint iedereen weer op 100.</p>`;
-      main = `<button class="btn primary xl" data-act="gNewRondje">Nieuw rondje <span class="arr">→</span></button>`;
-      stand = `<section class="panel"><div class="panel-head"><h2>Rondje ${nr} · ${euro(last.price)}</h2><span class="label">te betalen</span></div><div>${rondjeRows('harten', last)}</div></section>`;
+          ${n ? `<span class="meta">${tied[i] ? 'gedeeld ' : ''}${ORD[place[i]]} · ${euro(c.price * out[i] / 100)}</span>` : ''}</div>`).join('')}</div></section>`;
     } else {
-      head = `<p class="label">${esc(today())}</p><h1>Iedereen op <em>100</em></h1><p class="lead">Elk rondje begint met de vraag wat het kost. Wie eerst op 0 staat, verliest het rondje. Dan betaalt iedereen zijn deel, volgens zijn plaats.</p>`;
-      main = `<button class="btn primary xl" data-act="gNewRondje">Nieuw rondje <span class="arr">→</span></button>`;
+      head = `<p class="label">Hartenjagen · ${euro(last.price)}</p><h1>Rondje <em>gedaan</em></h1>`;
+      main = doneButtons();
+      stand = `<section class="panel"><div class="panel-head"><h2>Wie betaalt</h2></div><div>${rondjeRows('harten', last)}</div></section>`;
     }
     const hands = r ? r.hands : [];
     const hist = hands.map((h, k) => {
@@ -1314,21 +1311,18 @@ if (typeof module !== 'undefined') module.exports = Logic;
       <section>${head}</section>
       ${main}
       ${stand}
-      ${avondPanel()}
       ${hands.length ? `<section class="panel"><div class="panel-head"><h2>Gespeeld</h2><button class="btn soft sm" data-act="hUndo">Laatste ongedaan</button></div><div>${hist}</div></section>` : ''}
-      <p class="hint" style="text-align:center">Per rondje: ${H.pct.map((v, i) => `${ORD[i]} ${v}%`).join(' · ')} · <button class="link" data-act="wEditPct">aanpassen</button></p>
-      ${renderHistory()}
+      ${c ? avondPanel() : ''}
     </div>${dock()}`;
   }
 
   // ---------- Hartenjagen: een hand ingeven ----------
   function hRoundSum() {
     const R = ui.hr;
-    if (R.moon !== null) return `<div class="sumline"><span class="label">Controle</span><span class="ok">${P(R.moon)} pakte alles: de anderen −26</span></div>`;
+    if (R.moon !== null) return `<div class="sumline"><span class="label">Controle</span><span class="ok">${P(R.moon)} pakte alles</span></div>`;
     const hearts = R.p.reduce((a, b) => a + b, 0);
     const ok = hearts === 13 && R.q !== null;
-    return `<div class="sumline"><span class="label">Controle</span><span class="${ok ? 'ok' : 'bad'}">♥ ${hearts} van 13 · ♠V ${R.q !== null ? P(R.q) : 'nog niet gekozen'}</span></div>
-      ${ok ? '' : '<p class="hint">Normaal zijn er 13 harten en 1 schoppen vrouw per hand. Je kan toch bewaren, bijvoorbeeld als jullie met andere regels spelen.</p>'}`;
+    return `<div class="sumline"><span class="label">Controle</span><span class="${ok ? 'ok' : 'bad'}">♥ ${hearts}/13 · ♠V ${R.q !== null ? P(R.q) : '?'}</span></div>`;
   }
   function hAfter(i) {
     const tot = hTot(openOf(S.hj)), pts = hjPts(ui.hr), v = tot[i] - pts[i];
@@ -1339,14 +1333,12 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const rows = S.players.map((p, i) => `<div class="pctrow" style="--pc:var(--p${i})"><span class="pl">${esc(p)}<small id="hto${i}">${hAfter(i)}</small></span>
       <div class="stepper"><button type="button" data-act="hStep" data-i="${i}" data-v="-1" aria-label="1 hart minder" ${moon ? 'disabled' : ''}>−</button><input id="hp${i}" inputmode="numeric" maxlength="2" value="${moon ? pts[i] : R.p[i]}" ${moon ? 'disabled' : ''} aria-label="Harten van ${esc(p)}"><button type="button" data-act="hStep" data-i="${i}" data-v="1" aria-label="1 hart meer" ${moon ? 'disabled' : ''}>+</button><button type="button" class="qv ${R.q === i && !moon ? 'on' : ''}" data-act="hQueen" data-i="${i}" aria-label="Schoppen vrouw, 13 punten" ${moon ? 'disabled' : ''}>♠V</button></div></div>`).join('');
     return `<div class="wrap">
-      <header class="top"><button class="btn ghost sm" data-act="hCancel">← Annuleer</button><span class="label">Rondje ${S.hj.rondjes.length} · hand ${n + 1} · ${P(S.hj.dealer)} deelt</span></header>
-      <section><p class="label">${PASS[n % 4]}</p><h1>Wie pakte <em>wat</em>?</h1>
-        <p class="lead">Tel per speler de harten. Tik op ♠V bij wie de schoppen vrouw pakte (13 punten).</p></section>
+      <header class="top"><button class="btn ghost sm" data-act="hCancel">← Terug</button><span class="label">Hand ${n + 1} · ${P(S.hj.dealer)} deelt</span></header>
+      <section><h1>Wie pakte <em>wat</em>?</h1><p class="lead">♥ = 1 punt · ♠V = 13 punten</p></section>
       <section class="panel" style="gap:0;padding-block:6px">${rows}</section>
       <div id="hsum" class="steps" style="gap:8px">${hRoundSum()}</div>
-      <div class="step"><span class="label">Pakte iemand alles? (13 ♥ én de ♠V)</span>
-        <div class="chips">${S.players.map((p, i) => `<button class="chip ${R.moon === i ? 'on' : ''}" data-act="hMoon" data-v="${i}">${esc(p)}</button>`).join('')}</div>
-        <p class="hint">Dan gaat er bij de 3 anderen 26 af en bij hem niets.</p></div>
+      <div class="step"><span class="label">Pakte iemand alles?</span>
+        <div class="chips">${S.players.map((p, i) => `<button class="chip ${R.moon === i ? 'on' : ''}" data-act="hMoon" data-v="${i}">${esc(p)}</button>`).join('')}</div></div>
       <button class="btn primary xl" data-act="hSave" id="hSave" ${pts.some((v) => v > 0) ? '' : 'disabled'}>Bewaar hand <span class="arr">→</span></button>
     </div>`;
   }
@@ -1354,40 +1346,6 @@ if (typeof module !== 'undefined') module.exports = Logic;
     [0, 1, 2, 3].forEach((i) => { const el = document.getElementById('hto' + i); if (el) el.innerHTML = hAfter(i); });
     const s = document.getElementById('hsum'); if (s) s.innerHTML = hRoundSum();
     const b = document.getElementById('hSave'); if (b) b.disabled = !hjPts(ui.hr).some((v) => v > 0);
-  }
-
-  // ---------- Schermen ----------
-  function renderHome() {
-    const done = finished();
-    const { owed } = owedAll();
-    const nr = S.rounds.length + 1;
-    const total = done.reduce((t, r) => t + r.price, 0);
-    const rows = S.players.map((p, i) => `
-      <div class="srow" style="--pc:var(--p${i})"><span class="who">${esc(p)}</span>
-      <span class="owe ${owed[i] ? '' : 'zero'}">${euro(owed[i])}</span></div>`).join('');
-    const list = done.slice().reverse().map((r) => {
-      const idx = S.rounds.indexOf(r) + 1;
-      const isLast = r === S.rounds[S.rounds.length - 1];
-      return `<div class="rround"><span class="no">${idx}</span>
-        <div class="txt"><span class="t${r.winner} tc" style="font-weight:600">${tName(r, r.winner)}</span> wonnen<br><span class="muted">${tName(r, 1 - r.winner)} betalen</span>
-        ${isLast ? `<br><button class="link" data-act="reopen">Heropen dit rondje</button>` : ''}</div>
-        <div class="amt">${euro(r.price)}<small>${euro(r.price / 2)} p.p.</small></div></div>`;
-    }).join('');
-    return `<div class="wrap">
-      <header class="top"><div class="brand">Troeven</div>
-        <div style="display:flex;gap:12px;align-items:center"><span class="sync ${ui.synced ? 'on' : ''}">${ui.synced ? 'Bewaard' : 'Op dit toestel'}</span><button class="btn ghost sm" data-act="toChoose">Ander spel</button></div></header>
-      <section>
-        <p class="label">${esc(today())}${done.length ? ` · ${done.length} rondje${done.length > 1 ? 's' : ''} · ${euro(total)}` : ''}</p>
-        <h1>${done.length ? `Rondje <em>${nr}</em>` : 'Een nieuwe <em>avond</em>'}</h1>
-        <p class="lead">Elk rondje trekken jullie boeren: de eerste twee met een boer spelen samen. Wie eerst zijn boom van tien streepjes kwijt is, wint. De verliezers betalen het rondje.</p>
-      </section>
-      <button class="btn primary xl" data-act="draw">Trek boeren <span class="arr">→</span></button>
-      <section class="panel"><div class="panel-head"><h2>Stand van de avond</h2><span class="label">te betalen</span></div>
-        <div>${rows}</div></section>
-      ${renderStats()}
-      ${done.length ? `<section class="panel"><h2>Rondjes</h2><div>${list}</div></section>` : ''}
-      ${renderHistory()}
-    </div>${dock()}`;
   }
 
   const SUIT_GLYPH = { s: '♠︎', h: '♥︎', k: '♣︎', r: '♦︎' };
@@ -1515,11 +1473,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
     ex.innerHTML = e ? esc(e).replace(/[+−×÷]/g, (m) => `<span class="op">${m}</span>`) : '0,00';
     const t = trimOp(e), v = Logic.calc(t), hasOp = /[+−×÷]/.test(t);
     const res = document.getElementById('cres');
-    if (ui.calc.target === 'gprice' && gCur()) {
-      const pc = gCur().pct;
-      if (!e) res.innerHTML = '<span>Iedereen betaalt een deel, volgens zijn plaats.</span>';
-      else if (!v) res.innerHTML = `<span>${hasOp ? 'Dat geeft geen geldig bedrag.' : ''}</span>`;
-      else res.innerHTML = `<span>${hasOp ? `Totaal ${euro(v)} · ` : ''}laatste betaalt</span><b>${euro(v * pc[3] / 100)}</b>`;
+    if (ui.calc.target === 'nprice') {
+      res.innerHTML = !v ? `<span>${e && hasOp ? 'Dat geeft geen geldig bedrag.' : ''}</span>` : hasOp ? `<span>Totaal</span><b>${euro(v)}</b>` : '';
     } else if (!e) res.innerHTML = '<span>De twee verliezers delen het rondje.</span>';
     else if (!v) res.innerHTML = `<span>${hasOp ? 'Dat geeft geen geldig bedrag.' : ''}</span>`;
     else if (hasOp) res.innerHTML = `<span>Totaal ${euro(v)}</span><b>${euro(v / 2)} <span class="muted" style="font:500 12px var(--f-ui)">per verliezer</span></b>`;
@@ -1534,7 +1489,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (ev.target && ev.target.tagName === 'INPUT') return;
     const map = { '.': ',', ',': ',', '+': '+', '-': '−', '*': '×', 'x': '×', '/': '÷', 'Backspace': '⌫', 'Delete': 'C', 'Escape': 'C', '=': '=' };
     let k = /^\d$/.test(ev.key) ? ev.key : map[ev.key];
-    if (ev.key === 'Enter') { ev.preventDefault(); const f = document.querySelector('#editPriceForm, #priceForm, #gPriceForm'); if (f) f.requestSubmit(); return; }
+    if (ev.key === 'Enter') { ev.preventDefault(); const f = document.querySelector('#editPriceForm, #priceForm, #nPriceForm'); if (f) f.requestSubmit(); return; }
     if (!k) return;
     ev.preventDefault();
     pressKey(k);
@@ -1690,7 +1645,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       body = `<span class="crest">${TEAM[w]} · rondje ${S.rounds.length}</span>
         <canvas id="confetti"></canvas><h2><span class="tc">${tName(r, w)}</span> <em style="font-weight:500">winnen!</em></h2><div class="wl2"></div>
         <div class="pay"><span class="label">${tName(r, l)} betalen het rondje</span><b>${euro(r.price / 2)}</b><span class="muted" style="font-size:13px">per persoon, ${euro(r.price)} samen</span></div>
-        <button class="btn primary xl" data-act="next">Volgend rondje: boeren trekken <span class="arr">→</span></button>
+        <button class="btn primary xl" data-act="newRondje">Nieuw rondje <span class="arr">→</span></button>
         <div class="row2" style="width:100%"><button class="btn ghost" data-act="toHome">Overzicht</button><button class="btn ghost" data-act="undoWin">Foutje, terug</button></div>`;
     } else if (m === 'editPrice') {
       body = `<h2>Prijs van dit rondje</h2><form id="editPriceForm" class="steps">${calcHTML()}
@@ -1718,8 +1673,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
 
   function render() {
     const v = view();
-    ui.view = ['draw', 'end', 'wsetup', 'wround', 'hround', 'choose', 'start'].includes(v) ? v : null;
-    const screens = { home: renderHome, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, choose: renderChoose, wsetup: renderWSetup, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, gprice: renderGPrice };
+    ui.view = ['draw', 'end', 'wround', 'hround', 'start', 'nprice', 'npick', 'npct'].includes(v) ? v : null;
+    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound };
     $app.innerHTML = screens[v]();
     renderModal();
     updateCalc();
@@ -1855,11 +1810,13 @@ if (typeof module !== 'undefined') module.exports = Logic;
     draw: startDraw,
     redraw: startDraw,
     next: startDraw,
-    home() { ui.view = null; ui.draw = null; ui.modal = null; render(); },
+    home() { if (ui.view === 'draw' && ui.flow) { ui.draw = null; ui.view = 'npick'; render(); return; } ui.view = null; ui.draw = null; ui.modal = null; ui.result = null; render(); window.scrollTo(0, 0); },
     toHome() { ui.modal = null; ui.view = null; render(); },
     accept() {
-      S.rounds.push({ id: Date.now(), teams: ui.draw.teams, dealer: ui.draw.dealer, price: null, hands: [], winner: null, start: Date.now() });
-      ui.draw = null; ui.view = null; save(); render();
+      const price = ui.flow ? ui.flow.price : null;
+      S.rounds.push({ id: Date.now(), teams: ui.draw.teams, dealer: ui.draw.dealer, price, hands: [], winner: null, start: Date.now() });
+      if (price) S.lastPrice = price;
+      S.game = 'troeven'; ui.flow = null; ui.draw = null; ui.view = null; save(); render(); keepAwake();
     },
     setprice(b) { ui.calc.expr = fmt(+b.dataset.v); updateCalc(); },
     key(b) { pressKey(b.dataset.k); },
@@ -1885,38 +1842,44 @@ if (typeof module !== 'undefined') module.exports = Logic;
       const c = openOf(S.hj); if (!c) return;
       c.hands.push({ p: pts, q: R.moon !== null ? null : R.q, moon: R.moon, at: Date.now() });
       S.hj.dealer = (S.hj.dealer + 1) % 4;
-      const done = hDone(c); if (done) c.end = Date.now();
+      const done = hDone(c); if (done) { c.end = Date.now(); ui.result = 'harten'; }
       ui.hr = null; ui.view = null; save(); render(); window.scrollTo({ top: 0, behavior: 'smooth' });
       showToast(done ? `<b>Rondje ${S.hj.rondjes.length} gedaan</b> · iemand staat op 0` : `<b>Hand ${c.hands.length}</b> bewaard`);
     },
     hUndo() { const r = lastOf(S.hj); if (!r || !r.hands.length) return; r.hands.pop(); r.end = null; S.hj.dealer = (S.hj.dealer + 3) % 4; save(); render(); },
-    // Nieuw rondje voor wiezen of hartenjagen: eerst de prijs
-    gNewRondje() {
-      const st = pg().st();
-      const r = { price: null, pct: st.pct.slice(), start: Date.now(), end: null };
-      if (S.game === 'wiezen') { r.per = S.wz.per; r.games = []; } else r.hands = [];
-      st.rondjes.push(r); ui.calc = { expr: '', target: null }; save(); render(); window.scrollTo(0, 0); keepAwake();
-    },
-    gCancel() { const st = pg().st(), c = openOf(st); if (c && c.price == null) st.rondjes.pop(); ui.calc = { expr: '', target: null }; save(); render(); },
     perSet(b) { ui.per = +b.dataset.v; render(); },
     hNextDealer() { S.hj.dealer = (S.hj.dealer + 1) % 4; save(); render(); },
     // Start van de avond en keuze van het spel
     toStart() { ui.view = 'start'; render(); window.scrollTo(0, 0); },
+    // Nieuw rondje: prijs → spel → percentages
+    newRondje() { hideToast(); ui.flow = { price: null, game: null }; ui.result = null; ui.modal = null; ui.calc = { expr: '', target: null }; ui.view = 'nprice'; render(); window.scrollTo(0, 0); },
+    flowBack() {
+      if (ui.view === 'npct') ui.view = 'npick';
+      else if (ui.view === 'npick') ui.view = 'nprice';
+      else { ui.flow = null; ui.view = null; }
+      render(); window.scrollTo(0, 0);
+    },
+    flowGame(b) {
+      const g = b.dataset.v; ui.flow.game = g;
+      if (g === 'troeven') { startDraw(); return; }
+      ui.pct = (PG[g].st().pct || PCT_PRESETS[0].v).slice(); ui.per = S.wz.per || 1;
+      ui.view = 'npct'; render(); window.scrollTo(0, 0);
+    },
+    npctStart() {
+      if (!ui.flow || ui.pct.reduce((a, c) => a + c, 0) !== 100) return;
+      const g = ui.flow.game, st = PG[g].st();
+      st.pct = ui.pct.slice();
+      const r = { price: ui.flow.price, pct: ui.pct.slice(), start: Date.now(), end: null };
+      if (g === 'wiezen') { S.wz.per = ui.per || 1; r.per = S.wz.per; r.games = []; } else r.hands = [];
+      st.rondjes.push(r); S.game = g; ui.flow = null; ui.pct = null;
+      if (g === 'wiezen') { ui.wr = { k: null, sel: [], made: null, diff: 0 }; ui.view = 'wround'; } else ui.view = null;
+      save(); render(); window.scrollTo(0, 0); keepAwake();
+    },
     hOpen(b) { const i = +b.dataset.v; ui.hOpen = ui.hOpen === i ? null : i; ui.hDel = null; render(); },
     hDel(b) { const i = +b.dataset.v; if (ui.hDel !== i) { ui.hDel = i; render(); return; } S.history.splice(i, 1); ui.hOpen = null; ui.hDel = null; save(); render(); },
-    toChoose() { hideToast(); ui.view = 'choose'; ui.modal = null; render(); window.scrollTo(0, 0); },
-    pickGame(b) {
-      S.game = b.dataset.v;
-      ui.view = PG[S.game] && !PG[S.game].st().pct ? 'wsetup' : null;
-      ui.pct = null; save(); render(); window.scrollTo(0, 0);
-    },
     // Wiezen: percentages
     pctPreset(b) { ui.pct = PCT_PRESETS[+b.dataset.v].v.slice(); render(); },
     pctStep(b) { const i = +b.dataset.i; ui.pct[i] = Math.max(0, Math.min(100, ui.pct[i] + +b.dataset.v)); const inp = document.getElementById('pct' + i); if (inp) inp.value = ui.pct[i]; updatePct(); },
-    pctSave() { if (ui.pct.reduce((a, c) => a + c, 0) !== 100) return; pg().st().pct = ui.pct.slice(); if (S.game === 'wiezen') S.wz.per = ui.per || 1;
-      const c = gCur(); if (c && c.price == null) { c.pct = ui.pct.slice(); if (S.game === 'wiezen') c.per = S.wz.per; } ui.pct = null; ui.view = null; save(); render(); window.scrollTo(0, 0); },
-    wsetupCancel() { ui.pct = null; ui.view = null; render(); window.scrollTo(0, 0); },
-    wEditPct() { ui.pct = null; ui.view = 'wsetup'; render(); window.scrollTo(0, 0); },
     // Wiezen: spelletjes
     wNew() { ui.wr = { k: null, sel: [], made: null, diff: 0 }; ui.view = 'wround'; render(); window.scrollTo(0, 0); keepAwake(); },
     wCancel() { ui.wr = null; ui.view = null; render(); window.scrollTo(0, 0); },
@@ -1942,7 +1905,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       const c = openOf(S.wz); if (!c) return;
       c.games.push({ k: R.k, sel: R.sel.slice(), made: R.made, diff: bd.extra ? R.diff : 0, d: wDelta(R.k, R.sel, R.made, R.diff), at: Date.now() });
       S.wz.dealer = (S.wz.dealer + 1) % 4;
-      const done = c.games.length >= c.per; if (done) c.end = Date.now();
+      const done = c.games.length >= c.per; if (done) { c.end = Date.now(); ui.result = 'wiezen'; }
       ui.wr = null; ui.view = null; save(); render(); window.scrollTo({ top: 0, behavior: 'smooth' });
       showToast(`<b>${esc(bd.n)}</b> · ${R.made ? 'gehaald' : 'niet gehaald'}${done ? ` · rondje ${S.wz.rondjes.length} gedaan` : ''}`);
     },
@@ -2018,13 +1981,12 @@ if (typeof module !== 'undefined') module.exports = Logic;
       const v = calcValue();
       if (!v) { document.getElementById('priceErr').textContent = 'Geef een bedrag in, bijvoorbeeld 24,50.'; return; }
       current().price = v; S.lastPrice = v; ui.calc = { expr: '', target: null }; save(); render(); keepAwake();
-    } else if (f.id === 'gPriceForm') {
-      const v = calcValue(), c = gCur();
+    } else if (f.id === 'nPriceForm') {
+      const v = calcValue();
       if (!v) { document.getElementById('priceErr').textContent = 'Geef een bedrag in, bijvoorbeeld 24,50.'; return; }
-      if (!c) return;
-      c.price = v; S.lastPrice = v; ui.calc = { expr: '', target: null };
-      if (S.game === 'wiezen' && !c.games.length) { ui.wr = { k: null, sel: [], made: null, diff: 0 }; ui.view = 'wround'; }
-      save(); render(); window.scrollTo(0, 0); keepAwake();
+      if (!ui.flow) return;
+      ui.flow.price = v; S.lastPrice = v; ui.calc = { expr: '', target: null }; ui.view = 'npick';
+      save(); render(); window.scrollTo(0, 0);
     } else if (f.id === 'editPriceForm') {
       const v = calcValue();
       if (!v) { document.getElementById('priceErr2').textContent = 'Geef een bedrag in, bijvoorbeeld 24,50.'; return; }
@@ -2035,7 +1997,10 @@ if (typeof module !== 'undefined') module.exports = Logic;
       const empty = names.findIndex((n) => !n);
       if (empty >= 0) { err.textContent = 'Vul alle 4 de namen in.'; document.getElementById('sp' + empty).focus(); return; }
       if (new Set(names.map((n) => n.toLowerCase())).size < 4) { err.textContent = 'Geef elke speler een andere naam.'; return; }
-      S.players = names; ui.view = 'choose'; save(); render(); window.scrollTo(0, 0);
+      S.players = names; S.ready = true; save();
+      const busy = current() || openOf(S.wz) || openOf(S.hj);
+      if (!busy && !owedAll().n) { actions.newRondje(); return; }
+      ui.view = null; render(); window.scrollTo(0, 0);
     } else if (f.id === 'playersForm') {
       const names = S.players.map((_, i) => document.getElementById('pl' + i).value.trim());
       if (names.some((n) => !n)) return;
@@ -2051,7 +2016,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 <script>
 // Installeerbare app: offline werken en vanzelf de nieuwste versie laden.
 (() => {
-  const APP_VERSION = '20261125-103510';
+  const APP_VERSION = '20261125-105333';
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
