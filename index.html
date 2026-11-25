@@ -1675,8 +1675,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   function avondPanel() {
     const A = owedAll(), pk = pokerNet();
     if (!A.n && !pk) return '';
-    if (!A.n) return `<section class="panel"><div class="panel-head"><h2>Poker</h2><span class="label">klaar</span></div>
-      <div>${S.players.map((p, i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${esc(p)}</span><span class="owe ${pk[i] ? (pk[i] > 0 ? 'pos' : 'neg') : 'zero'}">${pk[i] > 0 ? '+' : pk[i] < 0 ? '−' : ''}${euro(Math.abs(pk[i]))}</span></div>`).join('')}</div></section>`;
+    if (!A.n) return '';
     return `<section class="panel"><div class="panel-head"><h2>Te betalen vanavond</h2><span class="label" style="white-space:nowrap">${euro(A.total)}</span></div>
       <div>${S.players.map((p, i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${esc(p)}</span><span class="owe ${A.owed[i] ? '' : 'zero'}">${euro(A.owed[i])}</span></div>`).join('')}</div></section>`;
   }
@@ -1859,14 +1858,12 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const net = pokerNet();
     const tout = K.who.reduce((t, i) => t + (K.buyout[i] || 0), 0), D = tout - tin;
     const rows = K.who.slice().sort((a, b) => net[b] - net[a]).map((i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${P(i)}<span class="meta">in ${euro(K.buyin[i])} · uit ${euro(K.buyout[i] || 0)}</span></span><span class="pts ${pn(net[i])}">${net[i] > 0 ? '+' : net[i] < 0 ? '−' : ''}${euro(Math.abs(net[i])).replace('€ ', '€')}</span></div>`).join('');
-    const tx = minTransfers(net).map((t) => `<div class="tr"><div class="who"><span>${P(t.from)}</span><span class="arrow">betaalt ${P(t.to)}</span></div><div class="amt">${euro(t.amount)}</div></div>`).join('');
     return `<div class="wrap">${head('Poker · resultaat')}
       <section><h1>Poker <em>klaar</em></h1></section>
       ${D ? `<div class="note">De pot klopt niet: ${euro(Math.abs(D))} ${D > 0 ? 'te veel' : 'te weinig'}. Dat verschil is gelijk over iedereen verdeeld.</div>` : ''}
       <section class="panel"><h2>Winst en verlies</h2><div>${rows}</div></section>
-      <section class="panel"><h2>Wie betaalt wie</h2><div>${tx || '<p class="empty">Niemand moet iets betalen.</p>'}</div>
-        <p class="hint">Bij "Einde avond" komt dit samen met de café-rondjes in één afrekening.</p></section>
-      <button class="btn ghost block" data-act="pkStep" data-v="buyout">← Buy-out aanpassen</button>
+      <button class="btn primary xl" data-act="end">Afrekenen <span class="arr">→</span></button>
+      <button class="btn ghost block" data-act="pkStep" data-v="buyout">Buy-out aanpassen</button>
     </div>`;
   }
   function pkAddHTML() {
@@ -2275,7 +2272,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     return `<div class="wrap">
       <header class="top"><button class="btn ghost sm" data-act="home">← Terug</button><span class="label">Einde avond</span></header>
       <section>${!done.length && pk ? '<h1>Poker <em>afrekenen</em></h1>' : `<p class="label">${done.length} rondje${done.length === 1 ? '' : 's'} gespeeld</p><h1>Wie heeft de <em>rekening</em> betaald?</h1>`}
-        ${parts.length ? `<p class="lead">${parts.map((p) => (p[0] === 'Poker' ? 'Poker: winst en verlies zitten mee in de afrekening' : `${p[0]}: ${p[1]} rondje${p[1] > 1 ? 's' : ''} · ${euro(p[2])}`)).join('<br>')}</p>` : ''}</section>
+        ${parts.length && done.length ? `<p class="lead">${parts.map((p) => (p[0] === 'Poker' ? 'Poker: zit mee in de afrekening' : `${p[0]}: ${p[1]} rondje${p[1] > 1 ? 's' : ''} · ${euro(p[2])}`)).join('<br>')}</p>` : ''}</section>
       ${open ? `<div class="note">Een rondje dat nog bezig is, telt niet mee.</div>` : ''}
       ${pkOpen ? `<div class="note">De poker is nog niet afgerekend en telt niet mee. Vul eerst de buy-outs in.</div>` : ''}
       ${!done.length && pk ? `<div id="settle">${renderSettle()}</div>` : ''}
@@ -2310,12 +2307,12 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const n = S.players.length;
     const trs = r.transfers.map((t) => `<div class="tr"><div class="who"><span>${P(t.from)}</span><span class="arrow">schrijft over naar ${P(t.to)}</span></div><div class="amt">${euro(t.amount)}</div></div>`).join('');
     return `<section class="panel">
-      ${onlyPoker ? '<div class="total"><span class="label">Poker</span><b>Wie betaalt wie</b></div>' : `<div class="total"><span class="label">${P(ui.payer)} betaalde</span><b>${euro(r.total)}</b></div>`}
+      ${onlyPoker ? '<h2>Wie betaalt wie</h2>' : `<div class="total"><span class="label">${P(ui.payer)} betaalde</span><b>${euro(r.total)}</b></div>`}
       ${r.poker && !onlyPoker ? `<div class="breakdown"><span>Pokerwinst en -verlies</span><span>zit mee in de bedragen</span></div>` : ''}
       ${r.diff ? `<div class="breakdown"><span>Rondjes</span><span>${euro(r.rounds)}</span><span>Verschil met de rekening</span><span>${signedEuro(r.diff)}</span><span>Per persoon</span><span>${signedEuro(r.diff / n)}</span></div>` : ''}
       <hr class="rule">
       ${r.transfers.length ? `<div>${trs}</div>` : `<p class="empty">Niemand moet iets overschrijven.</p>`}
-      <p class="muted" style="margin:0;font-size:12.5px">${r.poker ? 'Zo weinig mogelijk overschrijvingen voor de rondjes en de poker samen.' : (() => {
+      <p class="muted" style="margin:0;font-size:12.5px">${onlyPoker ? 'Zo weinig mogelijk overschrijvingen.' : r.poker ? 'Zo weinig mogelijk overschrijvingen voor de rondjes en de poker samen.' : (() => {
         const inc = r.transfers.reduce((t, x) => t + (x.to === ui.payer ? x.amount : -x.amount), 0);
         const own = r.total - inc;
         return own < 0
@@ -3038,7 +3035,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 <script>
 // Installeerbare app: offline werken en vanzelf de nieuwste versie laden.
 (() => {
-  const APP_VERSION = '20261125-121907';
+  const APP_VERSION = '20261125-124542';
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
