@@ -1457,7 +1457,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const done = finished();
     if (done.length) {
       const st = Logic.stats(done, 4);
-      rec.t = { n: done.length, r: done.length, won: st.per.map((p) => p.won), lost: st.per.map((p) => p.played - p.won), paid: Logic.shares(S).owed.map((c) => Math.round(c)) };
+      rec.t = { who: [...new Set(done.flatMap((r) => (r.teams || []).flat()))].sort((a, b) => a - b), n: done.length, r: done.length, won: st.per.map((p) => p.won), lost: st.per.map((p) => p.played - p.won), paid: Logic.shares(S).owed.map((c) => Math.round(c)) };
       starts.push(done[0].start || done[0].id);
     }
     // Wiezen en hartenjagen: per uitgespeeld rondje telt de 1ste als gewonnen, wie het meest betaalt als verloren.
@@ -1470,7 +1470,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
         const mx = Math.max(...out);
         out.forEach((o, i) => { if (place[i] === 0) won[i]++; if (o === mx && mx > 0) lost[i]++; });
       });
-      rec[key] = { n: rs.length, r: rs.length, won, lost, paid: gameOwed(g).owed.map((c) => Math.round(c)) };
+      const nn = Math.max(...rs.map((r) => r.n || S.players.length));
+      rec[key] = { who: S.players.map((_, i) => i).filter((i) => i < nn), n: rs.length, r: rs.length, won, lost, paid: gameOwed(g).owed.map((c) => Math.round(c)) };
       starts.push(rs[0].start);
     });
     const pnet = pokerNet();
@@ -1488,6 +1489,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const parts = HKEYS.map((k) => h[k] && h[k].paid).filter(Boolean);
     return parts.length ? h.players.map((_, i) => parts.reduce((s, p) => s + p[i], 0)) : null;
   }
+  // Alleen wie dat spel echt meespeelde (een speler die later bij kwam, telt niet mee in de groep)
+  const gPlayers = (h, k) => (h[k] && h[k].who ? h[k].who.map((i) => h.players[i]) : h.players);
   const HKEYS = ['t', 'w', 'h', 'p', 'n', 'l', 'd', 'k'];
   const nightLost = (h) => h.players.map((_, i) => HKEYS.reduce((a, k) => a + (h[k] ? h[k].lost[i] || 0 : 0), 0));
   const nightWon = (h) => h.players.map((_, i) => HKEYS.reduce((a, k) => a + (h[k] ? h[k].won[i] || 0 : 0), 0));
@@ -1581,13 +1584,13 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const k = HK[H.game], gname = [...GAMES, POKER_TILE].find((g) => g.k === H.game).name;
     const recs = all.filter(({ h }) => h[k]);
     const groups = {};
-    recs.forEach(({ h }) => { const key = groupKey(h.players); const g = (groups[key] = groups[key] || { players: h.players, n: 0, last: 0 }); g.n++; g.last = Math.max(g.last, h.date); if (h.players.reduce((t, p) => t + nameScore(p.trim()), 0) > g.players.reduce((t, p) => t + nameScore(p.trim()), 0)) g.players = h.players; });
+    recs.forEach(({ h }) => { const gp = gPlayers(h, k), key = groupKey(gp); const g = (groups[key] = groups[key] || { players: gp, n: 0, last: 0 }); g.n++; g.last = Math.max(g.last, h.date); if (gp.reduce((t, p) => t + nameScore(p.trim()), 0) > g.players.reduce((t, p) => t + nameScore(p.trim()), 0)) g.players = gp; });
     if (!H.group) {
       const list = Object.entries(groups).sort((a, b) => b[1].last - a[1].last).map(([key, g]) => `<button class="grp" data-act="histGroup" data-v="${esc(key)}"><span class="grp-names">${g.players.map((p) => esc(tidy(p))).join(' · ')}</span><span class="grp-n">${g.n} avond${g.n > 1 ? 'en' : ''} ›</span></button>`).join('');
       return `<div class="wrap">${head(gname)}<section><h1>Met <em>wie</em>?</h1></section><div class="grps">${list}</div></div>`;
     }
     const all1 = H.group === '*';
-    const nights = all1 ? recs : recs.filter(({ h }) => groupKey(h.players) === H.group);
+    const nights = all1 ? recs : recs.filter(({ h }) => groupKey(gPlayers(h, k)) === H.group);
     // Bij poker: alleen wie die avond echt meespeelde
     const inGame = (h) => (h[k].who ? h[k].who : h.players.map((_, i) => i));
     const players = all1 ? [...new Map(nights.flatMap(({ h }) => inGame(h).map((i) => [nameKey(h.players[i]), h.players[i]]))).values()] : (groups[H.group] ? groups[H.group].players : []);
@@ -2972,7 +2975,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       if (H && H.group) { H.group = null; if (H.game === 'poker') H.game = null; } else if (H && H.game) H.game = null; else { ui.hist = null; ui.view = null; }
       ui.hOpen = null; render(); window.scrollTo(0, 0);
     },
-    histGame(b) { ui.hist.game = b.dataset.v; if (ui.hist.game === 'poker') { ui.hist.group = '*'; render(); window.scrollTo(0, 0); return; } const recs = (S.history || []).filter((h) => h[HK[ui.hist.game]]); const keys = [...new Set(recs.map((h) => groupKey(h.players)))]; if (keys.length === 1) ui.hist.group = keys[0]; render(); window.scrollTo(0, 0); },
+    histGame(b) { ui.hist.game = b.dataset.v; if (ui.hist.game === 'poker') { ui.hist.group = '*'; render(); window.scrollTo(0, 0); return; } const recs = (S.history || []).filter((h) => h[HK[ui.hist.game]]); const keys = [...new Set(recs.map((h) => groupKey(gPlayers(h, HK[ui.hist.game]))))]; if (keys.length === 1) ui.hist.group = keys[0]; render(); window.scrollTo(0, 0); },
     histGroup(b) { ui.hist.group = b.dataset.v; render(); window.scrollTo(0, 0); },
     nStep(b) {
       const c = openOf(S.np); if (!c) return;
@@ -3240,6 +3243,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
     }
   });
 
+  // Liep er een toernooi toen de app dichtging? Dan meteen terug naar de klok.
+  if (S.pk && S.pk.on && S.pk.mode === 'tour' && S.pk.step === 'play') { ui.view = 'poker'; try { keepAwake(); } catch (e) {} }
   render();
   window.__troeven = { get state() { return S; }, ui };
 })();
