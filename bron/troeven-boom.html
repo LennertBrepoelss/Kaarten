@@ -1240,7 +1240,13 @@ if (typeof module !== 'undefined') module.exports = Logic;
 
   // ---------- Geschiedenis: spel → spelers → overzicht ----------
   const HK = { troeven: 't', wiezen: 'w', harten: 'h', pietjes: 'p', nappen: 'n', lucky: 'l' };
-  const groupKey = (players) => players.map((p) => p.toLowerCase()).sort().join('|');
+  // Namen vergelijken zonder hoofdletters of spaties: "inez" en "Inez " zijn dezelfde speler.
+  const nameKey = (p) => String(p).trim().toLowerCase();
+  const groupKey = (players) => players.map(nameKey).sort().join('|');
+  // Netste schrijfwijze: liefst met hoofdletter vooraan en niet alles in hoofdletters.
+  const nameScore = (p) => (/^\p{Lu}/u.test(p) ? 2 : 0) + (p !== p.toUpperCase() ? 1 : 0);
+  const nicer = (a, b) => (nameScore(b.trim()) > nameScore(a.trim()) ? b.trim() : a.trim());
+  const tidy = (p) => { const t = p.trim(); return nameScore(t) ? t : t.charAt(0).toUpperCase() + t.slice(1).toLowerCase(); };
   // Wat iedereen voor dit spel betaalde die avond (oudere avonden: enkel als het het enige spel was)
   function gamePaidOf(h, k) {
     const x = h[k];
@@ -1257,9 +1263,9 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const k = HK[H.game], gname = GAMES.find((g) => g.k === H.game).name;
     const recs = all.filter(({ h }) => h[k]);
     const groups = {};
-    recs.forEach(({ h }) => { const key = groupKey(h.players); (groups[key] = groups[key] || { players: h.players, n: 0, last: 0 }).n++; groups[key].last = Math.max(groups[key].last, h.date); groups[key].players = h.players; });
+    recs.forEach(({ h }) => { const key = groupKey(h.players); const g = (groups[key] = groups[key] || { players: h.players, n: 0, last: 0 }); g.n++; g.last = Math.max(g.last, h.date); if (h.players.reduce((t, p) => t + nameScore(p.trim()), 0) > g.players.reduce((t, p) => t + nameScore(p.trim()), 0)) g.players = h.players; });
     if (!H.group) {
-      const list = Object.entries(groups).sort((a, b) => b[1].last - a[1].last).map(([key, g]) => `<button class="grp" data-act="histGroup" data-v="${esc(key)}"><span class="grp-names">${g.players.map(esc).join(' · ')}</span><span class="grp-n">${g.n} avond${g.n > 1 ? 'en' : ''} ›</span></button>`).join('');
+      const list = Object.entries(groups).sort((a, b) => b[1].last - a[1].last).map(([key, g]) => `<button class="grp" data-act="histGroup" data-v="${esc(key)}"><span class="grp-names">${g.players.map((p) => esc(tidy(p))).join(' · ')}</span><span class="grp-n">${g.n} avond${g.n > 1 ? 'en' : ''} ›</span></button>`).join('');
       return `<div class="wrap">${head(gname)}<section><h1>Met <em>wie</em>?</h1></section><div class="grps">${list}</div></div>`;
     }
     const nights = recs.filter(({ h }) => groupKey(h.players) === H.group);
@@ -1270,7 +1276,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
       const x = h[k], paid = gamePaidOf(h, k);
       const mx = paid ? Math.max(...paid) : Math.max(...x.lost);
       h.players.forEach((nm, i) => {
-        const a = agg[nm] = agg[nm] || { nights: 0, won: 0, lost: 0, paid: 0, paidN: 0, loser: 0 };
+        const a = agg[nameKey(nm)] = agg[nameKey(nm)] || { name: nm.trim(), nights: 0, won: 0, lost: 0, paid: 0, paidN: 0, loser: 0 };
+        a.name = nicer(a.name, nm);
         a.nights++; a.won += x.won[i] || 0; a.lost += x.lost[i] || 0;
         if (paid) { a.paid += paid[i]; a.paidN++; }
         if (mx > 0 && (paid ? paid[i] : x.lost[i]) === mx) a.loser++;
@@ -1279,7 +1286,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const avg = (a) => (a.paidN ? a.paid / a.paidN : Infinity);
     const names = Object.keys(agg).sort((a, b) => avg(agg[a]) - avg(agg[b]) || agg[b].won - agg[a].won || agg[a].loser - agg[b].loser);
     const krows = names.map((nm, i) => { const a = agg[nm]; return `<div class="krow"><span class="kn">${i + 1}</span>
-      <span class="kname">${esc(nm)}<small>${a.won}–${a.lost} rondjes${a.loser ? ` · <b class="neg">${a.loser}× verliezer</b>` : ''}</small></span>
+      <span class="kname">${esc(tidy(a.name))}<small>${a.won}–${a.lost} rondjes${a.loser ? ` · <b class="neg">${a.loser}× verliezer</b>` : ''}</small></span>
       <span class="kpaid">${a.paidN ? euro(a.paid) : '–'}<small>${a.paidN ? `gem. ${euro(a.paid / a.paidN)}` : ''}</small></span></div>`; }).join('');
     const items = nights.slice().reverse().map(({ h, idx }) => {
       const x = h[k], paid = gamePaidOf(h, k), open = ui.hOpen === idx;
@@ -1293,7 +1300,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
         ${losers.length ? `<span class="hlos">Grote verliezer: <b>${losers.map(esc).join(' &amp; ')}</b></span>` : ''}</span><span class="chev">›</span></button>${body}</div>`;
     }).join('');
     return `<div class="wrap">${head(gname)}
-      <section><h1>${esc(gname)}</h1><p class="lead">${players.map(esc).join(' · ')}</p></section>
+      <section><h1>${esc(gname)}</h1><p class="lead">${players.map((p) => esc(tidy(p))).join(' · ')}</p></section>
       <section class="panel"><h2>Klassement</h2><div>${krows}</div></section>
       <section class="panel"><div class="panel-head"><h2>Avonden</h2><span class="label">${nights.length}</span></div><div>${items}</div></section>
     </div>`;
@@ -2481,7 +2488,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       if (!v) { document.getElementById('priceErr2').textContent = 'Geef een bedrag in, bijvoorbeeld 24,50.'; return; }
       current().price = v; S.lastPrice = v; ui.modal = null; save(); render();
     } else if (f.id === 'startForm') {
-      const names = [...document.querySelectorAll('[id^="sp"]')].map((el) => el.value.trim());
+      const names = [...document.querySelectorAll('[id^="sp"]')].map((el) => el.value.trim().replace(/\s+/g, ' '));
       const err = document.getElementById('startErr');
       const empty = names.findIndex((n) => !n);
       if (empty >= 0) { err.textContent = 'Vul alle 4 de namen in.'; document.getElementById('sp' + empty).focus(); return; }
