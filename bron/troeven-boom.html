@@ -1218,7 +1218,9 @@ if (typeof module !== 'undefined') module.exports = Logic;
   const tReb = (K, i) => Math.max(0, Math.round((K.buyin[i] || 0) / K.unit) - 1);
   function tPrizes(K) {
     // De gekozen bedragen gelden voor de pot bij de start; komt er geld bij (terug inkopen), dan groeit alles in dezelfde verhouding
-    const pot = tPot(K), tot = K.pay.reduce((a, b) => a + b, 0) || 1, pr = K.pay.map((p) => Math.floor((pot * p) / tot));
+    // De 3de plaats blijft op het gekozen bedrag; extra geld (terug inkopen, speler erbij) gaat naar 1ste en 2de in dezelfde verhouding
+    const pot = tPot(K), third = Math.min(K.pay[2] || 0, pot), rest = pot - third, top = (K.pay[0] || 0) + (K.pay[1] || 0) || 1;
+    const second = Math.floor((rest * (K.pay[1] || 0)) / top), pr = [rest - second, second, third];
     pr[0] += pot - pr.reduce((a, b) => a + b, 0);
     return pr;
   }
@@ -2030,7 +2032,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       <section class="panel" style="gap:0;padding-block:6px"><div class="panel-head" style="padding:8px 0 4px"><h2>Wie ligt eruit?</h2><span class="label">tik op een naam</span></div>${board}</section>
       <section class="panel"><div class="panel-head"><h2>Prijzen</h2><span class="label">${euro(K.unit)} inkoop</span></div>
         <div>${K.pay.map((p, k) => (p ? `<div class="srow"><span class="who">${plc(k)}</span><span class="owe">${euro(pr[k])}</span></div>` : '')).join('')}</div>
-        <p class="hint">Wie terug inkoopt, betaalt opnieuw ${euro(K.unit)}. Dat komt in de pot en wordt in dezelfde verhouding over de prijzen verdeeld. Eigen inkopen gaan van de winst af.</p></section>
+        <p class="hint">Wie terug inkoopt, betaalt opnieuw ${euro(K.unit)}. Dat extra geld gaat naar de 1ste en 2de plaats, in dezelfde verhouding. De 3de plaats blijft gelijk. Eigen inkopen gaan van de winst af.</p></section>
       ${chipsHTML()}
       ${ui.pkAdd ? pkAddHTML() : `<button class="btn ghost block" data-act="pkAddOpen" ${S.players.length >= 8 && K.who.length >= S.players.length ? 'disabled' : ''}>+ Speler erbij</button>`}
       <button class="btn ghost block" data-act="pkCancel">${ui.pkSure ? 'Tik nog eens: toernooi wissen' : 'Toernooi wissen'}</button>
