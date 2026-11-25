@@ -550,6 +550,46 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 .pkin span { color: var(--dim); font: 500 18px var(--f-serif); }
 .pkin input { width: 96px; border: 0; background: transparent; outline: none; font: 600 24px/1.2 var(--f-serif); text-align: right; font-variant-numeric: lining-nums tabular-nums; padding: 6px 0; }
 .pkin:focus-within { border-color: var(--gold); }
+/* Pokertoernooi */
+.pkclock { text-align: center; gap: 10px; }
+.pkclock .lvl { font: 600 12px/1 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.pkclock .blinds { font: 600 58px/1 var(--f-serif); font-variant-numeric: lining-nums tabular-nums; letter-spacing: -.01em; }
+.pkclock .blinds small { font-size: 30px; color: var(--dim); margin: 0 6px; }
+.pkclock .time { font: 600 40px/1 var(--f-ui); font-variant-numeric: tabular-nums; color: var(--gold); transition: color .3s ease; }
+.pkclock .time.soon { color: var(--danger); animation: blink 1s steps(2) infinite; }
+.pkclock .time.paused { color: var(--dim); }
+@keyframes blink { 50% { opacity: .45; } }
+.pkclock .bar { height: 6px; border-radius: 6px; background: rgba(255,255,255,.08); overflow: hidden; }
+.pkclock .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--t1), var(--t2)); border-radius: 6px; transition: width 1s linear; }
+.pkclock .next { font-size: 13px; color: var(--dim); }
+.pkclock .ctl { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 8px; }
+.pkstats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pkstats div { background: var(--surface); border: 1px solid var(--hair); border-radius: 14px; padding: 10px 12px; }
+.pkstats b { display: block; font: 600 22px/1.1 var(--f-serif); font-variant-numeric: lining-nums tabular-nums; margin-top: 4px; white-space: nowrap; }
+.bust { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; text-align: left; padding: 12px 0; border: 0; border-bottom: 1px solid var(--hair); background: none; color: inherit; font: inherit; cursor: pointer; }
+.bust:last-child { border-bottom: 0; }
+.bust .who { font: 600 20px/1.1 var(--f-serif); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bust .who::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--pc); margin-right: 10px; vertical-align: 3px; box-shadow: 0 0 10px var(--pc); }
+.bust .meta { display: block; font: 500 12px/1.3 var(--f-ui); color: var(--dim); margin-top: 4px; }
+.bust .tag { font: 600 12px/1 var(--f-ui); padding: 8px 10px; border-radius: 999px; border: 1px solid var(--hair-2); color: var(--dim); white-space: nowrap; }
+.bust.out .who { color: var(--dim); text-decoration: line-through; text-decoration-color: rgba(255,255,255,.25); }
+.bust.out .tag { border-color: transparent; }
+.pkchips { display: flex; justify-content: space-around; gap: 10px; text-align: center; }
+.pkchips figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.pkchips svg { width: 58px; height: 58px; filter: drop-shadow(0 6px 10px rgba(0,0,0,.45)); }
+.pkchips b { font: 600 20px/1 var(--f-serif); }
+.pkchips small { font-size: 12px; color: var(--dim); }
+.paygrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.paygrid label { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--dim); }
+.paygrid .pin { display: flex; align-items: baseline; gap: 4px; background: var(--surface); border: 1px solid var(--hair); border-radius: 14px; padding: 10px 12px; }
+.paygrid input { width: 100%; min-width: 0; border: 0; background: transparent; outline: none; color: var(--ivory); font: 600 26px/1 var(--f-serif); }
+.prize { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 12px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--hair); }
+.prize:last-child { border-bottom: 0; }
+.prize .pl { font: 600 22px/1 var(--f-serif); color: var(--gold); min-width: 34px; }
+.prize .nm { font: 600 19px/1.1 var(--f-serif); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prize .nm small { display: block; font: 500 12px/1.3 var(--f-ui); color: var(--dim); margin-top: 3px; white-space: normal; }
+.prize .am { text-align: right; font: 600 18px/1.1 var(--f-ui); font-variant-numeric: tabular-nums; }
+.prize .am small { display: block; font-size: 12px; margin-top: 3px; }
 .totbar { display: flex; justify-content: space-between; gap: 12px; background: var(--surface); border: 1px solid var(--hair); border-radius: 16px; padding: 14px 16px; }
 .totbar b { display: block; font: 600 24px/1.1 var(--f-serif); font-variant-numeric: lining-nums tabular-nums; margin-top: 4px; }
 .g-darts { --tg: linear-gradient(150deg, #8af7e0, #22b8a8 65%, #127a8a); --tglow: #22b8a8; }
@@ -1151,7 +1191,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   // ---------- Poker (kassa) ----------
   // Iedereen koopt in met een vast bedrag (buy-in), en kan bijkopen. Op het einde vul je in met hoeveel elke speler stopt
   // (buy-out). Winst of verlies = buy-out − buy-in. Klopt de pot niet, dan wordt het verschil gelijk over de spelers verdeeld.
-  function freshPk(prev) { return { unit: prev && prev.unit ? prev.unit : 1000, on: false, step: 'setup', who: [], buyin: [], buyout: [] }; }
+  function freshPk(prev) { return { unit: prev && prev.unit ? prev.unit : 1000, mode: prev && prev.mode ? prev.mode : 'cash', pay: prev && prev.pay ? prev.pay : [75, 25, 0], lvlMin: prev && prev.lvlMin ? prev.lvlMin : 5, on: false, step: 'setup', who: [], buyin: [], buyout: [] }; }
   function splitEqually(total, n) {
     if (n <= 0) return [];
     const sg = total < 0 ? -1 : 1, base = Math.floor(Math.abs(total) / n) * sg, arr = Array(n).fill(base);
@@ -1159,10 +1199,75 @@ if (typeof module !== 'undefined') module.exports = Logic;
     while (rem !== 0) { arr[k % n] += sg; rem -= sg; k++; }
     return arr;
   }
+  // ---------- Pokertoernooi ----------
+  // Iedereen start met 3.000 fiches. Om de zoveel minuten gaan de blinds omhoog. Wie eruit ligt kan terug inkopen.
+  // De pot (alle inkopen samen) wordt verdeeld volgens de percentages per plaats; eigen inkopen gaan er automatisch af.
+  const BL = [[25, 50], [50, 100], [150, 300], [250, 500], [500, 1000]];
+  const STACK = 3000;
+  const nf = (n) => Math.round(n).toLocaleString('nl-BE');
+  function tState(K) {
+    const L = (K.lvlMin || 5) * 60000, el = Math.max(0, (K.t.pausedAt || Date.now()) - K.t.start - K.t.off);
+    const lv = Math.min(Math.floor(el / L), BL.length - 1), last = lv === BL.length - 1;
+    return { lv, L, el, rem: last ? null : (lv + 1) * L - el, prog: last ? 1 : (el - lv * L) / L };
+  }
+  function tSetEl(K, target) { K.t.off = (K.t.pausedAt || Date.now()) - K.t.start - target; K.lastLvl = tState(K).lv; }
+  const mmss = (ms) => { const x = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(x / 60)}:${String(x % 60).padStart(2, '0')}`; };
+  const tAlive = (K) => K.who.filter((i) => !K.out.includes(i));
+  const tPot = (K) => K.who.reduce((t, i) => t + (K.buyin[i] || 0), 0);
+  const tReb = (K, i) => Math.max(0, Math.round((K.buyin[i] || 0) / K.unit) - 1);
+  function tPrizes(K) {
+    const pot = tPot(K), pr = K.pay.map((p) => Math.floor((pot * p) / 100));
+    pr[0] += pot - pr.reduce((a, b) => a + b, 0);
+    return pr;
+  }
+  // Volgorde van de eindstand: wie overblijft is 1ste, wie het laatst uitviel 2de, ...
+  const tOrder = (K) => [...tAlive(K), ...K.out.slice().reverse()];
+  function chipSVG(fill, edge, ink) {
+    return `<svg viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="30" r="28" fill="${fill}"/><circle cx="30" cy="30" r="28" fill="none" stroke="${edge}" stroke-width="7" stroke-dasharray="9 8.6"/><circle cx="30" cy="30" r="17" fill="${fill}" stroke="${ink}" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="3 3"/><circle cx="30" cy="30" r="28" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="1"/></svg>`;
+  }
+  const CHIPS = [
+    { v: 25, name: 'rood', svg: () => chipSVG('#d93a3a', '#fff', '#fff'), n: 8 },
+    { v: 100, name: 'wit', svg: () => chipSVG('#f4f5f7', '#2b5cd6', '#1b1f2e'), n: 8 },
+    { v: 500, name: 'groen', svg: () => chipSVG('#2e9e5b', '#fff', '#fff'), n: 4 },
+  ];
+  const chipsHTML = () => `<section class="panel"><div class="panel-head"><h2>Fiches</h2><span class="label">start ${nf(STACK)}</span></div>
+    <div class="pkchips">${CHIPS.map((c) => `<figure>${c.svg()}<b>${c.v}</b><small>${c.n}× ${c.name}</small></figure>`).join('')}</div></section>`;
+  function blindAlarm(lv) {
+    showToast(`<b>Blinds omhoog</b> · ${nf(BL[lv][0])} / ${nf(BL[lv][1])}`, false);
+    if (navigator.vibrate) try { navigator.vibrate([250, 120, 250, 120, 250]); } catch (e) {}
+    try {
+      const ac = audioCtx(); if (!ac) return;
+      [0, 0.28, 0.56].forEach((d) => {
+        const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + d;
+        o.type = 'triangle'; o.frequency.value = d === 0.56 ? 1175 : 880; o.connect(g); g.connect(ac.destination);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.24);
+        o.start(t); o.stop(t + 0.26);
+      });
+    } catch (e) {}
+  }
+  let ac0 = null;
+  function audioCtx() { try { if (!ac0) { const A = window.AudioContext || window.webkitAudioContext; if (A) ac0 = new A(); } if (ac0 && ac0.state === 'suspended') ac0.resume(); } catch (e) {} return ac0; }
+  // De klok loopt op tijdstippen, dus hij klopt ook als de app even dicht was
+  setInterval(() => {
+    const K = S.pk; if (!K || !K.on || K.mode !== 'tour' || K.step !== 'play') return;
+    const t = tState(K);
+    if (K.lastLvl === undefined) K.lastLvl = t.lv;
+    if (t.lv !== K.lastLvl) { const up = t.lv > K.lastLvl; K.lastLvl = t.lv; save(); if (up) blindAlarm(t.lv); if (ui.view === 'poker' && !ui.modal) render(); return; }
+    const el = document.getElementById('pkTime'); if (!el) return;
+    el.textContent = t.rem === null ? 'laatste niveau' : mmss(t.rem);
+    el.className = 'time' + (K.t.pausedAt ? ' paused' : t.rem !== null && t.rem < 30000 ? ' soon' : '');
+    const bar = document.getElementById('pkBar'); if (bar) bar.style.width = (t.prog * 100).toFixed(1) + '%';
+  }, 1000);
+
   // Winst/verlies per speler van de avond (in cent), null als de poker nog niet afgerekend is
   function pokerNet() {
     const K = S.pk;
     if (!K || !K.on || K.step !== 'done') return null;
+    if (K.mode === 'tour') {
+      const net = S.players.map(() => 0), pr = tPrizes(K);
+      tOrder(K).forEach((i, k) => { net[i] = (pr[k] || 0) - (K.buyin[i] || 0); });
+      return net;
+    }
     const idx = K.who;
     const tin = idx.reduce((t, i) => t + (K.buyin[i] || 0), 0), tout = idx.reduce((t, i) => t + (K.buyout[i] || 0), 0);
     const sh = splitEqually(tout - tin, idx.length);
@@ -1574,7 +1679,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       <header class="top"><div class="brand">Spelletjes</div><div style="display:flex;gap:12px;align-items:center">${syncChip()}<button class="btn ghost sm" data-act="toStart">Spelers</button></div></header>
       <section><p class="label">${firstStart() ? `<span class="live" id="liveClock">${liveTxt()}</span>` : esc(today())}</p><h1>${A.n ? `Rondje <em>${A.n + 1}</em>` : 'Een nieuwe <em>avond</em>'}</h1></section>
       <button class="btn primary xl" data-act="newRondje">Nieuw rondje <span class="arr">→</span></button>
-      ${S.pk.on ? `<div class="row2"><button class="btn ghost" data-act="pkOpen">♠ Poker · ${S.pk.step === 'done' ? 'klaar' : 'bezig'}</button><button class="btn ghost" data-act="histOpen">Geschiedenis</button></div>` : '<button class="btn ghost block" data-act="histOpen">Geschiedenis</button>'}
+      ${S.pk.on ? `<div class="row2"><button class="btn ghost" data-act="pkOpen">♠ ${S.pk.mode === 'tour' ? (S.pk.step === 'done' ? 'Toernooi · klaar' : `${nf(BL[tState(S.pk).lv][0])}/${nf(BL[tState(S.pk).lv][1])}`) : `Poker · ${S.pk.step === 'done' ? 'klaar' : 'bezig'}`}</button><button class="btn ghost" data-act="histOpen">Geschiedenis</button></div>` : '<button class="btn ghost block" data-act="histOpen">Geschiedenis</button>'}
       ${avondPanel()}
       ${items.length ? `<section class="panel"><h2>Rondjes</h2><div>${list}</div></section>` : ''}
       <section class="panel"><h2>Back-up</h2>
@@ -1830,15 +1935,24 @@ if (typeof module !== 'undefined') module.exports = Logic;
   function renderPoker() {
     const K = S.pk, head = (label) => `<header class="top"><button class="btn ghost sm" data-act="pkBack">← ${K.on && K.step !== 'setup' ? 'Overzicht' : 'Terug'}</button><span class="label">${label}</span></header>`;
     if (!K.on) {
-      const sel = ui.pkSel || S.players.map((_, i) => i);
+      const sel = ui.pkSel || S.players.map((_, i) => i), tour = (ui.pkMode || K.mode || 'cash') === 'tour';
+      const pay = ui.pkPay || K.pay || [75, 25, 0], lvl = ui.pkLvl || K.lvlMin || 5;
       return `<div class="wrap">${head('Poker')}
+        <div class="seg money-seg"><button class="opt ${tour ? '' : 'on'}" type="button" data-act="pkMode" data-v="cash"><span class="big">Cash game</span></button><button class="opt ${tour ? 'on' : ''}" type="button" data-act="pkMode" data-v="tour"><span class="big">Toernooi</span></button></div>
         <section><h1>Wie <em>pokert</em> er mee?</h1></section>
         <div class="chips">${S.players.map((p, i) => `<button class="chip ${sel.includes(i) ? 'on' : ''}" data-act="pkSel" data-v="${i}">${esc(p)}</button>`).join('')}</div>
-        <div class="field"><label for="pkUnit">Buy-in per keer</label><div class="money"><span>€</span><input id="pkUnit" inputmode="decimal" value="${fmt(K.unit)}"></div></div>
+        <div class="field"><label for="pkUnit">${tour ? 'Inkoop per speler (ook bij terug inkopen)' : 'Buy-in per keer'}</label><div class="money"><span>€</span><input id="pkUnit" inputmode="decimal" value="${fmt(K.unit)}"></div></div>
+        ${tour ? `<div class="field"><label>Wie krijgt wat van de pot?</label>
+          <div class="paygrid">${['1ste', '2de', '3de'].map((n, k) => `<label for="pkP${k}">${n}<span class="pin"><input id="pkP${k}" inputmode="numeric" value="${pay[k]}"><span>%</span></span></label>`).join('')}</div>
+          <p class="hint" id="pkPaySum">${payHint(pay)}</p></div>
+        <div class="field"><label>Blinds omhoog na</label><div class="chips">${[5, 10, 15, 20].map((m) => `<button class="chip ${m === lvl ? 'on' : ''}" data-act="pkLvl" data-v="${m}">${m} min</button>`).join('')}</div></div>
+        <p class="hint">Blinds: ${BL.map((b) => `${b[0]}/${b[1]}`).join(' → ')}</p>
+        ${chipsHTML()}` : ''}
         <p class="err" id="pkErr" style="min-height:0"></p>
-        <button class="btn primary xl" data-act="pkStart" ${sel.length >= 2 ? '' : 'disabled'}>${sel.length >= 2 ? `Start poker · ${sel.length} spelers` : 'Kies minstens 2 spelers'} <span class="arr">→</span></button>
+        <button class="btn primary xl" data-act="pkStart" ${sel.length >= 2 ? '' : 'disabled'}>${sel.length >= 2 ? `Start ${tour ? 'toernooi' : 'poker'} · ${sel.length} spelers` : 'Kies minstens 2 spelers'} <span class="arr">→</span></button>
       </div>`;
     }
+    if (K.mode === 'tour') return renderTour(head);
     const tin = K.who.reduce((t, i) => t + K.buyin[i], 0);
     if (K.step === 'buyin') {
       const rows = K.who.map((i) => `<div class="pkrow" style="--pc:var(--p${i})"><span class="who">${P(i)}<span class="meta">${Math.round(K.buyin[i] / K.unit)}× buy-in</span></span><span class="pkamt">${euro(K.buyin[i])}</span>
@@ -1876,6 +1990,46 @@ if (typeof module !== 'undefined') module.exports = Logic;
       <button class="btn ghost block" data-act="pkStep" data-v="buyout">Buy-out aanpassen</button>
     </div>`;
   }
+  const readPay = () => [0, 1, 2].map((k) => { const el = document.getElementById('pkP' + k); const v = el ? parseInt(el.value.replace(/\D/g, ''), 10) : (ui.pkPay || S.pk.pay || [75, 25, 0])[k]; return isNaN(v) ? 0 : Math.min(100, v); });
+  const payHint = (pay) => { const t = pay.reduce((a, b) => a + (+b || 0), 0); return t === 100 ? 'Samen 100%' : `<span class="neg">Samen ${t}%: dat moet 100% zijn</span>`; };
+  const plc = (k) => `${k + 1}${k === 0 ? 'ste' : 'de'}`;
+  function renderTour(head) {
+    const K = S.pk, pot = tPot(K), pr = tPrizes(K), alive = tAlive(K);
+    if (K.step === 'done') {
+      const net = pokerNet();
+      const rows = tOrder(K).map((i, k) => `<div class="prize" style="--pc:var(--p${i})"><span class="pl">${plc(k)}</span>
+        <span class="nm">${P(i)}<small>inkoop ${euro(K.buyin[i])}${tReb(K, i) ? ` · ${tReb(K, i)}× terug ingekocht` : ''}${pr[k] ? ` · wint ${euro(pr[k])}` : ''}</small></span>
+        <span class="am ${pn(net[i])}">${net[i] > 0 ? '+' : net[i] < 0 ? '−' : ''}${euro(Math.abs(net[i]))}</span></div>`).join('');
+      return `<div class="wrap">${head('Toernooi · uitslag')}
+        <section><p class="label">Pot ${euro(pot)}</p><h1>${P(alive[0])} <em>wint</em></h1></section>
+        <section class="panel" style="gap:0;padding-block:6px">${rows}</section>
+        <button class="btn primary xl" data-act="end">Afrekenen <span class="arr">→</span></button>
+        <button class="btn ghost block" data-act="tUndo">Laatste uitschakeling ongedaan</button>
+      </div>`;
+    }
+    const t = tState(K), b = BL[t.lv], nx = BL[t.lv + 1];
+    const chipsIn = (K.who.length + K.who.reduce((a, i) => a + tReb(K, i), 0)) * STACK;
+    const board = [...alive.map((i) => `<button class="bust" style="--pc:var(--p${i})" data-act="tBust" data-v="${i}"><span class="who">${P(i)}<span class="meta">${tReb(K, i) ? `${tReb(K, i)}× terug ingekocht` : 'speelt'}</span></span><span class="tag">ligt eruit</span></button>`),
+      ...K.out.slice().reverse().map((i) => `<button class="bust out" style="--pc:var(--p${i})" data-act="tBack" data-v="${i}"><span class="who">${P(i)}<span class="meta">${plc(K.who.length - 1 - K.out.indexOf(i))} · tik om terug te zetten</span></span><span class="tag">eruit</span></button>`)].join('');
+    return `<div class="wrap">${head('Toernooi')}
+      <section class="panel pkclock">
+        <span class="lvl">Niveau ${t.lv + 1} van ${BL.length}</span>
+        <div class="blinds">${nf(b[0])}<small>/</small>${nf(b[1])}</div>
+        <div class="time ${K.t.pausedAt ? 'paused' : t.rem !== null && t.rem < 30000 ? 'soon' : ''}" id="pkTime">${t.rem === null ? 'laatste niveau' : mmss(t.rem)}</div>
+        <div class="bar"><i id="pkBar" style="width:${(t.prog * 100).toFixed(1)}%"></i></div>
+        <span class="next">${nx ? `Daarna ${nf(nx[0])} / ${nf(nx[1])}` : 'Blinds blijven nu zo'}${K.t.pausedAt ? ' · gepauzeerd' : ''}</span>
+        <div class="ctl"><button class="btn ghost sm" data-act="tLvl" data-v="-1" ${t.lv ? '' : 'disabled'} aria-label="Vorig niveau">◀ Vorig</button><button class="btn ${K.t.pausedAt ? 'primary' : 'soft'} sm" data-act="tPause">${K.t.pausedAt ? '▶ Verder' : 'Pauze'}</button><button class="btn ghost sm" data-act="tLvl" data-v="1" ${nx ? '' : 'disabled'} aria-label="Volgend niveau">Volgend ▶</button></div>
+      </section>
+      <div class="pkstats"><div><span class="label">Spelers</span><b>${alive.length}/${K.who.length}</b></div><div><span class="label">Gem. stack</span><b>${nf(chipsIn / Math.max(1, alive.length))}</b></div><div><span class="label">Pot</span><b>${euro(pot)}</b></div></div>
+      <section class="panel" style="gap:0;padding-block:6px"><div class="panel-head" style="padding:8px 0 4px"><h2>Wie ligt eruit?</h2><span class="label">tik op een naam</span></div>${board}</section>
+      <section class="panel"><div class="panel-head"><h2>Prijzen</h2><span class="label">${euro(K.unit)} inkoop</span></div>
+        <div>${K.pay.map((p, k) => (p ? `<div class="srow"><span class="who">${plc(k)} · ${p}%</span><span class="owe">${euro(pr[k])}</span></div>` : '')).join('')}</div>
+        <p class="hint">Wie terug inkoopt, betaalt opnieuw ${euro(K.unit)}. Dat komt in de pot, en het wordt van de eigen winst afgetrokken.</p></section>
+      ${chipsHTML()}
+      ${ui.pkAdd ? pkAddHTML() : `<button class="btn ghost block" data-act="pkAddOpen" ${S.players.length >= 8 && K.who.length >= S.players.length ? 'disabled' : ''}>+ Speler erbij</button>`}
+      <button class="btn ghost block" data-act="pkCancel">${ui.pkSure ? 'Tik nog eens: toernooi wissen' : 'Toernooi wissen'}</button>
+    </div>`;
+  }
   function pkAddHTML() {
     const K = S.pk, rest = S.players.map((_, i) => i).filter((i) => !K.who.includes(i));
     const blocked = !!(current() || openOf(S.wz) || openOf(S.hj) || openOf(S.pj) || openOf(S.np) || openOf(S.lk) || openOf(S.dt));
@@ -1883,7 +2037,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       ${rest.length ? `<div class="chips">${rest.map((i) => `<button class="chip" data-act="pkAdd" data-v="${i}">+ ${P(i)}</button>`).join('')}</div>` : ''}
       ${S.players.length < 8 ? (blocked ? '<p class="hint">Een nieuwe naam toevoegen kan pas als er geen ander rondje meer bezig is.</p>'
         : `<form id="pkNewForm" class="dtyped" autocomplete="off"><input class="input" id="pkNew" maxlength="18" placeholder="Nieuwe naam"><button class="btn soft" type="submit">Toevoegen</button></form><p class="err" id="pkNewErr" style="min-height:0"></p>`) : ''}
-      <p class="hint">Een nieuwe speler start met één buy-in.</p></section>`;
+      <p class="hint">Een nieuwe speler start met één ${S.pk.mode === 'tour' ? `inkoop en ${nf(STACK)} fiches` : 'buy-in'}.</p></section>`;
   }
   function pkTotHTML() {
     const K = S.pk, tin = K.who.reduce((t, i) => t + K.buyin[i], 0), tout = K.who.reduce((t, i) => t + (K.buyout[i] || 0), 0), D = tout - tin;
@@ -2383,6 +2537,12 @@ if (typeof module !== 'undefined') module.exports = Logic;
       body = `<h2>Spelers</h2><p class="muted" style="margin:0;font-size:14px">Pas de namen aan. Gespeelde rondjes blijven bewaard.</p>
         <form id="playersForm" class="steps">${S.players.map((p, i) => `<div class="field"><label for="pl${i}">Speler ${i + 1}</label><input class="input" id="pl${i}" value="${esc(p)}" maxlength="18" required></div>`).join('')}
         <div class="row2"><button type="button" class="btn ghost" data-act="close">Annuleer</button><button class="btn primary" type="submit">Bewaar</button></div></form>`;
+    } else if (m === 'pkBust') {
+      const K = S.pk, i = ui.pkBustI, left = tAlive(K).length - 1;
+      body = `<h2>${P(i)} ligt eruit</h2><p class="muted" style="margin:0">Terug inkopen voor ${euro(K.unit)}? Dan krijgt ${P(i)} opnieuw ${nf(STACK)} fiches.</p>
+        <button class="btn primary block" data-act="tRebuy">Ja, terug inkopen · ${euro(K.unit)}</button>
+        <button class="btn danger block" data-act="tOut">Nee, ${left <= 1 ? `${P(tAlive(K).find((x) => x !== i))} wint` : `${P(i)} wordt ${plc(left)}`}</button>
+        <button class="btn ghost block" data-act="close">Annuleren</button>`;
     } else if (m === 'winner') {
       const r = S.rounds[S.rounds.length - 1];
       const w = r.winner, l = 1 - w;
@@ -2718,16 +2878,37 @@ if (typeof module !== 'undefined') module.exports = Logic;
       if (ui.flow && ui.flow.price !== 0) { showToast('<b>Poker heeft een eigen kassa</b> · kies "Zonder geld" en dan Poker', false); return; }
       ui.flow = null; actions.pkOpen();
     },
-    pkOpen() { hideToast(); ui.pkSel = null; ui.pkSure = false; ui.pkAdd = false; ui.view = 'poker'; render(); window.scrollTo(0, 0); },
+    pkOpen() { hideToast(); ui.pkSel = null; ui.pkMode = null; ui.pkPay = null; ui.pkLvl = null; ui.pkSure = false; ui.pkAdd = false; ui.view = 'poker'; render(); window.scrollTo(0, 0); },
     pkBack() { ui.view = null; ui.pkSure = false; render(); window.scrollTo(0, 0); },
     pkSel(b) { const i = +b.dataset.v; const sel = ui.pkSel || S.players.map((_, k) => k); ui.pkSel = sel.includes(i) ? sel.filter((x) => x !== i) : [...sel, i].sort((a, c) => a - c); render(); },
+    pkMode(b) { ui.pkPay = readPay(); ui.pkMode = b.dataset.v; render(); },
+    pkLvl(b) { ui.pkPay = readPay(); ui.pkLvl = +b.dataset.v; render(); },
     pkStart() {
       const sel = ui.pkSel || S.players.map((_, k) => k), u = cents(document.getElementById('pkUnit').value);
       if (!u) { document.getElementById('pkErr').textContent = 'Geef een bedrag in, bijvoorbeeld 10.'; return; }
       if (sel.length < 2) return;
+      if ((ui.pkMode || S.pk.mode || 'cash') === 'tour') {
+        const pay = readPay();
+        if (pay.reduce((a, c) => a + c, 0) !== 100) { document.getElementById('pkErr').textContent = 'De percentages moeten samen 100% zijn.'; return; }
+        const now = Date.now();
+        S.pk = { mode: 'tour', unit: u, on: true, step: 'play', who: sel, buyin: S.players.map((_, i) => (sel.includes(i) ? u : 0)), buyout: S.players.map(() => null), out: [], pay, lvlMin: ui.pkLvl || S.pk.lvlMin || 5, t: { start: now, pausedAt: null, off: 0 }, lastLvl: 0, start: now };
+        audioCtx(); save(); render(); window.scrollTo(0, 0); keepAwake(); return;
+      }
       S.pk = { unit: u, on: true, step: 'buyin', who: sel, buyin: S.players.map((_, i) => (sel.includes(i) ? u : 0)), buyout: S.players.map(() => null), start: Date.now() };
       save(); render(); window.scrollTo(0, 0); keepAwake();
     },
+    tPause() { const K = S.pk, now = Date.now(); if (K.t.pausedAt) { K.t.off += now - K.t.pausedAt; K.t.pausedAt = null; keepAwake(); } else K.t.pausedAt = now; audioCtx(); save(); render(); },
+    tLvl(b) { const K = S.pk, t = tState(K), lv = Math.max(0, Math.min(BL.length - 1, t.lv + +b.dataset.v)); tSetEl(K, lv * t.L); save(); render(); },
+    tBust(b) { ui.pkBustI = +b.dataset.v; ui.modal = 'pkBust'; render(); },
+    tRebuy() { const K = S.pk, i = ui.pkBustI; K.buyin[i] = (K.buyin[i] || 0) + K.unit; ui.modal = null; save(); render(); showToast(`<b>${P(i)}</b> koopt terug in · pot ${euro(tPot(K))}`, false); },
+    tOut() {
+      const K = S.pk, i = ui.pkBustI; ui.modal = null;
+      if (!K.out.includes(i)) K.out.push(i);
+      if (tAlive(K).length <= 1) { hideToast(); K.step = 'done'; if (!K.t.pausedAt) K.t.pausedAt = Date.now(); partyDue = true; save(); render(); window.scrollTo(0, 0); return; }
+      save(); render(); showToast(`<b>${P(i)}</b> wordt ${plc(tAlive(K).length)}`, false);
+    },
+    tBack(b) { const K = S.pk, i = +b.dataset.v; K.out = K.out.filter((x) => x !== i); save(); render(); showToast(`<b>${P(i)}</b> speelt terug mee`, false); },
+    tUndo() { const K = S.pk; K.out.pop(); K.step = 'play'; if (K.t.pausedAt) { K.t.off += Date.now() - K.t.pausedAt; K.t.pausedAt = null; } save(); render(); window.scrollTo(0, 0); },
     pkAddOpen() { ui.pkAdd = true; render(); },
     pkAddClose() { ui.pkAdd = false; render(); },
     pkAdd(b) { const K = S.pk, i = +b.dataset.v; if (K.who.includes(i)) return; K.who.push(i); K.buyin[i] = K.unit; K.buyout[i] = null; ui.pkAdd = false; save(); render(); showToast(`<b>${P(i)}</b> doet mee`, false); },
@@ -2973,6 +3154,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       updateHRound();
       return;
     }
+    if (/^pkP\d$/.test(e.target.id || '')) { const h = document.getElementById('pkPaySum'); if (h) h.innerHTML = payHint(readPay()); return; }
     const po = /^pko(\d)$/.exec(e.target.id || '');
     if (po) {
       const v = e.target.value.trim() === '' ? null : cents(e.target.value);
@@ -3050,7 +3232,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 <script>
 // Installeerbare app: offline werken en vanzelf de nieuwste versie laden.
 (() => {
-  const APP_VERSION = '20261125-124754';
+  const APP_VERSION = '20261125-144545';
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
