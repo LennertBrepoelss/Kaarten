@@ -2347,8 +2347,10 @@ if (typeof module !== 'undefined') module.exports = Logic;
       body = `<h2>Rondje stoppen?</h2><p class="muted" style="margin:0">De ${current().hands.length} gespeelde handen worden gewist en niemand betaalt dit rondje.</p>
         <div class="row2"><button class="btn ghost" data-act="close">Nee</button><button class="btn danger" data-act="cancelRound">Ja, stoppen</button></div>`;
     } else if (m === 'askReset') {
-      body = `<h2>Nieuwe avond starten?</h2><p class="muted" style="margin:0">De rondjes, spelletjes en bedragen van deze avond worden gewist, van alle spellen. Ze komen bij Vorige avonden. De spelersnamen en jullie afspraken over percentages en punten blijven.</p>
-        <div class="row2"><button class="btn ghost" data-act="close">Nee</button><button class="btn danger" data-act="reset">Ja, wissen</button></div>`;
+      body = `<h2>Nieuwe avond starten?</h2><p class="muted" style="margin:0">Deze avond bewaren in de geschiedenis?</p>
+        <button class="btn primary block" data-act="reset" data-v="1">Ja, bewaren</button>
+        <button class="btn danger block" data-act="reset" data-v="0">Nee, niet bewaren</button>
+        <button class="btn ghost block" data-act="close">Annuleren</button>`;
     } else if (m === 'backup') {
       body = `<h2>Back-up terugzetten</h2>
         <input class="input" type="file" id="bkFile" accept=".json,application/json,text/plain">
@@ -2797,7 +2799,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       }
     },
     askReset() { ui.modal = 'askReset'; renderModal(); },
-    reset() { const archive = [...(S.archive || []), ...finished().map((r) => ({ teams: r.teams, winner: r.winner, date: r.end || r.start }))]; const rec = nightRecord(); const history = [...(S.history || []), ...(rec ? [rec] : [])]; const wz = freshWz(S.wz), hj = freshHj(S.hj), pj = freshPj(S.pj), np = freshNp(S.np), lk = freshLk(S.lk), dt = freshDt(S.dt), pk = freshPk(S.pk); S = fresh(S.players); S.archive = archive; S.wz = wz; S.hj = hj; S.pj = pj; S.np = np; S.lk = lk; S.dt = dt; S.pk = pk; S.history = history; ui.hOpen = null; ui.hDel = null; ui.modal = null; ui.view = 'start'; ui.payer = null; ui.bill = ''; ui.hr = null; ui.wr = null; save(); render(); window.scrollTo(0, 0); },
+    reset(b) { const keep = !b || b.dataset.v !== '0'; const archive = [...(S.archive || []), ...(keep ? finished().map((r) => ({ teams: r.teams, winner: r.winner, date: r.end || r.start })) : [])]; const rec = keep ? nightRecord() : null; const history = [...(S.history || []), ...(rec ? [rec] : [])]; const wz = freshWz(S.wz), hj = freshHj(S.hj), pj = freshPj(S.pj), np = freshNp(S.np), lk = freshLk(S.lk), dt = freshDt(S.dt), pk = freshPk(S.pk); S = fresh(S.players); S.archive = archive; S.wz = wz; S.hj = hj; S.pj = pj; S.np = np; S.lk = lk; S.dt = dt; S.pk = pk; S.history = history; ui.hOpen = null; ui.hDel = null; ui.modal = null; ui.view = 'start'; ui.payer = null; ui.bill = ''; ui.hr = null; ui.wr = null; save(); render(); window.scrollTo(0, 0); },
   };
 
   document.addEventListener('click', (e) => {
