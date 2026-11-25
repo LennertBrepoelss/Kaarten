@@ -581,6 +581,7 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 .pkchips small { font-size: 12px; color: var(--dim); }
 .paygrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .paygrid label { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--dim); }
+.paygrid .pin > span { color: var(--dim); font-size: 18px; }
 .paygrid .pin { display: flex; align-items: baseline; gap: 4px; background: var(--surface); border: 1px solid var(--hair); border-radius: 14px; padding: 10px 12px; }
 .paygrid input { width: 100%; min-width: 0; border: 0; background: transparent; outline: none; color: var(--ivory); font: 600 26px/1 var(--f-serif); }
 .prize { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 12px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--hair); }
@@ -1216,7 +1217,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
   const tPot = (K) => K.who.reduce((t, i) => t + (K.buyin[i] || 0), 0);
   const tReb = (K, i) => Math.max(0, Math.round((K.buyin[i] || 0) / K.unit) - 1);
   function tPrizes(K) {
-    const pot = tPot(K), pr = K.pay.map((p) => Math.floor((pot * p) / 100));
+    // De gekozen bedragen gelden voor de pot bij de start; komt er geld bij (terug inkopen), dan groeit alles in dezelfde verhouding
+    const pot = tPot(K), tot = K.pay.reduce((a, b) => a + b, 0) || 1, pr = K.pay.map((p) => Math.floor((pot * p) / tot));
     pr[0] += pot - pr.reduce((a, b) => a + b, 0);
     return pr;
   }
@@ -1936,15 +1938,16 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const K = S.pk, head = (label) => `<header class="top"><button class="btn ghost sm" data-act="pkBack">← ${K.on && K.step !== 'setup' ? 'Overzicht' : 'Terug'}</button><span class="label">${label}</span></header>`;
     if (!K.on) {
       const sel = ui.pkSel || S.players.map((_, i) => i), tour = (ui.pkMode || K.mode || 'cash') === 'tour';
-      const pay = ui.pkPay || K.pay || [75, 25, 0], lvl = ui.pkLvl || K.lvlMin || 5;
+      const unitTxt = ui.pkUnitTxt !== undefined && ui.pkUnitTxt !== null ? ui.pkUnitTxt : fmt(K.unit), pot0 = sel.length * (cents(unitTxt) || 0);
+      const pay = ui.pkPayEdited && ui.pkPay ? ui.pkPay : defPay(pot0), lvl = ui.pkLvl || K.lvlMin || 5;
       return `<div class="wrap">${head('Poker')}
         <div class="seg money-seg"><button class="opt ${tour ? '' : 'on'}" type="button" data-act="pkMode" data-v="cash"><span class="big">Cash game</span></button><button class="opt ${tour ? 'on' : ''}" type="button" data-act="pkMode" data-v="tour"><span class="big">Toernooi</span></button></div>
         <section><h1>Wie <em>pokert</em> er mee?</h1></section>
         <div class="chips">${S.players.map((p, i) => `<button class="chip ${sel.includes(i) ? 'on' : ''}" data-act="pkSel" data-v="${i}">${esc(p)}</button>`).join('')}</div>
-        <div class="field"><label for="pkUnit">${tour ? 'Inkoop per speler (ook bij terug inkopen)' : 'Buy-in per keer'}</label><div class="money"><span>€</span><input id="pkUnit" inputmode="decimal" value="${fmt(K.unit)}"></div></div>
+        <div class="field"><label for="pkUnit">${tour ? 'Inkoop per speler (ook bij terug inkopen)' : 'Buy-in per keer'}</label><div class="money"><span>€</span><input id="pkUnit" inputmode="decimal" value="${esc(unitTxt)}"></div></div>
         ${tour ? `<div class="field"><label>Wie krijgt wat van de pot?</label>
-          <div class="paygrid">${['1ste', '2de', '3de'].map((n, k) => `<label for="pkP${k}">${n}<span class="pin"><input id="pkP${k}" inputmode="numeric" value="${pay[k]}"><span>%</span></span></label>`).join('')}</div>
-          <p class="hint" id="pkPaySum">${payHint(pay)}</p></div>
+          <div class="paygrid">${['1ste', '2de', '3de'].map((n, k) => `<label for="pkP${k}">${n}<span class="pin"><span>€</span><input id="pkP${k}" inputmode="decimal" value="${pay[k] ? fmt(pay[k]) : '0'}"></span></label>`).join('')}</div>
+          <p class="hint" id="pkPaySum">${payHint(pay, pot0)}</p></div>
         <div class="field"><label>Blinds omhoog na</label><div class="chips">${[5, 10, 15, 20].map((m) => `<button class="chip ${m === lvl ? 'on' : ''}" data-act="pkLvl" data-v="${m}">${m} min</button>`).join('')}</div></div>
         <p class="hint">Blinds: ${BL.map((b) => `${b[0]}/${b[1]}`).join(' → ')}</p>
         ${chipsHTML()}` : ''}
@@ -1990,8 +1993,11 @@ if (typeof module !== 'undefined') module.exports = Logic;
       <button class="btn ghost block" data-act="pkStep" data-v="buyout">Buy-out aanpassen</button>
     </div>`;
   }
-  const readPay = () => [0, 1, 2].map((k) => { const el = document.getElementById('pkP' + k); const v = el ? parseInt(el.value.replace(/\D/g, ''), 10) : (ui.pkPay || S.pk.pay || [75, 25, 0])[k]; return isNaN(v) ? 0 : Math.min(100, v); });
-  const payHint = (pay) => { const t = pay.reduce((a, b) => a + (+b || 0), 0); return t === 100 ? 'Samen 100%' : `<span class="neg">Samen ${t}%: dat moet 100% zijn</span>`; };
+  const readPay = () => [0, 1, 2].map((k) => { const el = document.getElementById('pkP' + k); return el ? cents(el.value) || 0 : 0; });
+  // Standaard: 75% voor de 1ste (afgerond op hele euro's), de rest voor de 2de
+  const defPay = (pot) => { const a = Math.round((pot * 0.75) / 100) * 100; return [a, pot - a, 0]; };
+  const setupPot = () => { const sel = ui.pkSel || S.players.map((_, k) => k), el = document.getElementById('pkUnit'); return sel.length * (cents(el ? el.value : '') || 0); };
+  const payHint = (pay, pot) => { const t = pay.reduce((a, b) => a + b, 0); return t === pot ? `In de pot: ${euro(pot)} · klopt` : `<span class="neg">${euro(t)} verdeeld, maar er zit ${euro(pot)} in de pot</span>`; };
   const plc = (k) => `${k + 1}${k === 0 ? 'ste' : 'de'}`;
   function renderTour(head) {
     const K = S.pk, pot = tPot(K), pr = tPrizes(K), alive = tAlive(K);
@@ -2023,8 +2029,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
       <div class="pkstats"><div><span class="label">Spelers</span><b>${alive.length}/${K.who.length}</b></div><div><span class="label">Gem. stack</span><b>${nf(chipsIn / Math.max(1, alive.length))}</b></div><div><span class="label">Pot</span><b>${euro(pot)}</b></div></div>
       <section class="panel" style="gap:0;padding-block:6px"><div class="panel-head" style="padding:8px 0 4px"><h2>Wie ligt eruit?</h2><span class="label">tik op een naam</span></div>${board}</section>
       <section class="panel"><div class="panel-head"><h2>Prijzen</h2><span class="label">${euro(K.unit)} inkoop</span></div>
-        <div>${K.pay.map((p, k) => (p ? `<div class="srow"><span class="who">${plc(k)} · ${p}%</span><span class="owe">${euro(pr[k])}</span></div>` : '')).join('')}</div>
-        <p class="hint">Wie terug inkoopt, betaalt opnieuw ${euro(K.unit)}. Dat komt in de pot, en het wordt van de eigen winst afgetrokken.</p></section>
+        <div>${K.pay.map((p, k) => (p ? `<div class="srow"><span class="who">${plc(k)}</span><span class="owe">${euro(pr[k])}</span></div>` : '')).join('')}</div>
+        <p class="hint">Wie terug inkoopt, betaalt opnieuw ${euro(K.unit)}. Dat komt in de pot en wordt in dezelfde verhouding over de prijzen verdeeld. Eigen inkopen gaan van de winst af.</p></section>
       ${chipsHTML()}
       ${ui.pkAdd ? pkAddHTML() : `<button class="btn ghost block" data-act="pkAddOpen" ${S.players.length >= 8 && K.who.length >= S.players.length ? 'disabled' : ''}>+ Speler erbij</button>`}
       <button class="btn ghost block" data-act="pkCancel">${ui.pkSure ? 'Tik nog eens: toernooi wissen' : 'Toernooi wissen'}</button>
@@ -2878,18 +2884,19 @@ if (typeof module !== 'undefined') module.exports = Logic;
       if (ui.flow && ui.flow.price !== 0) { showToast('<b>Poker heeft een eigen kassa</b> · kies "Zonder geld" en dan Poker', false); return; }
       ui.flow = null; actions.pkOpen();
     },
-    pkOpen() { hideToast(); ui.pkSel = null; ui.pkMode = null; ui.pkPay = null; ui.pkLvl = null; ui.pkSure = false; ui.pkAdd = false; ui.view = 'poker'; render(); window.scrollTo(0, 0); },
+    pkOpen() { hideToast(); ui.pkSel = null; ui.pkMode = null; ui.pkPay = null; ui.pkPayEdited = false; ui.pkUnitTxt = null; ui.pkLvl = null; ui.pkSure = false; ui.pkAdd = false; ui.view = 'poker'; render(); window.scrollTo(0, 0); },
     pkBack() { ui.view = null; ui.pkSure = false; render(); window.scrollTo(0, 0); },
     pkSel(b) { const i = +b.dataset.v; const sel = ui.pkSel || S.players.map((_, k) => k); ui.pkSel = sel.includes(i) ? sel.filter((x) => x !== i) : [...sel, i].sort((a, c) => a - c); render(); },
-    pkMode(b) { ui.pkPay = readPay(); ui.pkMode = b.dataset.v; render(); },
-    pkLvl(b) { ui.pkPay = readPay(); ui.pkLvl = +b.dataset.v; render(); },
+    pkMode(b) { ui.pkMode = b.dataset.v; render(); },
+    pkLvl(b) { ui.pkLvl = +b.dataset.v; render(); },
     pkStart() {
       const sel = ui.pkSel || S.players.map((_, k) => k), u = cents(document.getElementById('pkUnit').value);
       if (!u) { document.getElementById('pkErr').textContent = 'Geef een bedrag in, bijvoorbeeld 10.'; return; }
       if (sel.length < 2) return;
       if ((ui.pkMode || S.pk.mode || 'cash') === 'tour') {
         const pay = readPay();
-        if (pay.reduce((a, c) => a + c, 0) !== 100) { document.getElementById('pkErr').textContent = 'De percentages moeten samen 100% zijn.'; return; }
+        if (pay.reduce((a, c) => a + c, 0) !== sel.length * u) { document.getElementById('pkErr').textContent = `Verdeel precies ${euro(sel.length * u)} over de plaatsen.`; return; }
+        if (!pay[0]) { document.getElementById('pkErr').textContent = 'De winnaar moet iets krijgen.'; return; }
         const now = Date.now();
         S.pk = { mode: 'tour', unit: u, on: true, step: 'play', who: sel, buyin: S.players.map((_, i) => (sel.includes(i) ? u : 0)), buyout: S.players.map(() => null), out: [], pay, lvlMin: ui.pkLvl || S.pk.lvlMin || 5, t: { start: now, pausedAt: null, off: 0 }, lastLvl: 0, start: now };
         audioCtx(); save(); render(); window.scrollTo(0, 0); keepAwake(); return;
@@ -3154,7 +3161,14 @@ if (typeof module !== 'undefined') module.exports = Logic;
       updateHRound();
       return;
     }
-    if (/^pkP\d$/.test(e.target.id || '')) { const h = document.getElementById('pkPaySum'); if (h) h.innerHTML = payHint(readPay()); return; }
+    if (/^pkP\d$/.test(e.target.id || '')) { ui.pkPayEdited = true; ui.pkPay = readPay(); const h = document.getElementById('pkPaySum'); if (h) h.innerHTML = payHint(ui.pkPay, setupPot()); return; }
+    if (e.target.id === 'pkUnit') {
+      ui.pkUnitTxt = e.target.value;
+      const pot = setupPot(), pay = ui.pkPayEdited && ui.pkPay ? ui.pkPay : defPay(pot);
+      if (!ui.pkPayEdited) pay.forEach((v, k) => { const el = document.getElementById('pkP' + k); if (el) el.value = v ? fmt(v) : '0'; });
+      const h = document.getElementById('pkPaySum'); if (h) h.innerHTML = payHint(pay, pot);
+      return;
+    }
     const po = /^pko(\d)$/.exec(e.target.id || '');
     if (po) {
       const v = e.target.value.trim() === '' ? null : cents(e.target.value);
@@ -3232,7 +3246,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 <script>
 // Installeerbare app: offline werken en vanzelf de nieuwste versie laden.
 (() => {
-  const APP_VERSION = '20261125-144545';
+  const APP_VERSION = '20261125-145337';
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
