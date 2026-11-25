@@ -493,6 +493,44 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 .tile.cur { outline: 2px solid rgba(255,255,255,.75); outline-offset: 3px; }
 .g-troef { --tg: linear-gradient(150deg, #c39bff, #7b4fe0 70%, #5a35b8); --tglow: #7b4fe0; }
 .g-wiez { --tg: linear-gradient(150deg, #7fe6ff, #1fa8e0 70%, #1279b5); --tglow: #1fa8e0; }
+.g-lucky { --tg: linear-gradient(150deg, #ff9ac8, #c34cff 60%, #6a3cff); --tglow: #c34cff; }
+.grps { display: grid; gap: 10px; }
+.grp { display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: left; border: 1px solid var(--hair); background: var(--surface); border-radius: 16px; padding: 16px; }
+.grp-names { font: 600 19px/1.25 var(--f-serif); min-width: 0; }
+.grp-n { font: 600 11px/1 var(--f-ui); letter-spacing: .12em; text-transform: uppercase; color: var(--gold); white-space: nowrap; }
+/* Lucky 7 */
+.lk-card { gap: 12px; }
+.lk-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.lk-no { font: 600 13px/1 var(--f-ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.lk-badge { font: 700 13px/1 var(--f-ui); color: var(--ink); background: linear-gradient(115deg, #6ff5c6, #4fd8ff 55%, #a98bff); padding: 7px 12px; border-radius: 999px; }
+.lk-prog { height: 6px; border-radius: 3px; background: var(--hair); overflow: hidden; }
+.lk-prog i { display: block; height: 100%; background: linear-gradient(90deg, var(--t1), var(--gold), var(--t2)); border-radius: 3px; transition: width .4s var(--ease); }
+.lk-dl7 { text-align: center; font: 800 14px/1.2 var(--f-ui); letter-spacing: .12em; padding: 12px; border-radius: 12px; color: var(--ink); background: linear-gradient(115deg, #ffe08a, #ff9ac8 50%, #a98bff); box-shadow: 0 0 24px -6px #ff9ac8; }
+.lk-title { font: 600 22px/1.15 var(--f-serif); margin-top: 4px; }
+.ldot { width: 12px; height: 12px; border-radius: 50%; flex: 0 0 auto; background: var(--pc); box-shadow: 0 0 10px var(--pc); }
+.bid-entry { padding: 12px 2px; border-bottom: 1px solid var(--hair); }
+.bid-entry:last-of-type { border-bottom: none; }
+.bid-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.bid-head .nm { font: 600 19px/1 var(--f-serif); }
+.lk-tag { font: 700 9px/1 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--gold); border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent); padding: 4px 7px; border-radius: 999px; }
+.lk-tag.last { color: var(--t1); border-color: color-mix(in srgb, var(--t1) 45%, transparent); }
+.nums { display: grid; gap: 6px; }
+.num { height: 46px; min-width: 0; padding: 0; border-radius: 12px; border: 1px solid var(--hair-2); background: var(--surface-2); font: 700 20px/1 var(--f-ui); color: var(--ivory); touch-action: manipulation; }
+.num.sel { background: linear-gradient(115deg, #6ff5c6, #4fd8ff 55%, #a98bff); color: var(--ink); border-color: transparent; box-shadow: 0 6px 18px -8px #4fd8ff; }
+.num.forbidden { opacity: .25; text-decoration: line-through; }
+.rc-entry { display: grid; grid-template-columns: auto minmax(0, 1fr) auto 34px; gap: 10px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--hair); }
+.rc-entry .nm { font: 600 19px/1.1 var(--f-serif); }
+.rc-entry .meta { font-size: 12px; color: var(--dim); margin-top: 2px; }
+.rc-btns { display: flex; gap: 6px; }
+.rc { min-width: 66px; height: 42px; border-radius: 10px; border: 1px solid var(--hair-2); background: var(--surface-2); font: 800 12px/1 var(--f-ui); letter-spacing: .08em; color: var(--dim); }
+.rc.juist.on { background: color-mix(in srgb, var(--p2) 22%, transparent); border-color: var(--p2); color: var(--p2); }
+.rc.fout.on { background: color-mix(in srgb, var(--danger) 20%, transparent); border-color: var(--danger); color: var(--danger); }
+.rc-pts { font: 600 22px/1 var(--f-serif); text-align: right; font-variant-numeric: lining-nums tabular-nums; }
+.score-row { display: grid; grid-template-columns: 22px auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--hair); }
+.score-row:last-child { border-bottom: 0; }
+.score-row .rk { font: italic 600 18px/1 var(--f-serif); color: var(--gold); }
+.score-row .nm { font: 600 18px/1.1 var(--f-serif); }
+.score-row .pt { font: 600 22px/1 var(--f-serif); font-variant-numeric: lining-nums tabular-nums; }
 .g-nappen { --tg: linear-gradient(150deg, #c9f78a, #6fcf3b 70%, #3f9a1c); --tglow: #6fcf3b; }
 .nrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--hair); }
 .nrow:last-child { border-bottom: 0; }
@@ -869,6 +907,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
     delete s.hj.hands;
     if (!s.pj) s.pj = freshPj();
     if (!s.np) s.np = freshNp();
+    if (!s.lk) s.lk = freshLk();
+    if (!Array.isArray(s.lk.rondjes)) s.lk.rondjes = [];
     if (!Array.isArray(s.np.rondjes)) s.np.rondjes = [];
     if (!Array.isArray(s.pj.rondjes)) s.pj.rondjes = [];
     if (!Array.isArray(s.history)) s.history = historyFromArchive(s);
@@ -909,22 +949,39 @@ if (typeof module !== 'undefined') module.exports = Logic;
   function freshNp(prev) { return { pct: prev && prev.pct ? prev.pct : null, rondjes: [] }; }
   const nTot = (r) => (r ? r.log : []).reduce((t, x) => { t[x.i] += x.v; return t; }, Array(S.players.length).fill(r ? r.base : NP_START));
 
+  // ---------- (Double) Lucky 7 ----------
+  // 14 rondes: 1 tot 7 slagen en terug. Iedereen gokt zijn aantal slagen; de laatste mag niet gokken zodat de som
+  // gelijk is aan het aantal slagen. Juist = 10 + 2 × gok, fout = 0. Ronde 7 (Double Lucky 7) telt dubbel. Meeste punten = 1ste.
+  const LK_TRICKS = [1, 2, 3, 4, 5, 6, 7, 7, 6, 5, 4, 3, 2, 1];
+  const LK_DL7 = 6;
+  function freshLk(prev) { return { pct: prev && prev.pct ? prev.pct : null, rondjes: [] }; }
+  const lOrder = (c, ri) => { const n = c.bids[0].length, d = (c.dealer0 + ri) % n; return [...Array(n).keys()].map((k) => (d + k) % n); };
+  const lPts = (c, ri, i) => { const b = c.bids[ri][i], ok = c.correct[ri][i]; if (b == null || ok == null) return null; const p = ok ? 10 + 2 * b : 0; return ri === LK_DL7 ? p * 2 : p; };
+  const lTot = (r) => (r ? r.bids[0].map((_, i) => r.done.reduce((t, d, ri) => t + (d ? lPts(r, ri, i) || 0 : 0), 0)) : S.players.map(() => 0));
+  const lForbidden = (c, ri) => {
+    const order = lOrder(c, ri), last = order[order.length - 1], tr = LK_TRICKS[ri];
+    const others = order.slice(0, -1).reduce((t, i) => t + (c.bids[ri][i] || 0), 0);
+    const f = tr - others;
+    return f >= 0 && f <= tr ? { who: last, v: f } : null;
+  };
+
   // Spellen die afrekenen met percentages per plaats
   const PG = {
     wiezen: { title: 'Wiezen', st: () => S.wz, tot: wTot },
     harten: { title: 'Hartenjagen', st: () => S.hj, tot: hTot },
     pietjes: { title: 'Pietjesbak', st: () => S.pj, tot: pTot, rank: (r) => pTot(r).map((v) => -v) },
     nappen: { title: 'Nappen', st: () => S.np, tot: nTot, rank: (r) => nTot(r).map((v) => -v) },
+    lucky: { title: 'Lucky 7', st: () => S.lk, tot: lTot },
   };
-  const PG_KEYS = ['wiezen', 'harten', 'pietjes', 'nappen'];
+  const PG_KEYS = ['wiezen', 'harten', 'pietjes', 'nappen', 'lucky'];
   const rankOf = (g, r) => (PG[g].rank ? PG[g].rank(r) : PG[g].tot(r));
-  const openAny = () => current() || openOf(S.wz) || openOf(S.hj) || openOf(S.pj) || openOf(S.np);
+  const openAny = () => current() || openOf(S.wz) || openOf(S.hj) || openOf(S.pj) || openOf(S.np) || openOf(S.lk);
   const pg = () => PG[S.game] || PG.wiezen;
   const lastOf = (st) => st.rondjes[st.rondjes.length - 1] || null;
   const openOf = (st) => { const r = lastOf(st); return r && !r.end ? r : null; };
   const gCur = () => openOf(pg().st());
   const priceTxt = (c) => (c ? euro(c) : 'zonder geld');
-  const ptsLabel = (g, v) => (g === 'harten' ? `${v < 0 ? '−' + Math.abs(v) : v} over` : g === 'pietjes' ? `${v} streepje${v === 1 ? '' : 's'}` : g === 'nappen' ? `${v} ptn` : `${sign(v)} ptn`);
+  const ptsLabel = (g, v) => (g === 'harten' ? `${v < 0 ? '−' + Math.abs(v) : v} over` : g === 'pietjes' ? `${v} streepje${v === 1 ? '' : 's'}` : g === 'nappen' || g === 'lucky' ? `${v} ptn` : `${sign(v)} ptn`);
   // Wat elke speler betaalt voor de uitgespeelde rondjes van één spel (in cent)
   function gameOwed(g) {
     const owed = Array(S.players.length).fill(0); let total = 0, n = 0;
@@ -975,7 +1032,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     return out;
   }
 
-  function fresh(players) { return { v: 1, players: players || [...DEFAULT_PLAYERS], rounds: [], lastPrice: null, updatedAt: 0, game: null, ready: false, wz: freshWz(), hj: freshHj(), pj: freshPj(), np: freshNp() }; }
+  function fresh(players) { return { v: 1, players: players || [...DEFAULT_PLAYERS], rounds: [], lastPrice: null, updatedAt: 0, game: null, ready: false, wz: freshWz(), hj: freshHj(), pj: freshPj(), np: freshNp(), lk: freshLk() }; }
   function loadLocal() {
     try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 1 && Array.isArray(s.rounds)) return normalize(s); } catch (e) {}
     return null;
@@ -1037,7 +1094,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 
   // Een avond: spelers → (per rondje) prijs → spel → percentages (niet bij troeven) → spelen.
   function view() {
-    if (ui.view === 'start' || ui.view === 'end' || (ui.view === 'draw' && ui.draw)) return ui.view;
+    if (ui.view === 'start' || ui.view === 'end' || (ui.view === 'draw' && ui.draw) || (ui.view === 'hist' && ui.hist)) return ui.view;
     if (ui.flow && ['nprice', 'npick', 'npct'].includes(ui.view)) return ui.view;
     if (!S.ready) return 'start';
     const r = current();
@@ -1047,6 +1104,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (openOf(S.pj)) return ui.view === 'pround' && ui.pr ? 'pround' : 'pgame';
     if (ui.result === 'pietjes' && lastOf(S.pj)) return 'pgame';
     if (openOf(S.np) || (ui.result === 'nappen' && lastOf(S.np))) return 'ngame';
+    if (openOf(S.lk) || (ui.result === 'lucky' && lastOf(S.lk))) return 'lgame';
     if (ui.result === 'wiezen' && lastOf(S.wz)) return 'wgame';
     if (ui.result === 'harten' && lastOf(S.hj)) return 'hgame';
     return 'hub';
@@ -1086,11 +1144,11 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const done = finished();
     if (done.length) {
       const st = Logic.stats(done, 4);
-      rec.t = { n: done.length, won: st.per.map((p) => p.won), lost: st.per.map((p) => p.played - p.won) };
+      rec.t = { n: done.length, r: done.length, won: st.per.map((p) => p.won), lost: st.per.map((p) => p.played - p.won), paid: Logic.shares(S).owed.map((c) => Math.round(c)) };
       starts.push(done[0].start || done[0].id);
     }
     // Wiezen en hartenjagen: per uitgespeeld rondje telt de 1ste als gewonnen, wie het meest betaalt als verloren.
-    [['w', 'wiezen'], ['h', 'harten'], ['p', 'pietjes'], ['n', 'nappen']].forEach(([key, g]) => {
+    [['w', 'wiezen'], ['h', 'harten'], ['p', 'pietjes'], ['n', 'nappen'], ['l', 'lucky']].forEach(([key, g]) => {
       const rs = PG[g].st().rondjes.filter((r) => r.end && r.price != null);
       if (!rs.length) return;
       const won = S.players.map(() => 0), lost = S.players.map(() => 0);
@@ -1099,20 +1157,20 @@ if (typeof module !== 'undefined') module.exports = Logic;
         const mx = Math.max(...out);
         out.forEach((o, i) => { if (place[i] === 0) won[i]++; if (o === mx && mx > 0) lost[i]++; });
       });
-      rec[key] = { n: rs.length, r: rs.length, won, lost };
+      rec[key] = { n: rs.length, r: rs.length, won, lost, paid: gameOwed(g).owed.map((c) => Math.round(c)) };
       starts.push(rs[0].start);
     });
-    if (!rec.t && !rec.w && !rec.h && !rec.p && !rec.n) return null;
+    if (!rec.t && !rec.w && !rec.h && !rec.p && !rec.n && !rec.l) return null;
     rec.paid = settleAll(0, Logic.parsePrice(ui.bill)).per.map((c) => Math.round(c));
     if (starts.filter(Boolean).length) rec.date = Math.min(...starts.filter(Boolean));
     return rec;
   }
   function nightPaid(h) {
     if (h.paid) return h.paid;
-    const parts = [h.t && h.t.paid, h.w && h.w.paid, h.h && h.h.paid].filter(Boolean);
+    const parts = HKEYS.map((k) => h[k] && h[k].paid).filter(Boolean);
     return parts.length ? h.players.map((_, i) => parts.reduce((s, p) => s + p[i], 0)) : null;
   }
-  const HKEYS = ['t', 'w', 'h', 'p', 'n'];
+  const HKEYS = ['t', 'w', 'h', 'p', 'n', 'l'];
   const nightLost = (h) => h.players.map((_, i) => HKEYS.reduce((a, k) => a + (h[k] ? h[k].lost[i] || 0 : 0), 0));
   const nightWon = (h) => h.players.map((_, i) => HKEYS.reduce((a, k) => a + (h[k] ? h[k].won[i] || 0 : 0), 0));
   // Grote verliezer: wie het meest betaalde; zonder bedragen wie het meest verloor.
@@ -1180,6 +1238,67 @@ if (typeof module !== 'undefined') module.exports = Logic;
       <div>${items}</div></section>`;
   }
 
+  // ---------- Geschiedenis: spel → spelers → overzicht ----------
+  const HK = { troeven: 't', wiezen: 'w', harten: 'h', pietjes: 'p', nappen: 'n', lucky: 'l' };
+  const groupKey = (players) => players.map((p) => p.toLowerCase()).sort().join('|');
+  // Wat iedereen voor dit spel betaalde die avond (oudere avonden: enkel als het het enige spel was)
+  function gamePaidOf(h, k) {
+    const x = h[k];
+    if (x.paid) return x.paid;
+    return HKEYS.filter((q) => h[q]).length === 1 && h.paid ? h.paid : null;
+  }
+  function renderHist() {
+    const H = ui.hist, all = (S.history || []).map((h, idx) => ({ h, idx }));
+    const head = (label) => `<header class="top"><button class="btn ghost sm" data-act="histBack">← Terug</button><span class="label">${label}</span></header>`;
+    if (!H.game) {
+      const tiles = GAMES.map((g) => { const n = all.filter(({ h }) => h[HK[g.k]]).length; return `<button class="tile ${g.cls} ${n ? '' : 'off'}" data-act="histGame" data-v="${g.k}" ${n ? '' : 'disabled'}><span class="tart">${GAME_ART[g.k]}</span><span class="tstat">${n ? `${n} avond${n > 1 ? 'en' : ''}` : 'nog niets'}</span><span class="tname">${g.name}</span></button>`; }).join('');
+      return `<div class="wrap">${head('Geschiedenis')}<section><h1>Welk <em>spel</em>?</h1></section><div class="tiles">${tiles}</div></div>`;
+    }
+    const k = HK[H.game], gname = GAMES.find((g) => g.k === H.game).name;
+    const recs = all.filter(({ h }) => h[k]);
+    const groups = {};
+    recs.forEach(({ h }) => { const key = groupKey(h.players); (groups[key] = groups[key] || { players: h.players, n: 0, last: 0 }).n++; groups[key].last = Math.max(groups[key].last, h.date); groups[key].players = h.players; });
+    if (!H.group) {
+      const list = Object.entries(groups).sort((a, b) => b[1].last - a[1].last).map(([key, g]) => `<button class="grp" data-act="histGroup" data-v="${esc(key)}"><span class="grp-names">${g.players.map(esc).join(' · ')}</span><span class="grp-n">${g.n} avond${g.n > 1 ? 'en' : ''} ›</span></button>`).join('');
+      return `<div class="wrap">${head(gname)}<section><h1>Met <em>wie</em>?</h1></section><div class="grps">${list}</div></div>`;
+    }
+    const nights = recs.filter(({ h }) => groupKey(h.players) === H.group);
+    const players = groups[H.group] ? groups[H.group].players : [];
+    // Klassement voor dit spel en deze spelers
+    const agg = {};
+    nights.forEach(({ h }) => {
+      const x = h[k], paid = gamePaidOf(h, k);
+      const mx = paid ? Math.max(...paid) : Math.max(...x.lost);
+      h.players.forEach((nm, i) => {
+        const a = agg[nm] = agg[nm] || { nights: 0, won: 0, lost: 0, paid: 0, paidN: 0, loser: 0 };
+        a.nights++; a.won += x.won[i] || 0; a.lost += x.lost[i] || 0;
+        if (paid) { a.paid += paid[i]; a.paidN++; }
+        if (mx > 0 && (paid ? paid[i] : x.lost[i]) === mx) a.loser++;
+      });
+    });
+    const avg = (a) => (a.paidN ? a.paid / a.paidN : Infinity);
+    const names = Object.keys(agg).sort((a, b) => avg(agg[a]) - avg(agg[b]) || agg[b].won - agg[a].won || agg[a].loser - agg[b].loser);
+    const krows = names.map((nm, i) => { const a = agg[nm]; return `<div class="krow"><span class="kn">${i + 1}</span>
+      <span class="kname">${esc(nm)}<small>${a.won}–${a.lost} rondjes${a.loser ? ` · <b class="neg">${a.loser}× verliezer</b>` : ''}</small></span>
+      <span class="kpaid">${a.paidN ? euro(a.paid) : '–'}<small>${a.paidN ? `gem. ${euro(a.paid / a.paidN)}` : ''}</small></span></div>`; }).join('');
+    const items = nights.slice().reverse().map(({ h, idx }) => {
+      const x = h[k], paid = gamePaidOf(h, k), open = ui.hOpen === idx;
+      const mx = paid ? Math.max(...paid) : Math.max(...x.lost);
+      const losers = mx > 0 ? h.players.filter((_, i) => (paid ? paid[i] : x.lost[i]) === mx) : [];
+      const total = paid ? paid.reduce((a, b) => a + b, 0) : null;
+      const body = open ? `<div class="hbody"><div class="h2h-wrap"><table class="h2h htab"><thead><tr><th></th><th scope="col">Won–verl.</th><th scope="col">Betaald</th></tr></thead><tbody>${h.players.map((nm, i) => `<tr><th class="rowh" scope="row" style="color:var(--p${i})">${esc(nm)}</th><td><span class="w">${x.won[i]}</span><span class="l">–${x.lost[i]}</span></td><td>${paid ? euro(paid[i]) : '–'}</td></tr>`).join('')}</tbody></table></div>
+        <button class="link" data-act="hDel" data-v="${idx}" style="align-self:flex-start;color:${ui.hDel === idx ? 'var(--danger)' : ''}">${ui.hDel === idx ? 'Tik nog eens om deze avond te verwijderen' : 'Avond verwijderen'}</button></div>` : '';
+      return `<div class="hitem ${open ? 'open' : ''}"><button class="hhead" data-act="hOpen" data-v="${idx}" aria-expanded="${open}">
+        <span class="hmain"><span class="hdate">${esc(hDate(h.date))}</span><span class="hsub">${x.r || x.n} rondje${(x.r || x.n) > 1 ? 's' : ''}${total ? ` · ${euro(total)}` : ''}</span>
+        ${losers.length ? `<span class="hlos">Grote verliezer: <b>${losers.map(esc).join(' &amp; ')}</b></span>` : ''}</span><span class="chev">›</span></button>${body}</div>`;
+    }).join('');
+    return `<div class="wrap">${head(gname)}
+      <section><h1>${esc(gname)}</h1><p class="lead">${players.map(esc).join(' · ')}</p></section>
+      <section class="panel"><h2>Klassement</h2><div>${krows}</div></section>
+      <section class="panel"><div class="panel-head"><h2>Avonden</h2><span class="label">${nights.length}</span></div><div>${items}</div></section>
+    </div>`;
+  }
+
   // ---------- Start van de avond ----------
   const nightBusy = () => !!(openAny() || owedAll().n);
   function renderStart() {
@@ -1193,6 +1312,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
         ${locked ? '<p class="hint">Het aantal spelers ligt vast tot een nieuwe avond.</p>' : `<div class="np"><button type="button" class="btn ghost sm" data-act="npSet" data-v="-1" ${n <= 2 ? 'disabled' : ''}>− speler</button><span class="label">${n} spelers</span><button type="button" class="btn ghost sm" data-act="npSet" data-v="1" ${n >= 8 ? 'disabled' : ''}>+ speler</button></div>`}
         <p class="err" id="startErr" style="min-height:0"></p>
         <button class="btn primary xl" type="submit">Verder <span class="arr">→</span></button>
+        <button class="btn ghost block" type="button" data-act="histOpen">Geschiedenis</button>
       </form></div>`;
   }
 
@@ -1217,9 +1337,9 @@ if (typeof module !== 'undefined') module.exports = Logic;
       <header class="top"><div class="brand">Kaartavond</div><div style="display:flex;gap:12px;align-items:center">${syncChip()}<button class="btn ghost sm" data-act="toStart">Spelers</button></div></header>
       <section><p class="label">${esc(today())}</p><h1>${A.n ? `Rondje <em>${A.n + 1}</em>` : 'Een nieuwe <em>avond</em>'}</h1></section>
       <button class="btn primary xl" data-act="newRondje">Nieuw rondje <span class="arr">→</span></button>
+      <button class="btn ghost block" data-act="histOpen">Geschiedenis</button>
       ${avondPanel()}
       ${items.length ? `<section class="panel"><h2>Rondjes</h2><div>${list}</div></section>` : ''}
-      ${renderHistory()}
       <section class="panel"><h2>Back-up</h2>
         <div class="row2"><button class="btn soft" data-act="backupOut">Bewaren</button><button class="btn soft" data-act="backupIn">Terugzetten</button></div>
         <p class="muted" id="bkMsg" style="margin:0;font-size:13px"></p></section>
@@ -1248,6 +1368,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     troeven: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M48 14v70" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity=".55"/>${[0, 1, 2, 3, 4, 5].map((k) => `<rect x="${24 + (k % 2) * 4}" y="${70 - k * 10}" width="${44 - (k % 2) * 8 - k * 2}" height="4.5" rx="2.2" fill="currentColor" opacity="${k > 3 ? .35 : 1}"/>`).join('')}<g transform="translate(58 8) rotate(12)"><rect width="26" height="36" rx="4" fill="#fff"/><text x="13" y="24" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-weight="700" font-size="18" fill="#2b1d55">B</text></g></svg>`,
     wiezen: `<svg viewBox="0 0 96 96" aria-hidden="true">${[-20, 0, 20].map((a, k) => `<g transform="rotate(${a} 48 84)"><rect x="32" y="22" width="32" height="46" rx="5" fill="#fff" opacity="${.55 + k * .22}"/></g>`).join('')}<g transform="rotate(20 48 84)"><path d="M54 32c-5 6-11 9-11 15a5 5 0 0 0 9 3l-2 6h8l-2-6a5 5 0 0 0 9-3c0-6-6-9-11-15z" fill="#07324a"/></g></svg>`,
     pietjes: `<svg viewBox="0 0 96 96" aria-hidden="true">${[[14, 40, -14], [40, 18, 8], [50, 50, 18]].map(([x, y, a], k) => `<g transform="rotate(${a} ${x + 16} ${y + 16})"><rect x="${x}" y="${y}" width="32" height="32" rx="7" fill="#fff" opacity="${.75 + k * .12}"/>${[[[16, 16]], [[9, 9], [23, 23]], [[9, 9], [16, 16], [23, 23]]][k].map(([cx, cy]) => `<circle cx="${x + cx}" cy="${y + cy}" r="3.4" fill="#5a3300"/>`).join('')}</g>`).join('')}</svg>`,
+    lucky: `<svg viewBox="0 0 96 96" aria-hidden="true"><text x="40" y="76" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-weight="700" font-size="74" fill="#fff">7</text>${[[72, 22, 9], [80, 48, 6], [62, 8, 5]].map(([cx, cy, r]) => `<path d="M${cx} ${cy - r}l${r * .3} ${r * .7} ${r * .7} ${r * .3}-${r * .7} ${r * .3}-${r * .3} ${r * .7}-${r * .3}-${r * .7}-${r * .7}-${r * .3} ${r * .7}-${r * .3}z" fill="#fff" opacity=".9"/>`).join('')}</svg>`,
     nappen: `<svg viewBox="0 0 96 96" aria-hidden="true"><circle cx="40" cy="50" r="27" fill="#fff"/><text x="40" y="60" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="28" fill="#1f4d10">20</text><circle cx="74" cy="26" r="13" fill="#fff" opacity=".9"/><path d="M74 19v14M67 26h14" stroke="#1f4d10" stroke-width="3.5" stroke-linecap="round"/><circle cx="76" cy="66" r="11" fill="#fff" opacity=".7"/><path d="M70 66h12" stroke="#1f4d10" stroke-width="3.5" stroke-linecap="round"/></svg>`,
     harten: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M48 80 20 52a16 16 0 0 1 28-20 16 16 0 0 1 28 20z" fill="#fff"/><path d="M14 28 70 62" stroke="#5a0f33" stroke-width="3.5" stroke-linecap="round"/><path d="M70 62l-9-1 5-7z" fill="#5a0f33"/><path d="M14 28l6 1-3 5z" fill="#5a0f33"/></svg>`,
   };
@@ -1257,6 +1378,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     { k: 'harten', name: 'Hartenjagen', cls: 'g-hart', min: 4, max: 4 },
     { k: 'pietjes', name: 'Pietjesbak', cls: 'g-pietjes', min: 2, max: 8 },
     { k: 'nappen', name: 'Nappen', cls: 'g-nappen', min: 2, max: 8 },
+    { k: 'lucky', name: 'Lucky 7', cls: 'g-lucky', min: 2, max: 7 },
   ];
   function renderPick() {
     const n = S.players.length;
@@ -1449,6 +1571,50 @@ if (typeof module !== 'undefined') module.exports = Logic;
       ${stand}
       ${bs.length ? `<section class="panel"><div class="panel-head"><h2>Gespeeld</h2><button class="btn soft sm" data-act="pUndo">Laatste ongedaan</button></div><div>${hist}</div></section>` : ''}
       ${c ? avondPanel() : ''}
+    </div>${dock()}`;
+  }
+
+  // ---------- Lucky 7: gokken en juist/fout per ronde ----------
+  function renderLGame() {
+    const L = S.lk, c = openOf(L), last = lastOf(L), nr = owedAll().n + (c ? 1 : 0);
+    if (!c) {
+      return `<div class="wrap">
+        ${gameHeader('Lucky 7')}
+        <section><p class="label">Lucky 7 · ${priceTxt(last.price)}</p><h1>Rondje <em>gedaan</em></h1></section>
+        ${doneButtons()}
+        <section class="panel"><div class="panel-head"><h2>${last.price ? 'Wie betaalt' : 'Uitslag'}</h2><button class="link" data-act="lReopen">← Laatste ronde</button></div><div>${rondjeRows('lucky', last)}</div></section>
+      </div>${dock()}`;
+    }
+    const ri = c.ri, tr = LK_TRICKS[ri], order = lOrder(c, ri), n = order.length, tot = lTot(c);
+    const bar = `<div class="lk-bar"><span class="lk-no">Ronde ${ri + 1} / ${LK_TRICKS.length}</span><span class="lk-badge">${tr} ${tr === 1 ? 'slag' : 'slagen'}</span></div>
+      <div class="lk-prog"><i style="width:${(ri + (c.phase === 'result' ? .5 : 0)) / LK_TRICKS.length * 100}%"></i></div>
+      ${ri === LK_DL7 ? '<div class="lk-dl7">★ DOUBLE LUCKY 7 — dubbele punten! ★</div>' : ''}`;
+    let body;
+    if (c.phase === 'bid') {
+      const fb = lForbidden(c, ri), bids = c.bids[ri];
+      const all = bids.every((v) => v !== null), sum = bids.reduce((t, v) => t + (v || 0), 0), ok = all && sum !== tr;
+      body = `<div class="lk-title">Wat gokt iedereen?</div>
+        ${order.map((i, k) => `<div class="bid-entry"><div class="bid-head"><span class="ldot" style="--pc:var(--p${i})"></span><span class="nm">${P(i)}</span>${k === 0 ? '<span class="lk-tag">deelt</span>' : ''}${k === n - 1 ? '<span class="lk-tag last">laatste</span>' : ''}</div>
+          <div class="nums" style="grid-template-columns:repeat(${tr + 1}, minmax(0, 1fr))">${[...Array(tr + 1).keys()].map((v) => { const forb = k === n - 1 && fb && fb.v === v; return `<button class="num ${bids[i] === v ? 'sel' : ''} ${forb ? 'forbidden' : ''}" data-act="lBid" data-i="${i}" data-v="${v}" ${forb ? 'disabled' : ''}>${v}</button>`; }).join('')}</div></div>`).join('')}
+        <button class="btn primary xl" data-act="lToResult" ${ok ? '' : 'disabled'}>${ok ? 'Ronde spelen <span class="arr">→</span>' : all ? `${P(order[n - 1])} moet een andere gok kiezen` : 'Kies bij iedereen een gok'}</button>
+        ${ri > 0 ? '<button class="btn ghost block btn-sm" data-act="lPrev">← Vorige ronde</button>' : ''}`;
+    } else {
+      const cr = c.correct[ri], all = cr.every((v) => v !== null);
+      body = `<div class="lk-title">Wie had het juist?</div><p class="hint">Juist = 10 + 2 × gok${ri === LK_DL7 ? ' (dubbel!)' : ''}, fout = 0 punten.</p>
+        ${order.map((i) => { const p = lPts(c, ri, i); return `<div class="rc-entry"><span class="ldot" style="--pc:var(--p${i})"></span>
+          <div class="who"><div class="nm">${P(i)}</div><div class="meta">gokte ${c.bids[ri][i]}</div></div>
+          <div class="rc-btns"><button class="rc juist ${cr[i] === true ? 'on' : ''}" data-act="lC" data-i="${i}" data-v="1">JUIST</button><button class="rc fout ${cr[i] === false ? 'on' : ''}" data-act="lC" data-i="${i}" data-v="0">FOUT</button></div>
+          <span class="rc-pts">${p === null ? '–' : p}</span></div>`; }).join('')}
+        <button class="btn primary xl" data-act="lClose" ${all ? '' : 'disabled'}>${all ? (ri === LK_TRICKS.length - 1 ? 'Spel afsluiten <span class="arr">→</span>' : 'Ronde afsluiten <span class="arr">→</span>') : 'Kies bij iedereen juist of fout'}</button>
+        <button class="btn ghost block btn-sm" data-act="lBackBid">← Terug naar gokken</button>`;
+    }
+    const ranked = tot.map((v, i) => ({ v, i })).sort((a, b) => b.v - a.v);
+    const mini = `<section class="panel"><h2>Tussenstand</h2><div>${ranked.map((o, k) => `<div class="score-row"><span class="rk">${k + 1}</span><span class="ldot" style="--pc:var(--p${o.i})"></span><span class="nm">${P(o.i)}</span><span class="pt">${o.v}</span></div>`).join('')}</div></section>`;
+    return `<div class="wrap">
+      ${gameHeader('Lucky 7')}
+      <p class="label">Rondje ${nr} · ${priceTxt(c.price)}</p>
+      <section class="panel lk-card">${bar}${body}</section>
+      ${mini}
     </div>${dock()}`;
   }
 
@@ -1886,8 +2052,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
 
   function render() {
     const v = view();
-    ui.view = ['draw', 'end', 'wround', 'hround', 'pround', 'start', 'nprice', 'npick', 'npct'].includes(v) ? v : null;
-    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound, ngame: renderNGame };
+    ui.view = ['draw', 'end', 'wround', 'hround', 'pround', 'start', 'nprice', 'npick', 'npct', 'hist'].includes(v) ? v : null;
+    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound, ngame: renderNGame, lgame: renderLGame, hist: renderHist };
     $app.innerHTML = screens[v]();
     renderModal();
     updateCalc();
@@ -2041,7 +2207,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     playing(b) { ui.pick.playing = +b.dataset.v; render(); const s = document.getElementById('step3'); if (s) s.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); },
     result(b) { hideToast(); addHand(b.dataset.v); },
     statScope(b) { ui.statScope = b.dataset.v; render(); },
-    toastUndo() { hideToast(); if (S.game === 'wiezen') actions.wUndo(); else if (S.game === 'harten') actions.hUndo(); else if (S.game === 'pietjes') actions.pUndo(); else if (S.game === 'nappen') actions.nUndo(); else actions.undo(); },
+    toastUndo() { hideToast(); if (S.game === 'wiezen') actions.wUndo(); else if (S.game === 'harten') actions.hUndo(); else if (S.game === 'pietjes') actions.pUndo(); else if (S.game === 'nappen') actions.nUndo(); else if (S.game === 'lucky') {} else actions.undo(); },
     // Hartenjagen
     hNew() { ui.hr = { p: [0, 0, 0, 0], q: null, moon: null }; ui.view = 'hround'; render(); window.scrollTo(0, 0); keepAwake(); },
     hCancel() { ui.hr = null; ui.view = null; render(); window.scrollTo(0, 0); },
@@ -2085,6 +2251,29 @@ if (typeof module !== 'undefined') module.exports = Logic;
       ui.pr = null; ui.view = null; save(); render(); window.scrollTo({ top: 0, behavior: 'smooth' });
       showToast(done ? `<b>Rondje gedaan</b> · ${P(pTot(c).findIndex((v) => v <= 0))} is alles kwijt` : `<b>Beurt ${c.beurten.length}</b> bewaard`);
     },
+    // Lucky 7
+    lBid(b) { const c = openOf(S.lk); if (!c) return; c.bids[c.ri][+b.dataset.i] = +b.dataset.v; S.game = 'lucky'; save(); render(); },
+    lToResult() { const c = openOf(S.lk); if (!c) return; c.phase = 'result'; save(); render(); window.scrollTo({ top: 0, behavior: 'smooth' }); },
+    lBackBid() { const c = openOf(S.lk); if (!c) return; c.phase = 'bid'; save(); render(); },
+    lPrev() { const c = openOf(S.lk); if (!c || !c.ri) return; c.ri--; c.phase = 'result'; c.done[c.ri] = false; save(); render(); },
+    lC(b) { const c = openOf(S.lk); if (!c) return; c.correct[c.ri][+b.dataset.i] = b.dataset.v === '1'; save(); render(); },
+    lClose() {
+      const c = openOf(S.lk); if (!c || c.correct[c.ri].some((v) => v === null)) return;
+      c.done[c.ri] = true;
+      if (c.ri === LK_TRICKS.length - 1) { c.end = Date.now(); ui.result = 'lucky'; showToast('<b>Lucky 7 gedaan</b>'); }
+      else { c.ri++; c.phase = 'bid'; }
+      save(); render(); window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+    lReopen() { const r = lastOf(S.lk); if (!r) return; r.end = null; r.ri = LK_TRICKS.length - 1; r.phase = 'result'; r.done[r.ri] = false; ui.result = null; save(); render(); },
+    // Geschiedenis
+    histOpen() { hideToast(); ui.hist = { game: null, group: null }; ui.hOpen = null; ui.hDel = null; ui.view = 'hist'; render(); window.scrollTo(0, 0); },
+    histBack() {
+      const H = ui.hist;
+      if (H && H.group) H.group = null; else if (H && H.game) H.game = null; else { ui.hist = null; ui.view = null; }
+      ui.hOpen = null; render(); window.scrollTo(0, 0);
+    },
+    histGame(b) { ui.hist.game = b.dataset.v; const recs = (S.history || []).filter((h) => h[HK[ui.hist.game]]); const keys = [...new Set(recs.map((h) => groupKey(h.players)))]; if (keys.length === 1) ui.hist.group = keys[0]; render(); window.scrollTo(0, 0); },
+    histGroup(b) { ui.hist.group = b.dataset.v; render(); window.scrollTo(0, 0); },
     nStep(b) {
       const c = openOf(S.np); if (!c) return;
       c.log.push({ i: +b.dataset.i, v: +b.dataset.v }); S.game = 'nappen';
@@ -2157,6 +2346,11 @@ if (typeof module !== 'undefined') module.exports = Logic;
       if (g === 'wiezen') { S.wz.per = ui.per || 1; r.per = S.wz.per; r.games = []; }
       else if (g === 'pietjes') { S.pj.boom = ui.boom || 9; r.boom = S.pj.boom; r.beurten = []; }
       else if (g === 'nappen') { r.base = NP_START; r.log = []; }
+      else if (g === 'lucky') {
+        const n = S.players.length;
+        r.dealer0 = S.lk.rondjes.length % n; r.ri = 0; r.phase = 'bid';
+        r.bids = LK_TRICKS.map(() => Array(n).fill(null)); r.correct = LK_TRICKS.map(() => Array(n).fill(null)); r.done = LK_TRICKS.map(() => false);
+      }
       else r.hands = [];
       st.rondjes.push(r); S.game = g; ui.flow = null; ui.pct = null;
       if (g === 'wiezen') { ui.wr = { k: null, sel: [], made: null, diff: 0 }; ui.view = 'wround'; } else ui.view = null;
@@ -2224,7 +2418,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       }
     },
     askReset() { ui.modal = 'askReset'; renderModal(); },
-    reset() { const archive = [...(S.archive || []), ...finished().map((r) => ({ teams: r.teams, winner: r.winner, date: r.end || r.start }))]; const rec = nightRecord(); const history = [...(S.history || []), ...(rec ? [rec] : [])]; const wz = freshWz(S.wz), hj = freshHj(S.hj), pj = freshPj(S.pj), np = freshNp(S.np); S = fresh(S.players); S.archive = archive; S.wz = wz; S.hj = hj; S.pj = pj; S.np = np; S.history = history; ui.hOpen = null; ui.hDel = null; ui.modal = null; ui.view = 'start'; ui.payer = null; ui.bill = ''; ui.hr = null; ui.wr = null; save(); render(); window.scrollTo(0, 0); },
+    reset() { const archive = [...(S.archive || []), ...finished().map((r) => ({ teams: r.teams, winner: r.winner, date: r.end || r.start }))]; const rec = nightRecord(); const history = [...(S.history || []), ...(rec ? [rec] : [])]; const wz = freshWz(S.wz), hj = freshHj(S.hj), pj = freshPj(S.pj), np = freshNp(S.np), lk = freshLk(S.lk); S = fresh(S.players); S.archive = archive; S.wz = wz; S.hj = hj; S.pj = pj; S.np = np; S.lk = lk; S.history = history; ui.hOpen = null; ui.hDel = null; ui.modal = null; ui.view = 'start'; ui.payer = null; ui.bill = ''; ui.hr = null; ui.wr = null; save(); render(); window.scrollTo(0, 0); },
   };
 
   document.addEventListener('click', (e) => {
@@ -2312,7 +2506,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 <script>
 // Installeerbare app: offline werken en vanzelf de nieuwste versie laden.
 (() => {
-  const APP_VERSION = '20261125-111853';
+  const APP_VERSION = '20261125-112946';
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
