@@ -649,7 +649,7 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 .splash.tv .kname { font: 600 12.5vh/1 Cinzel, "Cormorant Garamond", Georgia, serif !important; letter-spacing: .24em; text-indent: .24em; }
 .tvfs { left: 3vw; top: 4vh; bottom: auto; transform: none; }
 /* Club: dunne klok, glans over KELDER, diep zwart */
-.splash.tv { background: transparent; }
+.splash.tv { background: #020206; }
 html.tvmode, html.tvmode body { background: #020206; }
 .splash.tv .tvmid { gap: 2.6vh; }
 .splash.tv .tvmid { animation: none; }
@@ -657,7 +657,8 @@ html.tvmode, html.tvmode body { background: #020206; }
 .splash.tv .tvdate { font: 300 1.7vh/1 var(--f-ui); letter-spacing: .5em; text-indent: .5em; text-transform: uppercase; color: rgba(220,228,255,.45); }
 .splash.tv .kname { background: none; color: #eef1fa; -webkit-text-fill-color: #eef1fa; animation: none; }
 .splash.tv .rule::after { background: #e8c27a; box-shadow: 0 0 14px #e8c27a; }
-#keepTv { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; object-fit: cover; pointer-events: none; background: #020206; }
+/* klein zwart filmpje in de hoek: een tv-video ligt altijd bovenop alles, dus het moet piepklein blijven */
+#keepTv { position: fixed; right: 0; bottom: 0; width: 4px; height: 4px; z-index: 50; pointer-events: none; background: #000; }
 .splash.tv .tvnow { backdrop-filter: none; -webkit-backdrop-filter: none; }
 #tvFx { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .tvlat { position: fixed; left: 50%; top: 5vh; transform: translateX(-50%); font: 500 2vh/1 var(--f-ui); letter-spacing: .12em; color: rgba(230,240,255,.85); background: rgba(6,8,18,.7); padding: 1.2vh 2vh; border-radius: 99px; opacity: 0; transition: opacity .6s ease; pointer-events: none; }
