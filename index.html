@@ -562,6 +562,13 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 @media (orientation: landscape) and (max-height: 520px) { .splash .ring { width: min(52vh, 300px); } .splash .date { font-size: 4.6vh; margin-top: 4px; } .splash .last { display: none; } .splash .time { font-size: 15vh; } .splash .icons { display: none; } }
 @media (prefers-reduced-motion: reduce) { .splash .suit { display: none; } .splash .tap::before, .splash .tap::after, .splash .time .col { animation: none; } }
 
+/* Tablet liggend: spellen breder, 4 per rij */
+@media (min-width: 900px) and (orientation: landscape) {
+  .wrap.hub { max-width: 1100px; }
+  .wrap.hub .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .wrap.hub .tile { aspect-ratio: 1.15; }
+  .wrap { max-width: 640px; }
+}
 /* Glans die af en toe over de tegels schuift */
 .tiles .tile:not(.off):not(.soon)::before { content: ""; position: absolute; top: -20%; bottom: -20%; left: -60%; width: 45%; z-index: 1; pointer-events: none;
   background: linear-gradient(100deg, transparent, rgba(255,255,255,.32), transparent); transform: skewX(-18deg) translateX(0); animation: shine 7s ease-in-out infinite; }
@@ -1786,7 +1793,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   function renderHub() {
     const A = owedAll(), items = rondjesTonight();
     const list = items.map((x, k) => `<div class="rround"><span class="no">${k + 1}</span><div class="txt"><b>${x.game}</b><br><span class="muted">${x.txt}</span></div><div class="amt ${x.price ? '' : 'muted'}">${x.price ? euro(x.price) : 'gratis'}</div></div>`).reverse().join('');
-    return `<div class="wrap">
+    return `<div class="wrap hub">
       <header class="top"><div class="brand">Spelletjes</div><div style="display:flex;gap:12px;align-items:center">${syncChip()}<button class="btn ghost sm" data-act="toStart">Spelers</button></div></header>
       <section><p class="label">${firstStart() ? `<span class="live" id="liveClock">${liveTxt()}</span>` : esc(today())}</p><h1>Welk <em>spel</em>?</h1>${A.n ? `<p class="lead">${A.n} rondje${A.n > 1 ? 's' : ''} gespeeld</p>` : ''}</section>
       ${tickerHTML()}
@@ -3561,7 +3568,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 <script>
 // Installeerbare app: offline werken en vanzelf de nieuwste versie laden.
 (() => {
-  const APP_VERSION = '20261126-163712';
+  const APP_VERSION = '20261126-170225';
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
