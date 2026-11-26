@@ -402,7 +402,7 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 .key.zero { grid-column: span 2; }
 
 /* Modals */
-.overlay { position: fixed; inset: 0; z-index: 20; background: rgba(3, 5, 14, .76); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: grid; align-items: end; justify-items: center; animation: fade .25s ease; }
+.overlay { position: fixed; inset: 0; z-index: 58; background: rgba(3, 5, 14, .76); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: grid; align-items: end; justify-items: center; animation: fade .25s ease; }
 @keyframes fade { from { opacity: 0; } }
 .sheet {
   width: 100%; max-width: 460px; max-height: 92vh; overflow: auto; background: var(--surface); border: 1px solid var(--hair); border-bottom: 0;
@@ -559,6 +559,55 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 @keyframes drift { from { transform: translateY(0) rotate(0); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } to { transform: translateY(-115vh) rotate(200deg); opacity: 0; } }
 .splash.leave { animation: splashout .55s var(--ease) forwards; }
 @keyframes splashout { to { opacity: 0; transform: scale(1.06); filter: blur(6px); } }
+/* Spotify op het beginscherm */
+.spcard { position: relative; display: flex; align-items: center; gap: 14px; width: min(92vw, 440px); padding: 12px; border-radius: 22px; text-align: left; cursor: default;
+  background: linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.03)); border: 1px solid var(--hair); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 20px 50px -26px rgba(0,0,0,.8); overflow: hidden; }
+.spcard .glow { position: absolute; inset: -40%; background-size: cover; background-position: center; filter: blur(40px) saturate(1.4); opacity: .35; z-index: -1; transition: background-image .6s ease; }
+.spcard .art { width: 72px; height: 72px; flex: none; border-radius: 14px; background: #1db95422 center/cover; box-shadow: 0 10px 24px -10px rgba(0,0,0,.7); display: grid; place-items: center; }
+.spcard .art svg { width: 34px; height: 34px; color: #1db954; }
+.spcard .meta { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.spcard .src { display: flex; align-items: center; gap: 6px; font: 600 10.5px/1 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: #1db954; }
+.spcard .src i { width: 6px; height: 6px; border-radius: 50%; background: #1db954; box-shadow: 0 0 8px #1db954; }
+.spcard .src.paused { color: var(--dim); } .spcard .src.paused i { background: var(--dim); box-shadow: none; }
+.spcard .ttl { font: 600 18px/1.2 var(--f-serif); color: var(--ivory); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spcard .art2 { font: 500 13px/1.25 var(--f-ui); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spcard .prog { display: flex; align-items: center; gap: 8px; font: 500 11px/1 var(--f-ui); color: var(--dim); font-variant-numeric: tabular-nums; margin-top: 2px; }
+.spcard .pbar { flex: 1; height: 4px; border-radius: 4px; background: rgba(255,255,255,.12); overflow: hidden; }
+.spcard .pbar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #1db954, var(--t1)); border-radius: 4px; transition: width 1s linear; }
+.spcard .ctl { display: flex; align-items: center; gap: 4px; flex: none; }
+.spcard .ctl button { width: 42px; height: 42px; border-radius: 50%; border: 0; background: transparent; color: var(--ivory); display: grid; place-items: center; cursor: pointer; }
+.spcard .ctl button svg { width: 20px; height: 20px; }
+.spcard .ctl button.pp { width: 50px; height: 50px; background: var(--ivory); color: #06121a; box-shadow: 0 8px 20px -8px rgba(255,255,255,.5); }
+.spcard .ctl button.pp svg { width: 22px; height: 22px; }
+.spcard .ctl button:active { transform: scale(.92); }
+.spcard .vol { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 4px; color: var(--dim); }
+.spcard .vol svg { width: 16px; height: 16px; flex: none; }
+.spcard .vol input { flex: 1; accent-color: #1db954; }
+.spcard.spcon { justify-content: center; gap: 12px; cursor: pointer; }
+.spcard.spcon .meta { flex: none; }
+/* Liggend (tablet): klok links, Spotify rechts */
+@media (orientation: landscape) and (min-width: 700px) {
+  .splash { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto 1fr auto; column-gap: 5vw; align-items: center; justify-items: center; padding-inline: max(5vw, env(safe-area-inset-left, 0px)); }
+  .splash .sptop { grid-column: 1 / -1; }
+  .splash .mid { grid-column: 1; align-self: center; }
+  .splash .ring { width: min(56vh, 42vw, 440px); }
+  .splash .time { font-size: min(15vh, 11vw); }
+  .splash .icons { display: none; }
+  .splash .side { grid-column: 2; align-self: center; width: 100%; display: flex; justify-content: center; }
+  .splash .spcard { width: min(40vw, 520px); flex-direction: column; align-items: stretch; padding: 20px; gap: 16px; border-radius: 28px; }
+  .splash .spcard .art { width: 100%; height: auto; aspect-ratio: 1; max-height: 40vh; max-width: 40vh; align-self: center; border-radius: 18px; }
+  .splash .spcard .art svg { width: 72px; height: 72px; }
+  .splash .spcard .ttl { font-size: 26px; }
+  .splash .spcard .art2 { font-size: 15px; }
+  .splash .spcard .ctl { justify-content: center; gap: 18px; }
+  .splash .spcard .ctl button { width: 52px; height: 52px; }
+  .splash .spcard .ctl button svg { width: 24px; height: 24px; }
+  .splash .spcard .ctl button.pp { width: 64px; height: 64px; }
+  .splash .spcard.spcon { flex-direction: column; align-items: center; text-align: center; padding: 34px 20px; }
+  .splash .spcard.spcon .art { width: 110px; height: 110px; border-radius: 50%; }
+  .splash .spcard.spcon .src { justify-content: center; }
+  .splash .bottom { grid-column: 1 / -1; }
+}
 @media (orientation: landscape) and (max-height: 520px) { .splash .ring { width: min(52vh, 300px); } .splash .date { font-size: 4.6vh; margin-top: 4px; } .splash .last { display: none; } .splash .time { font-size: 15vh; } .splash .icons { display: none; } }
 @media (prefers-reduced-motion: reduce) { .splash .suit { display: none; } .splash .tap::before, .splash .tap::after, .splash .time .col { animation: none; } }
 
@@ -1852,9 +1901,117 @@ if (typeof module !== 'undefined') module.exports = Logic;
         </div>
         <div class="icons">${icons}</div>
       </div>
+      <div class="side">${spCardHTML()}</div>
       <div class="bottom"><span class="tap">${ui.idle ? 'Tik om verder te spelen' : 'Tik om de avond te starten'} <span class="arr">→</span></span>${ui.idle ? (owedAll().n ? `<span class="last">${owedAll().n} rondje${owedAll().n > 1 ? 's' : ''} gespeeld vanavond</span>` : '') : last ? `<span class="last">${last}</span>` : ''}</div>
     </div>`;
   }
+  // ---------- Spotify (wat er speelt + bediening) ----------
+  // Werkt met een eigen Spotify-ontwikkelaarscode (Client ID) en aanmelden via Spotify (PKCE, geen geheim nodig).
+  // Alleen op dit toestel bewaard, niet in de back-up.
+  const SP_KEY = 'spelletjes-spotify';
+  let SP = (() => { try { return JSON.parse(localStorage.getItem(SP_KEY)) || {}; } catch (e) { return {}; } })();
+  const spSave = () => { try { localStorage.setItem(SP_KEY, JSON.stringify(SP)); } catch (e) {} };
+  const spRedirect = () => location.origin + location.pathname;
+  const spOn = () => !!(SP.cid && SP.rt);
+  let spNow = null, spBusy = false;
+  const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  async function spLogin() {
+    if (!SP.cid) return;
+    const arr = new Uint8Array(48); crypto.getRandomValues(arr);
+    const ver = b64u(arr), ch = b64u(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(ver)));
+    SP.ver = ver; spSave();
+    const q = new URLSearchParams({ response_type: 'code', client_id: SP.cid, redirect_uri: spRedirect(), code_challenge_method: 'S256', code_challenge: ch,
+      scope: 'user-read-currently-playing user-read-playback-state user-modify-playback-state' });
+    location.href = 'https://accounts.spotify.com/authorize?' + q;
+  }
+  async function spTokenReq(params) {
+    const r = await fetch('https://accounts.spotify.com/api/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(params) });
+    if (!r.ok) throw new Error('token ' + r.status);
+    const j = await r.json();
+    SP.at = j.access_token; SP.exp = Date.now() + (j.expires_in || 3600) * 1000; if (j.refresh_token) SP.rt = j.refresh_token; spSave();
+  }
+  async function spCallback() {
+    const q = new URLSearchParams(location.search);
+    if (!q.has('code') && !q.has('error')) return;
+    history.replaceState(null, '', spRedirect());
+    if (q.get('error')) { showToast('Spotify: aanmelden geannuleerd', false); return; }
+    try { await spTokenReq({ grant_type: 'authorization_code', code: q.get('code'), redirect_uri: spRedirect(), client_id: SP.cid, code_verifier: SP.ver || '' }); delete SP.ver; spSave(); showToast('<b>Spotify</b> is gekoppeld', false); spPoll(); }
+    catch (e) { showToast('Spotify koppelen lukte niet. Kijk de Client ID en het adres na.', false); }
+  }
+  async function spToken() {
+    if (!spOn()) return null;
+    if (SP.at && Date.now() < (SP.exp || 0) - 60000) return SP.at;
+    try { await spTokenReq({ grant_type: 'refresh_token', refresh_token: SP.rt, client_id: SP.cid }); return SP.at; }
+    catch (e) { return null; }
+  }
+  async function spApi(path, method = 'GET', body) {
+    const t = await spToken(); if (!t) return null;
+    try {
+      const r = await fetch('https://api.spotify.com/v1' + path, { method, headers: { Authorization: 'Bearer ' + t, ...(body ? { 'Content-Type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
+      if (r.status === 401) { SP.exp = 0; return null; }
+      if (r.status === 204) return {};
+      if (!r.ok) return null;
+      return await r.json().catch(() => ({}));
+    } catch (e) { return null; }
+  }
+  async function spPoll() {
+    if (!spOn() || spBusy) return;
+    spBusy = true;
+    const j = await spApi('/me/player?additional_types=episode');
+    spBusy = false;
+    if (j === null) return;
+    const it = j && j.item;
+    spNow = it ? { id: it.id, title: it.name, artist: it.artists ? it.artists.map((a) => a.name).join(', ') : (it.show ? it.show.name : ''),
+      art: ((it.album || it).images || [])[0] ? (it.album || it).images[0].url : '', dur: it.duration_ms || 0, prog: j.progress_ms || 0, playing: !!j.is_playing, t: Date.now(),
+      dev: j.device ? j.device.name : '', vol: j.device && j.device.volume_percent != null ? j.device.volume_percent : null } : null;
+    spPaint();
+  }
+  const mmss2 = (ms) => { const x = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(x / 60)}:${String(x % 60).padStart(2, '0')}`; };
+  const IC = {
+    play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>',
+    pause: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg>',
+    next: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 6.2v11.6a1 1 0 0 0 1.55.83l8.2-5.8a1 1 0 0 0 0-1.66l-8.2-5.8A1 1 0 0 0 5 6.2z"/><rect x="16.5" y="5" width="2.5" height="14" rx="1"/></svg>',
+    prev: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.2v11.6a1 1 0 0 1-1.55.83l-8.2-5.8a1 1 0 0 1 0-1.66l8.2-5.8A1 1 0 0 1 19 6.2z"/><rect x="5" y="5" width="2.5" height="14" rx="1"/></svg>',
+    note: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.6 14.4a.75.75 0 0 1-1 .25c-2.8-1.7-6.3-2.1-10.5-1.15a.75.75 0 1 1-.33-1.46c4.6-1.05 8.5-.6 11.6 1.3.35.22.46.68.24 1.06zm1.3-2.9a.94.94 0 0 1-1.3.3c-3.2-2-8.1-2.55-11.9-1.4a.94.94 0 1 1-.55-1.8c4.35-1.32 9.75-.68 13.45 1.6.44.27.58.85.3 1.3zm.1-3c-3.85-2.3-10.2-2.5-13.9-1.38a1.13 1.13 0 1 1-.65-2.16c4.25-1.3 11.3-1.05 15.75 1.6a1.13 1.13 0 0 1-1.2 1.94z"/></svg>',
+    vol: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>',
+  };
+  function spCardHTML() {
+    if (!spOn()) return `<div class="spcard spcon" data-act="spSetup"><span class="art">${IC.note}</span><span class="meta"><span class="src paused"><i></i>Spotify</span><span class="ttl">Koppel Spotify</span><span class="art2">Zie hier wat er speelt</span></span></div>`;
+    const n = spNow;
+    if (!n) return `<div class="spcard" id="spCard" data-act="noop"><span class="art">${IC.note}</span><span class="meta"><span class="src paused"><i></i>Spotify</span><span class="ttl">Er speelt niets</span><span class="art2">Start muziek op je gsm of boxen</span></span></div>`;
+    const prog = Math.min(n.dur, n.prog + (n.playing ? Date.now() - n.t : 0));
+    return `<div class="spcard" id="spCard" data-act="noop" data-id="${esc(n.id || '')}">
+      ${n.art ? `<span class="glow" style="background-image:url('${esc(n.art)}')"></span>` : ''}
+      <span class="art" style="${n.art ? `background-image:url('${esc(n.art)}')` : ''}">${n.art ? '' : IC.note}</span>
+      <span class="meta">
+        <span class="src ${n.playing ? '' : 'paused'}" id="spSrc"><i></i>${n.playing ? 'Speelt nu' : 'Gepauzeerd'}${n.dev ? ` · ${esc(n.dev)}` : ''}</span>
+        <span class="ttl">${esc(n.title)}</span><span class="art2">${esc(n.artist)}</span>
+        <span class="prog"><span id="spPos">${mmss2(prog)}</span><span class="pbar"><i id="spBar" style="width:${n.dur ? ((prog / n.dur) * 100).toFixed(1) : 0}%"></i></span><span>${mmss2(n.dur)}</span></span>
+        <span class="ctl"><button data-act="spCmd" data-v="prev" aria-label="Vorig nummer">${IC.prev}</button><button class="pp" data-act="spCmd" data-v="${n.playing ? 'pause' : 'play'}" aria-label="${n.playing ? 'Pauze' : 'Afspelen'}">${n.playing ? IC.pause : IC.play}</button><button data-act="spCmd" data-v="next" aria-label="Volgend nummer">${IC.next}</button></span>
+        ${n.vol !== null ? `<span class="vol">${IC.vol}<input type="range" id="spVol" min="0" max="100" value="${n.vol}" aria-label="Volume"></span>` : ''}
+      </span></div>`;
+  }
+  function spPaint() {
+    const side = document.querySelector('.splash .side'); if (!side) return;
+    const el = document.getElementById('spCard');
+    const a = document.activeElement; if (a && a.id === 'spVol') return; // niet storen terwijl je het volume schuift
+    if (el && spNow && el.dataset.id === (spNow.id || '')) {
+      // zelfde nummer: alleen de stand bijwerken (geen flikkerende hoes)
+      const tmp = document.createElement('div'); tmp.innerHTML = spCardHTML(); const nw = tmp.firstElementChild;
+      ['spSrc'].forEach((id) => { const o = el.querySelector('#' + id), n2 = nw.querySelector('#' + id); if (o && n2) o.outerHTML = n2.outerHTML; });
+      const oc = el.querySelector('.ctl'), nc = nw.querySelector('.ctl'); if (oc && nc) oc.innerHTML = nc.innerHTML;
+      const ov = el.querySelector('#spVol'), nv = nw.querySelector('#spVol'); if (ov && nv) ov.value = nv.value;
+      return;
+    }
+    side.innerHTML = spCardHTML();
+  }
+  setInterval(() => { if (!document.hidden && document.querySelector('.splash')) spPoll(); }, 5000);
+  document.addEventListener('change', (e) => {
+    if (e.target.id !== 'spVol') return;
+    const v = +e.target.value; if (spNow) spNow.vol = v;
+    spApi('/me/player/volume?volume_percent=' + v, 'PUT');
+  });
+
   // Klok op het beginscherm loopt elke seconde
   setInterval(() => {
     const t = document.getElementById('spTime'); if (!t) return;
@@ -1864,6 +2021,12 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (c) { if (sec === 0) { c.style.transition = 'none'; } else c.style.transition = ''; c.setAttribute('stroke-dashoffset', (C * (1 - (sec || 60) / 60)).toFixed(2)); }
     if (dot) { const a = (sec / 60) * 2 * Math.PI; dot.setAttribute('cx', 50 + R * Math.sin(a)); dot.setAttribute('cy', 50 - R * Math.cos(a)); }
     const g = document.getElementById('spGreet'); if (g) g.textContent = greet(d.getHours());
+    if (spNow && spNow.dur) {
+      const prog = Math.min(spNow.dur, spNow.prog + (spNow.playing ? Date.now() - spNow.t : 0));
+      const pe = document.getElementById('spPos'), be = document.getElementById('spBar');
+      if (pe) pe.textContent = mmss2(prog); if (be) be.style.width = ((prog / spNow.dur) * 100).toFixed(1) + '%';
+      if (spNow.playing && prog >= spNow.dur) spPoll();
+    }
   }, 1000);
 
   // Rustmodus: 1 minuut niets aangeraakt = terug naar het beginscherm met de klok.
@@ -2807,6 +2970,22 @@ if (typeof module !== 'undefined') module.exports = Logic;
       body = `<h2>Spelers</h2><p class="muted" style="margin:0;font-size:14px">Pas de namen aan. Gespeelde rondjes blijven bewaard.</p>
         <form id="playersForm" class="steps">${S.players.map((p, i) => `<div class="field"><label for="pl${i}">Speler ${i + 1}</label><input class="input" id="pl${i}" value="${esc(p)}" maxlength="18" required></div>`).join('')}
         <div class="row2"><button type="button" class="btn ghost" data-act="close">Annuleer</button><button class="btn primary" type="submit">Bewaar</button></div></form>`;
+    } else if (m === 'spotify') {
+      const uri = spRedirect();
+      body = spOn() ? `<h2>Spotify</h2><p class="muted" style="margin:0">Spotify is gekoppeld op dit toestel.</p>
+        <button class="btn danger block" data-act="spOff">Spotify ontkoppelen</button><button class="btn ghost block" data-act="close">Sluiten</button>`
+      : `<h2>Spotify koppelen</h2>
+        <ol class="muted" style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.45">
+          <li>Ga naar <b>developer.spotify.com/dashboard</b> en meld je aan met je Spotify-account.</li>
+          <li>Tik op <b>Create app</b>. Naam: <i>Spelletjes</i>. Beschrijving: <i>kelder</i>.</li>
+          <li>Bij <b>Redirect URI</b> vul je exact dit in:<br><code style="word-break:break-all;color:var(--ivory)">${esc(uri)}</code> <button class="link" data-act="spCopy" data-v="${esc(uri)}">kopieer</button></li>
+          <li>Vink <b>Web API</b> aan, ga akkoord en kies <b>Save</b>.</li>
+          <li>Kopieer de <b>Client ID</b> en plak hem hieronder.</li>
+        </ol>
+        <input class="input" id="spCid" placeholder="Client ID" value="${esc(ui.spCidTxt || '')}" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <p class="err" id="spErr" style="min-height:0"></p>
+        <button class="btn primary block" data-act="spSaveCid">Aanmelden bij Spotify</button>
+        <button class="btn ghost block" data-act="close">Annuleren</button>`;
     } else if (m === 'pkBust') {
       const K = S.pk, i = ui.pkBustI, left = tAlive(K).length - 1;
       body = `<h2>${P(i)} ligt eruit</h2><p class="muted" style="margin:0">Terug inkopen voor ${euro(K.unit)}? Dan krijgt ${P(i)} opnieuw ${nf(STACK)} fiches.</p>
@@ -3335,6 +3514,25 @@ if (typeof module !== 'undefined') module.exports = Logic;
     freeRondje() { if (!ui.flow) return; ui.flow.price = 0; ui.calc = { expr: '', target: null }; afterPrice(); },
     // "Nieuw rondje" brengt je terug naar de spelkeuze
     newRondje() { hideToast(); ui.flow = null; ui.result = null; ui.modal = null; ui.calc = { expr: '', target: null }; ui.view = null; render(); window.scrollTo(0, 0); },
+    noop() {},
+    spSetup() { ui.spCidTxt = SP.cid || ''; ui.modal = 'spotify'; render(); },
+    spSaveCid() {
+      const v = (document.getElementById('spCid') || {}).value || '';
+      const cid = v.trim();
+      if (!/^[0-9a-f]{32}$/i.test(cid)) { const e = document.getElementById('spErr'); if (e) e.textContent = 'Een Client ID is 32 tekens lang (cijfers en letters a–f).'; return; }
+      SP = { cid }; spSave(); spLogin();
+    },
+    spOff() { SP = {}; spNow = null; spSave(); ui.modal = null; render(); showToast('Spotify ontkoppeld', false); },
+    spCopy(b) { const t = b.dataset.v; try { navigator.clipboard.writeText(t).then(() => showToast('Gekopieerd', false)).catch(() => {}); } catch (e) {} },
+    async spCmd(b) {
+      const v = b.dataset.v;
+      if (spNow && (v === 'play' || v === 'pause')) { spNow.prog = Math.min(spNow.dur, spNow.prog + (spNow.playing ? Date.now() - spNow.t : 0)); spNow.t = Date.now(); spNow.playing = v === 'play'; spPaint(); }
+      if (v === 'play') await spApi('/me/player/play', 'PUT');
+      else if (v === 'pause') await spApi('/me/player/pause', 'PUT');
+      else if (v === 'next') await spApi('/me/player/next', 'POST');
+      else if (v === 'prev') await spApi('/me/player/previous', 'POST');
+      setTimeout(spPoll, 450);
+    },
     splashGo() {
       const el = document.querySelector('.splash');
       // Na de rustmodus terug naar waar je was; anders een nieuwe avond: eerst de spelers
@@ -3561,6 +3759,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   // Liep er een toernooi toen de app dichtging? Dan meteen terug naar de klok.
   if (S.pk && S.pk.on && S.pk.mode === 'tour' && S.pk.step === 'play') { ui.view = 'poker'; try { keepAwake(); } catch (e) {} }
   render();
+  spCallback().then(() => { if (spOn()) spPoll(); });
   window.__troeven = { get state() { return S; }, ui };
 })();
 </script>
