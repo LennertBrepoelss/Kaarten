@@ -4,7 +4,7 @@
 <meta name="theme-color" content="#060914">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Manrope:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Manrope:wght@400;500;600;700&display=swap">
 <style>
 /* Layout: één kolom (max 460px), aurora: poolnacht-blauw met noorderlicht in mint, cyaan en violet. Serif voor cijfers en namen, Manrope voor bediening. Vaste dock onderaan. */
 :root {
@@ -572,6 +572,63 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 .splash .suit { position: absolute; bottom: -40px; font: 400 28px/1 var(--f-serif); color: rgba(255,255,255,.08); animation: drift linear infinite; pointer-events: none; }
 @keyframes drift { from { transform: translateY(0) rotate(0); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } to { transform: translateY(-115vh) rotate(200deg); opacity: 0; } }
 .splash.leave { animation: splashout .55s var(--ease) forwards; }
+/* ===== Kelder: chique aurora ===== */
+.splash { background: #04060f; }
+.splash .sky { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.splash .sky b { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .55; mix-blend-mode: screen; will-change: transform; }
+.splash .sky b:nth-child(1) { width: 70vmax; height: 38vmax; left: -15vmax; top: -14vmax; background: radial-gradient(closest-side, rgba(70,240,190,.85), transparent); animation: sky1 38s ease-in-out infinite alternate; }
+.splash .sky b:nth-child(2) { width: 60vmax; height: 34vmax; right: -18vmax; top: -6vmax; background: radial-gradient(closest-side, rgba(150,110,255,.8), transparent); animation: sky2 46s ease-in-out infinite alternate; }
+.splash .sky b:nth-child(3) { width: 55vmax; height: 30vmax; left: 20vmax; bottom: -18vmax; background: radial-gradient(closest-side, rgba(60,170,255,.6), transparent); animation: sky3 52s ease-in-out infinite alternate; }
+.splash .sky b:nth-child(4) { width: 34vmax; height: 16vmax; left: 30vmax; top: 6vmax; background: radial-gradient(closest-side, rgba(255,120,210,.32), transparent); animation: sky2 60s ease-in-out infinite alternate-reverse; }
+@keyframes sky1 { to { transform: translate(18vmax, 8vmax) rotate(12deg) scale(1.15); } }
+@keyframes sky2 { to { transform: translate(-16vmax, 10vmax) rotate(-10deg) scale(1.2); } }
+@keyframes sky3 { to { transform: translate(-12vmax, -10vmax) rotate(8deg) scale(.9); } }
+.splash .sky i { position: absolute; border-radius: 50%; background: #fff; opacity: 0; animation: star 6s ease-in-out infinite; }
+@keyframes star { 0%, 100% { opacity: 0; transform: scale(.6); } 50% { opacity: .9; transform: scale(1); } }
+.splash .sky .orb { position: absolute; border-radius: 50%; background: radial-gradient(circle at 35% 35%, rgba(255,255,255,.55), rgba(160,200,255,.08) 60%, transparent 70%); filter: blur(1px); animation: orb linear infinite; opacity: 0; }
+@keyframes orb { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: .5; } 85% { opacity: .5; } 100% { transform: translateY(-110vh); opacity: 0; } }
+.splash::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(120% 90% at 50% 45%, transparent 55%, rgba(0,0,0,.7) 100%); }
+.splash::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .07; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+.splash .suit { display: none; }
+/* titel */
+.splash .sptop .kname { font: 300 clamp(36px, 6.4vh, 56px)/1 var(--f-serif); letter-spacing: .32em; text-indent: .32em; text-transform: uppercase;
+  background: linear-gradient(180deg, #ffffff, #b9c7e6); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none; }
+.splash .sptop .rule { width: 140px; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent); }
+.splash .sptop .rule::after { content: ""; display: block; width: 5px; height: 5px; margin: -2px auto 0; transform: rotate(45deg); background: var(--gold); box-shadow: 0 0 10px var(--gold); }
+/* klok */
+.splash .ring .trk { stroke: rgba(255,255,255,.06); stroke-width: .6; }
+.splash .ring .tick { stroke: rgba(255,255,255,.22); stroke-width: .5; }
+.splash .ring .tick.big { stroke: rgba(255,255,255,.75); stroke-width: .9; }
+.splash .ring .sec { stroke: url(#spg); stroke-width: .9; opacity: .45; filter: none; }
+.splash .ring .tail { fill: none; stroke: url(#spt); stroke-width: 2.2; stroke-linecap: round; filter: drop-shadow(0 0 3px rgba(94,240,192,.8)); }
+.splash .ring .dot { fill: #fff; filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 8px var(--gold)); }
+.splash .ring .halo { fill: none; stroke: rgba(255,255,255,.05); stroke-width: 14; }
+.splash .time { font-weight: 300; letter-spacing: -.01em; background: linear-gradient(180deg, #ffffff 30%, #a9bbdf); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none; filter: drop-shadow(0 0 30px rgba(120,200,255,.25)); }
+.splash .time .col { color: var(--gold); -webkit-text-fill-color: var(--gold); animation: breathe 2s ease-in-out infinite; }
+@keyframes breathe { 50% { opacity: .2; } }
+.splash .date { font: 500 clamp(10px, 1.5vh, 13px)/1 var(--f-ui); font-style: normal; letter-spacing: .2em; text-transform: uppercase; color: rgba(220,232,255,.7); margin-top: 14px; }
+/* Spotify-kaart */
+.spcard { background: linear-gradient(135deg, rgba(255,255,255,.10), rgba(255,255,255,.025)); border: 1px solid rgba(255,255,255,.12); box-shadow: 0 30px 70px -30px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.12); }
+.spcard .glow { opacity: .45; }
+.spcard .art { box-shadow: 0 18px 40px -14px rgba(0,0,0,.85), 0 0 0 1px rgba(255,255,255,.08); }
+.spcard .eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 10px; margin-right: 2px; }
+.spcard .eq span { width: 2.5px; background: #1db954; border-radius: 1px; animation: eq 1s ease-in-out infinite; }
+.spcard .eq span:nth-child(2) { animation-delay: -.3s; } .spcard .eq span:nth-child(3) { animation-delay: -.6s; } .spcard .eq span:nth-child(4) { animation-delay: -.15s; }
+@keyframes eq { 0%, 100% { height: 3px; } 50% { height: 10px; } }
+.spcard .src.paused .eq span { animation: none; height: 3px; background: var(--dim); }
+.spcard .ttl { font-weight: 500; }
+/* toestellen */
+.dev { border-radius: 50%; width: clamp(70px, 10.5vh, 92px); background: radial-gradient(circle at 30% 25%, rgba(255,255,255,.14), rgba(255,255,255,.03) 60%); border: 1px solid rgba(255,255,255,.12);
+  box-shadow: 0 18px 40px -22px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.15); font-size: 0; }
+.dev span { position: absolute; top: calc(100% + 8px); font: 500 11px/1 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: rgba(220,232,255,.65); white-space: nowrap; }
+.dev svg { width: 40%; height: 40%; }
+.devs { gap: clamp(22px, 4vw, 44px); padding-bottom: 18px; }
+/* binnenkomen: zacht scherp worden */
+.splash .sptop, .splash .mid, .splash .side, .splash .devs { animation: unblur 1.4s var(--ease) both; }
+.splash .mid { animation-delay: .1s; } .splash .side { animation-delay: .25s; } .splash .devs { animation-delay: .4s; }
+@keyframes unblur { from { opacity: 0; filter: blur(14px); transform: translateY(10px) scale(.98); } }
+@media (prefers-reduced-motion: reduce) { .splash .sky b, .splash .sky i, .splash .sky .orb, .spcard .eq span { animation: none !important; } }
 @keyframes splashout { to { opacity: 0; transform: scale(1.06); filter: blur(6px); } }
 /* Spotify op het beginscherm */
 .spcard { position: relative; display: flex; align-items: center; gap: 14px; width: min(92vw, 440px); padding: 12px; border-radius: 22px; text-align: left; cursor: default;
@@ -606,8 +663,7 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
   .splash .mid { grid-column: 1; align-self: center; }
   .splash { grid-template-rows: auto 1fr auto; row-gap: 2vh; }
   .splash .ring { width: min(46vh, 34vw, 380px); }
-  .splash .time { font-size: min(12vh, 9vw); }
-  .splash .date { font-size: min(3.4vh, 22px); }
+  .splash .time { font-size: min(14vh, 10vw); }
   .splash .icons { display: none; }
   .splash .side { grid-column: 2; align-self: center; width: 100%; display: flex; justify-content: center; }
   .splash .spcard { width: min(44vw, 560px); padding: 16px; gap: 18px; border-radius: 26px; }
@@ -1899,20 +1955,22 @@ if (typeof module !== 'undefined') module.exports = Logic;
   }
   function renderSplash() {
     const d = new Date(), sec = d.getSeconds(), R = 46, C = 2 * Math.PI * R;
-    const ticks = Array.from({ length: 60 }, (_, i) => { const a = (i / 60) * 2 * Math.PI, big = i % 5 === 0, r1 = big ? 41.5 : 43, r2 = 44.2;
+    const ticks = Array.from({ length: 60 }, (_, i) => { const a = (i / 60) * 2 * Math.PI, big = i % 5 === 0, r1 = big ? 40.6 : 42.6, r2 = 43.6;
       return `<line class="tick ${big ? 'big' : ''}" x1="${50 + r1 * Math.sin(a)}" y1="${50 - r1 * Math.cos(a)}" x2="${50 + r2 * Math.sin(a)}" y2="${50 - r2 * Math.cos(a)}"/>`; }).join('');
     const suits = ['♠', '♥', '♦', '♣', '♠', '♥', '♦', '♣', '♠', '♥'].map((x, i) => `<span class="suit" style="left:${(i * 37 + 7) % 96}%;font-size:${20 + ((i * 13) % 22)}px;animation-duration:${14 + ((i * 7) % 11)}s;animation-delay:-${(i * 2.3).toFixed(1)}s">${x}</span>`).join('');
     const icons = GAMES.map((g) => `<span class="${g.cls}">${GAME_ART[g.k]}</span>`).join('') + `<span class="g-poker">${GAME_ART.poker}</span>`;
     const last = lastNightTxt();
     return `<div class="splash" data-act="splashGo" role="button" aria-label="Tik om naar de spelletjes te gaan">
-      ${suits}
-      <div class="sptop"><div class="kname">Kelder</div></div>
+      <div class="sky" aria-hidden="true"><b></b><b></b><b></b><b></b>${skyBits()}</div>
+      <div class="sptop"><div class="kname">Kelder</div><div class="rule"></div></div>
       <div class="mid">
         <div class="ring">
-          <svg viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="spg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--t1)"/><stop offset="1" stop-color="var(--t2)"/></linearGradient></defs>
-            ${ticks}<circle class="trk" cx="50" cy="50" r="${R}"/>
+          <svg viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="spg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--t1)"/><stop offset="1" stop-color="var(--t2)"/></linearGradient>
+            <linearGradient id="spt" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="var(--gold)"/></linearGradient></defs>
+            <circle class="halo" cx="50" cy="50" r="${R}"/>${ticks}<circle class="trk" cx="50" cy="50" r="${R}"/>
             <circle class="sec" id="spSec" cx="50" cy="50" r="${R}" transform="rotate(-90 50 50)" stroke-dasharray="${C.toFixed(2)}" stroke-dashoffset="${(C * (1 - sec / 60)).toFixed(2)}"/>
-            <circle class="dot" id="spDot" r="1.8" cx="${50 + R * Math.sin((sec / 60) * 2 * Math.PI)}" cy="${50 - R * Math.cos((sec / 60) * 2 * Math.PI)}"/></svg>
+            <circle class="tail" id="spTail" cx="50" cy="50" r="${R}" transform="rotate(-90 50 50)" stroke-dasharray="0 ${C.toFixed(2)}"/>
+            <circle class="dot" id="spDot" r="1.5" cx="${50 + R * Math.sin((sec / 60) * 2 * Math.PI)}" cy="${50 - R * Math.cos((sec / 60) * 2 * Math.PI)}"/></svg>
           <div><div class="time" id="spTime">${spTime(d)}</div><div class="date" id="spDate">${esc(today())}</div></div>
         </div>
         <div class="icons">${icons}</div>
@@ -1920,6 +1978,13 @@ if (typeof module !== 'undefined') module.exports = Logic;
       <div class="side">${spCardHTML()}</div>
       <div class="devs">${DEVS.map((x) => `<button class="dev ${x.k}" style="--dc:${x.c}" data-act="devOpen" data-v="${x.k}" aria-label="${x.n}">${x.svg}<span>${x.n}</span></button>`).join('')}</div>
     </div>`;
+  }
+  // Sterren en zwevende lichtjes op het Kelder-scherm (vaste plaatsen, zodat het niet verspringt)
+  function skyBits() {
+    let h = '';
+    for (let i = 0; i < 40; i++) { const x = (i * 61.8) % 100, y = (i * 37.3 + 11) % 100, z = 1 + (i % 3) * .6; h += `<i style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%;width:${z}px;height:${z}px;animation-delay:-${((i * 1.7) % 6).toFixed(1)}s;animation-duration:${4 + (i % 5)}s"></i>`; }
+    for (let i = 0; i < 9; i++) { const x = (i * 23 + 5) % 96, z = 6 + ((i * 7) % 14); h += `<span class="orb" style="left:${x}%;bottom:-30px;width:${z}px;height:${z}px;animation-duration:${26 + ((i * 9) % 20)}s;animation-delay:-${(i * 4.3).toFixed(1)}s"></span>`; }
+    return h;
   }
   // ---------- Spotify (wat er speelt + bediening) ----------
   // Werkt met een eigen Spotify-ontwikkelaarscode (Client ID) en aanmelden via Spotify (PKCE, geen geheim nodig).
@@ -2000,7 +2065,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       ${n.art ? `<span class="glow" style="background-image:url('${esc(n.art)}')"></span>` : ''}
       <span class="art" style="${n.art ? `background-image:url('${esc(n.art)}')` : ''}">${n.art ? '' : IC.note}</span>
       <span class="meta">
-        <span class="src ${n.playing ? '' : 'paused'}" id="spSrc"><i></i>${n.playing ? 'Speelt nu' : 'Gepauzeerd'}${n.dev ? ` · ${esc(n.dev)}` : ''}</span>
+        <span class="src ${n.playing ? '' : 'paused'}" id="spSrc"><span class="eq"><span></span><span></span><span></span><span></span></span>${n.playing ? 'Speelt nu' : 'Gepauzeerd'}${n.dev ? ` · ${esc(n.dev)}` : ''}</span>
         <span class="ttl">${esc(n.title)}</span><span class="art2">${esc(n.artist)}</span>
         <span class="prog"><span id="spPos">${mmss2(prog)}</span><span class="pbar"><i id="spBar" style="width:${n.dur ? ((prog / n.dur) * 100).toFixed(1) : 0}%"></i></span><span>${mmss2(n.dur)}</span></span>
         <span class="ctl"><button data-act="spCmd" data-v="prev" aria-label="Vorig nummer">${IC.prev}</button><button class="pp" data-act="spCmd" data-v="${n.playing ? 'pause' : 'play'}" aria-label="${n.playing ? 'Pauze' : 'Afspelen'}">${n.playing ? IC.pause : IC.play}</button><button data-act="spCmd" data-v="next" aria-label="Volgend nummer">${IC.next}</button></span>
@@ -2065,6 +2130,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (c || dot) {
       const d = new Date(), f = (d.getSeconds() + d.getMilliseconds() / 1000) / 60, R = 46, C = 2 * Math.PI * R;
       if (c) c.setAttribute('stroke-dashoffset', (C * (1 - f)).toFixed(3));
+      const tl = document.getElementById('spTail');
+      if (tl) { const L = Math.min(C * 0.1, C * f); tl.setAttribute('stroke-dasharray', `${L.toFixed(3)} ${C.toFixed(3)}`); tl.setAttribute('stroke-dashoffset', (-(C * f - L)).toFixed(3)); }
       if (dot) { const a = f * 2 * Math.PI; dot.setAttribute('cx', (50 + R * Math.sin(a)).toFixed(3)); dot.setAttribute('cy', (50 - R * Math.cos(a)).toFixed(3)); }
     }
     requestAnimationFrame(ringLoop);
