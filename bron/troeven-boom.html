@@ -622,6 +622,18 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 .tvnow .t { font: 500 3vh/1.15 var(--f-serif); color: #fff; max-width: 40vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tvnow .a { font: 500 1.9vh/1.3 var(--f-ui); color: rgba(220,232,255,.7); letter-spacing: .04em; }
 .tvlink { position: fixed; right: 3vw; bottom: 4vh; font: 500 1.8vh/1 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: rgba(220,232,255,.55); background: none; border: 1px solid rgba(255,255,255,.15); border-radius: 99px; padding: 1.2vh 2vh; cursor: pointer; }
+/* Tv: dansen op de beat die de tablet doorstuurt */
+.splash.tv.live .sky { animation: none; transform: scale(calc(1 + var(--beat, 0) * .09)); filter: brightness(calc(.95 + var(--beat, 0) * .8 + var(--lvl, 0) * .5)) saturate(calc(1 + var(--lvl, 0) * .8)); transition: none; }
+.splash.tv.live .kname { filter: drop-shadow(0 0 calc(30px + var(--beat, 0) * 70px) rgba(150,200,255,calc(.2 + var(--beat, 0) * .5))); }
+.splash.tv.live .rule { transform: scaleX(calc(1 + var(--beat, 0) * .5)); }
+.tvcode { position: fixed; right: 3vw; top: 4vh; text-align: right; font: 500 1.7vh/1.4 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: rgba(220,232,255,.55); opacity: 0; transition: opacity 1s ease; pointer-events: none; }
+.tvcode.show { opacity: 1; }
+.tvcode b { display: block; font: 300 6vh/1.1 var(--f-serif); letter-spacing: .18em; color: #fff; }
+.dev.tv.on { box-shadow: 0 0 0 1px color-mix(in srgb, var(--dc) 60%, transparent), 0 0 24px -6px var(--dc); }
+.tvlinkst { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--card2, rgba(127,127,127,.08)); font-size: 14px; }
+.tvlinkst i { width: 9px; height: 9px; border-radius: 50%; background: #e0a030; flex: none; }
+.tvlinkst i.ok { background: #3ccf8e; box-shadow: 0 0 8px #3ccf8e; }
+#tvIn { font: 500 30px/1 var(--f-ui); letter-spacing: .3em; text-align: center; }
 /* Intro bij het aanzetten */
 @property --r { syntax: '<percentage>'; inherits: false; initial-value: -20%; }
 #intro { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: #02030a; pointer-events: none;
@@ -2039,7 +2051,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
         <div class="icons">${icons}</div>
       </div>
       <div class="side">${spCardHTML()}</div>
-      <div class="devs">${DEVS.map((x) => `<button class="dev ${x.k} ${x.k === 'dance' && danceOn() ? 'on' : ''}" style="--dc:${x.c}" data-act="devOpen" data-v="${x.k}" aria-label="${x.n}">${x.svg}<span>${x.n}</span></button>`).join('')}</div>
+      <div class="devs">${DEVS.map((x) => `<button class="dev ${x.k} ${x.k === 'tv' && LINK.code ? 'on' : ''}" style="--dc:${x.c}" data-act="devOpen" data-v="${x.k}" aria-label="${x.n}">${x.svg}<span>${x.n}</span></button>`).join('')}</div>
     </div>`;
   }
   // Sterren en zwevende lichtjes op het Kelder-scherm (vaste plaatsen, zodat het niet verspringt)
@@ -2064,9 +2076,118 @@ if (typeof module !== 'undefined') module.exports = Logic;
       <div class="sky" aria-hidden="true"><b></b><b></b><b></b><b></b>${skyBits()}</div>
       <div class="tvmid"><div class="kname">Kelder</div><div class="rule"></div></div>
       <div class="tvnow" id="tvNow"></div>
-      ${spOn() ? '' : '<button class="tvlink" data-act="spSetup">Spotify koppelen</button>'}
+      <div class="tvcode ${LINK.paired ? '' : 'show'}" id="tvCode">Code voor de tablet<b>${LINK.code.replace(/(\d{3})(\d{3})/, '$1 $2')}</b></div>
+      ${spOn() || LINK.paired ? '' : '<button class="tvlink" data-act="spSetup">Spotify koppelen</button>'}
     </div>`;
   }
+  // ---------- Tablet ↔ tv: de tablet hoort de muziek en stuurt de beat via internet naar de tv ----------
+  // Kleine MQTT-client over WebSocket naar twee gratis openbare servers tegelijk (valt er één uit, dan werkt de andere).
+  const BROKERS = ['wss://broker.hivemq.com:8884/mqtt', 'wss://broker.emqx.io:8084/mqtt'];
+  function mqttClient(onMsg) {
+    const te = new TextEncoder(), td = new TextDecoder(), subs = new Set(), conns = [];
+    const str = (x) => { const b = te.encode(x); return [b.length >> 8, b.length & 255, ...b]; };
+    const vlen = (n) => { const o = []; do { let d = n % 128; n = Math.floor(n / 128); if (n > 0) d |= 128; o.push(d); } while (n > 0); return o; };
+    const pkt = (h, body) => new Uint8Array([h, ...vlen(body.length), ...body]);
+    let mid = 1;
+    const subPkt = (t) => { mid = (mid % 65000) + 1; return pkt(0x82, [mid >> 8, mid & 255, ...str(t), 0]); };
+    function open(c) {
+      let ws; try { ws = new WebSocket(c.url, 'mqtt'); } catch (e) { return retry(c); }
+      c.ws = ws; ws.binaryType = 'arraybuffer'; let buf = new Uint8Array(0);
+      ws.onopen = () => ws.send(pkt(0x10, [...str('MQTT'), 4, 2, 0, 45, ...str('kelder' + Math.random().toString(36).slice(2, 12))]));
+      ws.onmessage = (e) => {
+        const add = new Uint8Array(e.data), nb = new Uint8Array(buf.length + add.length); nb.set(buf); nb.set(add, buf.length); buf = nb;
+        for (;;) {
+          if (buf.length < 2) break;
+          let len = 0, mul = 1, i = 1, b;
+          do { if (i >= buf.length) return; b = buf[i++]; len += (b & 127) * mul; mul *= 128; } while (b & 128 && i < 5);
+          if (buf.length < i + len) break;
+          const type = buf[0] >> 4, body = buf.subarray(i, i + len); buf = buf.slice(i + len);
+          if (type === 2) { // CONNACK
+            if (body[1] !== 0) { try { ws.close(); } catch (x) {} return; }
+            c.up = true; c.fail = 0; subs.forEach((t) => ws.send(subPkt(t)));
+            clearInterval(c.ping); c.ping = setInterval(() => { try { ws.send(new Uint8Array([0xc0, 0])); } catch (x) {} }, 30000);
+            api.onState && api.onState();
+          } else if (type === 3) { // PUBLISH (QoS 0)
+            const tl = (body[0] << 8) | body[1], topic = td.decode(body.subarray(2, 2 + tl)), qos = 0;
+            try { onMsg(topic, JSON.parse(td.decode(body.subarray(2 + tl + (qos ? 2 : 0))))); } catch (x) {}
+          }
+        }
+      };
+      ws.onclose = () => { c.up = false; clearInterval(c.ping); api.onState && api.onState(); retry(c); };
+      ws.onerror = () => { try { ws.close(); } catch (x) {} };
+    }
+    function retry(c) { if (c.stop) return; clearTimeout(c.rt); c.fail = (c.fail || 0) + 1; c.rt = setTimeout(() => open(c), Math.min(30000, 1500 * c.fail)); }
+    const api = {
+      sub(t) { subs.add(t); conns.forEach((c) => { if (c.up) c.ws.send(subPkt(t)); }); },
+      pub(t, obj, retain) { const p = pkt(0x30 | (retain ? 1 : 0), [...str(t), ...te.encode(JSON.stringify(obj))]); conns.forEach((c) => { if (c.up && c.ws.bufferedAmount < 4096) try { c.ws.send(p); } catch (x) {} }); },
+      up: () => conns.some((c) => c.up),
+      close() { conns.forEach((c) => { c.stop = true; clearTimeout(c.rt); clearInterval(c.ping); try { c.ws && c.ws.close(); } catch (x) {} }); conns.length = 0; },
+    };
+    BROKERS.forEach((url) => { const c = { url }; conns.push(c); open(c); });
+    return api;
+  }
+  const LINK = (() => {
+    const L = { code: '', paired: false, mq: null, last: 0, nowKey: '' };
+    try {
+      if (TV) {
+        L.code = localStorage.getItem('kelder-tvcode') || String(100000 + Math.floor(Math.random() * 900000));
+        localStorage.setItem('kelder-tvcode', L.code); L.paired = localStorage.getItem('kelder-tvpaired') === '1';
+      } else L.code = localStorage.getItem('kelder-tvlink') || '';
+    } catch (e) {}
+    return L;
+  })();
+  const linkTopic = (k) => 'kelder-spelletjes/v1/' + LINK.code + '/' + k;
+  // --- op de tv ---
+  const TVB = { beat: 0, lvl: 0, lvlT: 0, raf: 0 };
+  function tvLinkStart() {
+    LINK.mq = mqttClient((topic, m) => {
+      if (!m || typeof m !== 'object') return;
+      LINK.last = Date.now();
+      if (!LINK.paired) { LINK.paired = true; try { localStorage.setItem('kelder-tvpaired', '1'); } catch (e) {} const c = document.getElementById('tvCode'); if (c) c.classList.remove('show'); const l = document.querySelector('.tvlink'); if (l) l.remove(); }
+      if (topic.endsWith('/fx')) {
+        if (typeof m.b === 'number') TVB.beat = Math.max(TVB.beat, Math.min(1, m.b));
+        if (typeof m.l === 'number') TVB.lvlT = Math.min(1, Math.max(0, m.l));
+      } else if (topic.endsWith('/now') && !spOn()) {
+        const art = typeof m.art === 'string' && /^https:\/\/i\.scdn\.co\//.test(m.art) ? m.art : '';
+        spNow = m.id ? { id: String(m.id).slice(0, 80), title: String(m.title || '').slice(0, 200), artist: String(m.artist || '').slice(0, 200), art, playing: !!m.playing } : null;
+        spPaint();
+      }
+    });
+    LINK.mq.sub(linkTopic('fx')); LINK.mq.sub(linkTopic('now'));
+    const loop = () => {
+      TVB.raf = requestAnimationFrame(loop);
+      const el = document.querySelector('.splash.tv'); if (!el) return;
+      const live = Date.now() - LINK.last < 8000;
+      el.classList.toggle('live', live);
+      if (!live) return;
+      const now = performance.now(), k = Math.min(30, (now - (TVB.t || now)) / 16.7); TVB.t = now; TVB.fps = (TVB.fps || 60) * 0.95 + (k ? 60 / k : 60) * 0.05;
+      TVB.beat *= Math.pow(0.9, k); TVB.lvl += (TVB.lvlT - TVB.lvl) * (1 - Math.pow(0.88, k));
+      el.style.setProperty('--beat', TVB.beat.toFixed(3)); el.style.setProperty('--lvl', TVB.lvl.toFixed(3));
+    };
+    TVB.raf = requestAnimationFrame(loop);
+    // tik of druk op OK met de afstandsbediening: de code even tonen
+    const show = () => { const c = document.getElementById('tvCode'); if (!c) return; c.classList.add('show'); clearTimeout(show.t); if (LINK.paired) show.t = setTimeout(() => c.classList.remove('show'), 12000); };
+    document.addEventListener('pointerdown', show, { passive: true });
+    document.addEventListener('keydown', show);
+  }
+  // --- op de tablet ---
+  function tabLinkStart() {
+    if (!LINK.code || LINK.mq) return;
+    LINK.mq = mqttClient(() => {});
+    let wasUp = false;
+    LINK.mq.onState = () => { const up = LINK.mq && LINK.mq.up(); if (up && !wasUp) tabSendNow(true); wasUp = up; if (ui.modal === 'tv') renderModal(); };
+    LINK.nowKey = ''; tabSendNow();
+    danceStart().then((ok) => { LINK.mic = ok; if (!ok) showToast('De tv kan niet meedansen: sta de <b>microfoon</b> toe voor deze app.', false); if (ui.modal === 'tv') renderModal(); });
+  }
+  function tabLinkStop() { if (LINK.mq) LINK.mq.close(); LINK.mq = null; LINK.mic = false; danceStop(); }
+  function tabSendNow(force) {
+    if (TV || !LINK.mq) return;
+    const n = spNow, m = n ? { id: n.id, title: n.title, artist: n.artist, art: n.art, playing: n.playing } : { id: null };
+    const k = JSON.stringify(m); if (k === LINK.nowKey && !force) return;
+    LINK.nowKey = k; LINK.mq.pub(linkTopic('now'), m, true);
+  }
+  function tabSendFx(o) { if (LINK.mq) LINK.mq.pub(linkTopic('fx'), o); }
+
   // Bij een nieuw nummer: hoes en titel 10 seconden zacht in beeld
   let tvLast = null, tvT = 0;
   function tvPaint() {
@@ -2205,6 +2326,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     ui.artCols.forEach((c, k) => el.style.setProperty('--a' + (k + 1), c));
   }
   function spPaint() {
+    tabSendNow();
     auroraFromArt(spNow && spNow.art ? spNow.art : null);
     if (TV) { tvPaint(); return; }
     const side = document.querySelector('.splash .side'); if (!side) return;
@@ -2220,7 +2342,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
     }
     side.innerHTML = spCardHTML();
   }
-  setInterval(() => { if (!document.hidden && document.querySelector('.splash')) spPoll(); }, 5000);
+  setInterval(() => { if (!document.hidden && (document.querySelector('.splash') || LINK.mq)) spPoll(); }, 5000);
+  setInterval(() => tabSendNow(true), 60000); // af en toe opnieuw, voor een tv die later aangaat
   document.addEventListener('change', async (e) => {
     if (e.target.id !== 'wfImg' || !e.target.files || !e.target.files[0]) return;
     const err = document.getElementById('wfErr');
@@ -2260,9 +2383,10 @@ if (typeof module !== 'undefined') module.exports = Logic;
     { k: 'led', n: 'Ledstrips', c: '#d38bff', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 15c3-4 5-4 8 0s5 4 8 0 3-3 4-2"/><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="10" cy="15" r="1" fill="currentColor"/><circle cx="14" cy="17.6" r="1" fill="currentColor"/><circle cx="18" cy="15" r="1" fill="currentColor"/><path d="M5 8V6M10 10V7.5M14 12.5V10M18 10V7.5"/></svg>' },
     { k: 'wifi', n: 'Wifi', c: '#6aa8ff', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 9a14 14 0 0 1 19 0"/><path d="M5.5 12.5a9.5 9.5 0 0 1 13 0"/><path d="M8.7 15.8a5 5 0 0 1 6.6 0"/><circle cx="12" cy="19" r="1.2" fill="currentColor"/></svg>' },
     { k: 'dance', n: 'Meedansen', c: '#5ef0c0', svg: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="9" width="2.6" height="10" rx="1.2"/><rect x="9" y="5" width="2.6" height="14" rx="1.2"/><rect x="14" y="8" width="2.6" height="11" rx="1.2"/><rect x="19" y="11" width="2.6" height="8" rx="1.2"/></svg>' },
+    { k: 'tv', n: 'Tv', c: '#5ef0c0', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="19" height="12.5" rx="2"/><path d="M8 20.5h8"/><path d="M7.5 12.5c1-2 2-2 3 0s2 2 3 0 2-2 3 0"/></svg>' },
     { k: 'lamp', n: 'Lampen', c: '#ffd36b', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3z"/></svg>' },
   ];
-  { const o = ['fan', 'led', 'lamp', 'wifi']; for (let i = DEVS.length - 1; i >= 0; i--) if (!o.includes(DEVS[i].k)) DEVS.splice(i, 1); DEVS.sort((a, b) => o.indexOf(a.k) - o.indexOf(b.k)); }
+  { const o = ['fan', 'led', 'lamp', 'tv', 'wifi']; for (let i = DEVS.length - 1; i >= 0; i--) if (!o.includes(DEVS[i].k)) DEVS.splice(i, 1); DEVS.sort((a, b) => o.indexOf(a.k) - o.indexOf(b.k)); }
   const DEV_APPS = [['Smart Life', 'com.tuya.smartlife'], ['Tuya Smart', 'com.tuya.smart'], ['Philips Hue', 'com.philips.lighting.hue2'], ['Govee Home', 'com.govee.home'], ['SmartThings', 'com.samsung.android.oneconnect'], ['Google Home', 'com.google.android.apps.chromecast.app'], ['LG ThinQ', 'com.lgeha.nuts'], ['Spotify', 'com.spotify.music']];
   const DEV_KEY = 'kelder-apps';
   let DEVMAP = (() => { try { return JSON.parse(localStorage.getItem(DEV_KEY)) || {}; } catch (e) { return {}; } })();
@@ -2283,7 +2407,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   // Lang drukken op een knop = de app ervan kiezen
   let devHold = null;
   document.addEventListener('pointerdown', (e) => {
-    const d = e.target.closest && e.target.closest('.dev'); if (!d || d.dataset.v === 'games' || d.dataset.v === 'dance') return;
+    const d = e.target.closest && e.target.closest('.dev'); if (!d || d.dataset.v === 'games' || d.dataset.v === 'tv') return;
     devHold = setTimeout(() => { devHold = 'done'; ui.devK = d.dataset.v; ui.modal = d.dataset.v === 'wifi' ? 'wifi' : 'devApp'; render(); }, 650);
   }, { passive: true });
   ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => document.addEventListener(t, () => { if (devHold && devHold !== 'done') clearTimeout(devHold); setTimeout(() => { if (devHold === 'done') devHold = null; }, 50); }, { passive: true }));
@@ -3635,19 +3759,18 @@ module.exports = QRRSBlock;
       const ac = audioCtx(); const src = ac.createMediaStreamSource(D.st);
       D.an = ac.createAnalyser(); D.an.fftSize = 1024; D.an.smoothingTimeConstant = 0.55; src.connect(D.an);
       D.buf = new Uint8Array(D.an.frequencyBinCount);
-      cancelAnimationFrame(D.raf); D.raf = requestAnimationFrame(danceLoop);
+      clearInterval(D.raf); D.raf = setInterval(danceLoop, 20); D.lt = 0;
       return true;
     } catch (e) { danceStop(); return false; }
   }
   function danceStop() {
-    cancelAnimationFrame(D.raf);
+    clearInterval(D.raf);
     if (D.st) D.st.getTracks().forEach((t) => t.stop());
     D.st = null; D.an = null; D.beat = 0;
     const el = document.querySelector('.splash'); if (el) { el.style.removeProperty('--beat'); el.style.removeProperty('--lvl'); }
   }
   function danceLoop() {
-    D.raf = requestAnimationFrame(danceLoop);
-    const el = document.querySelector('.splash'); if (!el || !D.an) return;
+    if (!D.an) return;
     D.an.getByteFrequencyData(D.buf);
     let bass = 0, all = 0;
     for (let i = 1; i < 9; i++) bass += D.buf[i];        // ± 40–380 Hz: de beat
@@ -3656,9 +3779,10 @@ module.exports = QRRSBlock;
     // Beat = de bas springt plots omhoog (en niet vlak na de vorige beat)
     const now = performance.now(), flux = bass - (D.prev || 0);
     D.prev = bass; D.avg = D.avg * 0.97 + bass * 0.03;
-    if (flux > 0.05 && bass > 0.15 && bass > D.avg * 1.1 && now - (D.last || 0) > 180) { D.beat = Math.min(1, 0.55 + flux * 3); D.last = now; }
+    if (flux > 0.05 && bass > 0.15 && bass > D.avg * 1.1 && now - (D.last || 0) > 180) { D.beat = Math.min(1, 0.55 + flux * 3); D.last = now; tabSendFx({ b: +D.beat.toFixed(2) }); }
     else D.beat *= 0.88;
-    el.style.setProperty('--beat', D.beat.toFixed(3)); el.style.setProperty('--lvl', all.toFixed(3));
+    D.lv = (D.lv || 0) * 0.8 + all * 0.2;
+    if (now - D.lt > 250) { D.lt = now; tabSendFx({ l: +Math.min(1, D.lv * 1.6).toFixed(2) }); }
   }
   async function danceToggle() {
     if (danceOn()) { try { localStorage.removeItem(DANCE_KEY); } catch (e) {} danceStop(); render(); showToast('Meedansen staat uit', false); return; }
@@ -3670,7 +3794,7 @@ module.exports = QRRSBlock;
   // Na het herladen terug aanzetten; de geluidsverwerking start bij de eerste aanraking
   try { localStorage.removeItem(DANCE_KEY); } catch (e) {} // meedansen via de microfoon is van de tablet gehaald
   document.addEventListener('pointerdown', () => { if (D.st) audioCtx(); }, { passive: true });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) { if (D.st) danceStop(); } else if (danceOn()) danceStart(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { if (D.st) danceStop(); } else if (LINK.mq) danceStart(); });
 
   // Klok op het beginscherm loopt elke seconde
   setInterval(() => {
@@ -4639,6 +4763,24 @@ module.exports = QRRSBlock;
         <button class="btn primary block" data-act="wifiSave">Opslaan en tonen</button>
         ${WIFI.s ? '<button class="btn ghost block" data-act="wifiClear">Wissen</button>' : ''}
         <button class="btn ghost block" data-act="close">Annuleren</button>`;
+    } else if (m === 'tv') {
+      if (LINK.code) {
+        const net = LINK.mq && LINK.mq.up(), mic = !!D.st;
+        body = `<h2>Tv danst mee</h2>
+          <p class="muted" style="margin:0">De tablet luistert met de microfoon naar de muziek en stuurt de beat naar de tv. Op de tablet zelf zie je niets bewegen.</p>
+          <div class="tvlinkst"><i class="${net ? 'ok' : ''}"></i>${net ? 'Verbonden met de tv' : 'Verbinden…'} · code ${esc(LINK.code)}</div>
+          <div class="tvlinkst"><i class="${mic ? 'ok' : ''}"></i>${mic ? 'Microfoon luistert' : 'Microfoon staat niet aan'}</div>
+          ${mic ? '' : '<button class="btn soft block" data-act="tvMic">Microfoon aanzetten</button>'}
+          <button class="btn ghost block" data-act="tvUnlink">Loskoppelen</button>
+          <button class="btn primary block" data-act="close">Klaar</button>`;
+      } else {
+        body = `<h2>Koppel de tv</h2>
+          <p class="muted" style="margin:0">Open op de tv <b>lennertbrepoelss.github.io/Kaarten/?tv</b>. Rechtsboven staat een code van 6 cijfers.</p>
+          <input class="input" id="tvIn" inputmode="numeric" maxlength="7" placeholder="000 000" autocomplete="off">
+          <p class="err" id="tvErr" style="min-height:0"></p>
+          <button class="btn primary block" data-act="tvLink">Koppelen</button>
+          <button class="btn ghost block" data-act="close">Annuleren</button>`;
+      }
     } else if (m === 'devApp') {
       const d = DEVS.find((x) => x.k === ui.devK) || DEVS[0], cur = DEVMAP[d.k];
       body = `<h2>Welke app opent ${d.n.toLowerCase()}?</h2>
@@ -5212,7 +5354,7 @@ module.exports = QRRSBlock;
       const k = b.dataset.v;
       if (k === 'games') { actions.splashGo(); return; }
       if (k === 'wifi') { if (WIFI.s) showWifi(); else { ui.modal = 'wifi'; render(); } return; }
-      if (k === 'dance') { danceToggle(); return; }
+      if (k === 'tv') { ui.modal = 'tv'; render(); setTimeout(() => { const i = document.getElementById('tvIn'); if (i) i.focus(); }, 80); return; }
       const pkg = devApp(k);
       if (!pkg) { ui.devK = k; ui.modal = 'devApp'; render(); return; }
       openAndroidApp(pkg);
@@ -5224,6 +5366,14 @@ module.exports = QRRSBlock;
       DEVMAP[ui.devK] = v; devSave(); ui.modal = null; render(); showToast('<b>Opgeslagen</b> · tik op de knop om de app te openen', false);
     },
     devClear() { delete DEVMAP[ui.devK]; devSave(); ui.modal = null; render(); },
+    tvLink() {
+      const v = ((document.getElementById('tvIn') || {}).value || '').replace(/\D/g, '');
+      if (v.length !== 6) { const e = document.getElementById('tvErr'); if (e) e.textContent = 'De code heeft 6 cijfers. Je ziet hem rechtsboven op de tv.'; return; }
+      tabLinkStop(); LINK.code = v; try { localStorage.setItem('kelder-tvlink', v); } catch (e) {}
+      tabLinkStart(); audioCtx(); render(); showToast('<b>Tv gekoppeld</b> · zet de muziek op en kijk naar de tv', false);
+    },
+    tvMic() { audioCtx(); danceStart().then((ok) => { LINK.mic = ok; if (!ok) showToast('Geen toegang tot de microfoon. Sta de microfoon toe in de instellingen van de app.', false); renderModal(); }); },
+    tvUnlink() { tabLinkStop(); LINK.code = ''; try { localStorage.removeItem('kelder-tvlink'); } catch (e) {} ui.modal = null; render(); showToast('Tv losgekoppeld', false); },
     spSetup() { ui.spCidTxt = SP.cid || ''; ui.modal = 'spotify'; render(); },
     spSaveCid() {
       const v = (document.getElementById('spCid') || {}).value || '';
@@ -5482,6 +5632,7 @@ module.exports = QRRSBlock;
   })();
   render();
   spCallback().then(() => { if (spOn()) spPoll(); });
+  if (TV) tvLinkStart(); else if (LINK.code) tabLinkStart();
   window.__troeven = { get state() { return S; }, ui };
 })();
 </script>
