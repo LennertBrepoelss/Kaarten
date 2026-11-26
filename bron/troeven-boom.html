@@ -2166,7 +2166,22 @@ if (typeof module !== 'undefined') module.exports = Logic;
   })();
   const linkTopic = (k) => 'kelder-spelletjes/v1/' + LINK.code + '/' + k;
   // --- op de tv ---
-  const TVB = { beat: 0, lvl: 0, lvlT: 0, raf: 0, per: 0, next: 0, str: 0.8, sync: 0, rings: [], sparks: [], hit() {},
+  function tvFx(m, lat) {
+    LINK.last = Date.now();
+    if (typeof m.b === 'number') {
+      const b = Math.min(1, m.b), now = performance.now();
+      if (typeof m.p === 'number' && m.p >= 300 && m.p <= 1000) {
+        // gelijkzetten: de echte beat was lat ms geleden, de volgende komt dus over p - lat
+        const real = now - lat; let nx = real + m.p; while (nx < now) nx += m.p;
+        if (!TVB.per || Math.abs(m.p - TVB.per) > TVB.per * 0.15) TVB.next = nx; else { let d = nx - TVB.next; if (d > m.p / 2) d -= m.p; if (d < -m.p / 2) d += m.p; TVB.next += d * 0.5; }
+        if (!TVB.per) TVB.hit(b);
+        TVB.per = m.p; TVB.str = b; TVB.sync = now;
+      } else { TVB.per = 0; TVB.hit(b); }
+    }
+    if (typeof m.l === 'number') TVB.lvlT = Math.min(1, Math.max(0, m.l));
+  }
+  const TVB = { beat: 0, kick: 0, lvl: 0, lvlT: 0, raf: 0, per: 0, next: 0, str: 0.8, sync: 0, rings: [], sparks: [], hit() {}, local: false,
+    eF: 0, eS: 0.3, eQ: 0, I: 0.4, calm: 0, bloom: 0, lastDrop: 0, n: 0,
     lat: (() => { try { return +localStorage.getItem('kelder-tvlat') || 220; } catch (e) { return 220; } })() };
   function tvLinkStart() {
     LINK.mq = mqttClient((topic, m) => {
@@ -2174,17 +2189,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       LINK.last = Date.now();
       if (!LINK.paired) { LINK.paired = true; try { localStorage.setItem('kelder-tvpaired', '1'); } catch (e) {} const c = document.getElementById('tvCode'); if (c) c.classList.remove('show'); const l = document.querySelector('.tvlink'); if (l) l.remove(); }
       if (topic.endsWith('/fx')) {
-        if (typeof m.b === 'number') {
-          const b = Math.min(1, m.b), now = performance.now();
-          if (typeof m.p === 'number' && m.p >= 300 && m.p <= 1000) {
-            // gelijkzetten: de echte beat was LAT ms geleden, de volgende komt dus over p - LAT
-            const real = now - TVB.lat; let nx = real + m.p; while (nx < now) nx += m.p;
-            if (!TVB.per || Math.abs(m.p - TVB.per) > TVB.per * 0.15) TVB.next = nx; else { let d = nx - TVB.next; if (d > m.p / 2) d -= m.p; if (d < -m.p / 2) d += m.p; TVB.next += d * 0.5; }
-            if (!TVB.per) TVB.beat = Math.max(TVB.beat, b);
-            TVB.per = m.p; TVB.str = b; TVB.sync = now;
-          } else { TVB.per = 0; TVB.beat = Math.max(TVB.beat, b); TVB.hit(b); }
-        }
-        if (typeof m.l === 'number') TVB.lvlT = Math.min(1, Math.max(0, m.l));
+        if (!TVB.local) tvFx(m, TVB.lat);
       } else if (topic.endsWith('/now') && !spOn()) {
         const art = typeof m.art === 'string' && /^https:\/\/i\.scdn\.co\//.test(m.art) ? m.art : '';
         spNow = m.id ? { id: String(m.id).slice(0, 80), title: String(m.title || '').slice(0, 200), artist: String(m.artist || '').slice(0, 200), art, playing: !!m.playing } : null;
@@ -2192,6 +2197,9 @@ if (typeof module !== 'undefined') module.exports = Logic;
       }
     });
     LINK.mq.sub(linkTopic('fx')); LINK.mq.sub(linkTopic('now'));
+    // heeft de tv zelf een microfoon (of een usb-micro)? dan die gebruiken: geen vertraging over internet
+    const tryMic = () => { if (TVB.local || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return; audioCtx(); danceStart().then((ok) => { TVB.local = ok; }); };
+    tryMic(); document.addEventListener('keydown', () => { audioCtx(); tryMic(); }, { once: true });
     const DEF = ['rgba(70,240,190,.85)', 'rgba(150,110,255,.8)', 'rgba(60,170,255,.6)', 'rgba(255,120,210,.32)'];
     const parse = (c) => { const m = String(c).match(/[\d.]+/g) || [0, 0, 0, 0]; return [+m[0], +m[1], +m[2], m[3] == null ? 1 : +m[3]]; };
     const cols = DEF.map(parse);
@@ -2204,71 +2212,97 @@ if (typeof module !== 'undefined') module.exports = Logic;
       const live = Date.now() - LINK.last < 8000;
       el.classList.toggle('live', live);
       const now = performance.now(), k = Math.min(30, (now - (TVB.t || now)) / 16.7); TVB.t = now;
-      TVB.beat *= Math.pow(0.9, k); TVB.lvl += ((live ? TVB.lvlT : 0) - TVB.lvl) * (1 - Math.pow(0.88, k));
+      const dt = k * 16.7 / 1000, ema = (x, y, tau) => x + (y - x) * (1 - Math.exp(-dt / tau));
+      TVB.lvl = ema(TVB.lvl, live ? TVB.lvlT : 0, 0.12);
+      // voorspelde beat laten afgaan
       if (TVB.per) {
-        if (now - TVB.sync > TVB.per * 3) TVB.per = 0; // muziek stopt of tempo weg: niet verder blijven tikken
-        else if (now >= TVB.next) { TVB.beat = Math.max(TVB.beat, TVB.str); TVB.hit(TVB.str); TVB.next += TVB.per; if (TVB.next < now) TVB.next = now + TVB.per; }
+        if (now - TVB.sync > TVB.per * 3) TVB.per = 0;
+        else if (now >= TVB.next) { TVB.hit(TVB.str); TVB.next += TVB.per; if (TVB.next < now) TVB.next = now + TVB.per; }
       }
-      el.style.setProperty('--beat', TVB.beat.toFixed(3));
+      // beat: zachte aanzet en rustig uitdoven (geen harde flits)
+      TVB.kick *= Math.pow(0.82, k);
+      TVB.beat += TVB.kick > TVB.beat ? (TVB.kick - TVB.beat) * (1 - Math.pow(0.55, k)) : 0;
+      TVB.beat *= Math.pow(0.955, k);
+      // opbouw: vlak voor een voorspelde beat zwelt het licht al aan
+      let pre = 0; if (TVB.per) { const u = 1 - Math.max(0, Math.min(1, (TVB.next - now) / TVB.per)); pre = Math.pow(u, 4) * 0.1; }
+      // energie: kort (eQ), middel (eF) en lang (eS). Stiller dan normaal = break, daarna terug luid = drop
+      TVB.eQ = ema(TVB.eQ, TVB.lvl, 0.35); TVB.eF = ema(TVB.eF, TVB.lvl, 1.4); TVB.eS = ema(TVB.eS, TVB.lvl, 18);
+      if (live && TVB.eS > 0.12) {
+        if (TVB.eF < TVB.eS * 0.62) TVB.calm += dt;
+        else if (TVB.calm > 2.5 && TVB.eQ > TVB.eS * 1.02 && now - TVB.lastDrop > 8000) { TVB.drop(); TVB.calm = 0; }
+        else if (TVB.eF > TVB.eS * 0.9) TVB.calm = Math.max(0, TVB.calm - dt * 0.5);
+      }
+      TVB.I = ema(TVB.I, live ? Math.max(0, Math.min(1, 0.25 + (TVB.eF - TVB.eS) * 2.5 + TVB.eF * 0.3)) : el.classList.contains('playing') ? 0.4 : 0.3, 1.6);
+      TVB.bloom *= Math.pow(0.975, k);
+      const I = TVB.I, breath = !live && el.classList.contains('playing') ? 0.08 * (1 - Math.cos(2 * Math.PI * now / 1000 / 3.2)) / 2 : 0;
+      const pulse = TVB.beat * 0.55 + pre + breath + TVB.bloom * 0.6, grow = 1 + pulse * 0.05 + I * 0.06 + TVB.bloom * 0.05;
+      el.style.setProperty('--beat', Math.min(1, TVB.beat * 0.5 + TVB.bloom * 0.6).toFixed(3)); el.style.setProperty('--lvl', I.toFixed(3));
       const cv = document.getElementById('tvSky'); if (!cv) return;
       const cx = cv.getContext('2d'), W = cv.width, H = cv.height, V = W / 100, t = now / 1000;
-      // kleuren zacht naar die van de hoes laten overgaan (±3 s)
       const tgt = (ui.artCols || DEF).map(parse), f = 1 - Math.pow(0.985, k);
       cols.forEach((c, i) => { for (let j = 0; j < 4; j++) c[j] += (tgt[i][j] - c[j]) * f; });
-      const breath = !live && el.classList.contains('playing') ? 0.18 * (1 - Math.cos(2 * Math.PI * t / 3.2)) / 2 : 0;
-      const pulse = TVB.beat + breath, grow = 1 + pulse * 0.16 + TVB.lvl * 0.05;
       cx.clearRect(0, 0, W, H);
       cx.globalCompositeOperation = 'lighter';
       BL.forEach((b, i) => {
         const e = i === 3 ? 1 - ease(t, b[7]) : ease(t, b[7]), sc = (1 + (b[6] - 1) * e) * grow, c = cols[i];
-        const a = Math.min(1, c[3] * (0.72 + TVB.lvl * 0.25 + pulse * 0.35));
+        const a = Math.min(1, c[3] * (0.5 + I * 0.35 + pulse * 0.3));
         cx.save(); cx.translate((b[0] + b[4] * e) * V, (b[1] + b[5] * e) * V); cx.rotate((i % 2 ? -1 : 1) * 0.18 * e); cx.scale(b[2] * V * sc, b[3] * V * sc);
         const g = cx.createRadialGradient(0, 0, 0, 0, 0, 1), rgb = `${c[0] | 0},${c[1] | 0},${c[2] | 0}`;
         g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(0.45, `rgba(${rgb},${a * 0.55})`); g.addColorStop(1, `rgba(${rgb},0)`);
         cx.fillStyle = g; cx.beginPath(); cx.arc(0, 0, 1, 0, Math.PI * 2); cx.fill(); cx.restore();
       });
-      // noorderlicht-gordijnen bovenaan die zacht golven
+      // noorderlicht-gordijnen: worden langer en helderder naarmate de muziek opbouwt
       for (let i = 0; i < 3; i++) {
-        const c = cols[i], h = H * (0.42 + i * 0.06), g = cx.createLinearGradient(0, 0, 0, h), rgb = `${c[0] | 0},${c[1] | 0},${c[2] | 0}`;
-        g.addColorStop(0, `rgba(${rgb},0)`); g.addColorStop(0.55, `rgba(${rgb},.55)`); g.addColorStop(0.8, `rgba(${rgb},.9)`); g.addColorStop(1, `rgba(${rgb},0)`);
+        const c = cols[i], h = H * (0.36 + i * 0.05) * (0.8 + I * 0.45 + TVB.bloom * 0.2), g = cx.createLinearGradient(0, 0, 0, h), rgb = `${c[0] | 0},${c[1] | 0},${c[2] | 0}`;
+        g.addColorStop(0, `rgba(${rgb},0)`); g.addColorStop(0.55, `rgba(${rgb},.5)`); g.addColorStop(0.8, `rgba(${rgb},.85)`); g.addColorStop(1, `rgba(${rgb},0)`);
         cx.fillStyle = g;
         for (let x = 0; x < W; x += 3) {
-          const y = H * (0.02 + i * 0.07) + Math.sin(x * 0.018 + t * (0.21 + i * 0.07) + i * 2) * H * 0.07 + Math.sin(x * 0.047 - t * 0.33 + i) * H * 0.03;
+          const y = H * (0.02 + i * 0.07) + Math.sin(x * 0.018 + t * (0.21 + i * 0.07) * (0.8 + I * 0.6) + i * 2) * H * 0.07 + Math.sin(x * 0.047 - t * 0.33 + i) * H * 0.03;
           const ray = 0.5 + 0.5 * Math.sin(x * 0.11 + t * (0.6 + i * 0.2) + i * 1.7) * Math.sin(x * 0.031 - t * 0.25);
-          cx.globalAlpha = Math.min(1, (0.1 + ray * 0.22) * (0.75 + pulse * 1.1 + TVB.lvl * 0.4));
+          cx.globalAlpha = Math.min(1, (0.07 + ray * 0.2) * (0.5 + I * 0.75 + pulse * 0.45));
           cx.save(); cx.translate(x, y); cx.fillRect(0, 0, 3, h); cx.restore();
         }
       }
       cx.globalAlpha = 1;
-      if (pulse > 0.02) { // flits in het midden op de beat
-        const c = cols[0], g = cx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W * 0.45);
-        g.addColorStop(0, `rgba(${(c[0] + 255) / 2 | 0},${(c[1] + 255) / 2 | 0},${(c[2] + 255) / 2 | 0},${Math.min(0.5, pulse * 0.45)})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+      if (TVB.bloom > 0.02) { // alleen bij een drop: zachte gloed vanuit het midden
+        const c = cols[0], g = cx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W * 0.55);
+        g.addColorStop(0, `rgba(${(c[0] + 255) / 2 | 0},${(c[1] + 255) / 2 | 0},${(c[2] + 255) / 2 | 0},${TVB.bloom * 0.3})`); g.addColorStop(1, 'rgba(0,0,0,0)');
         cx.fillStyle = g; cx.fillRect(0, 0, W, H);
       }
       cx.globalCompositeOperation = 'source-over';
-      // fijne laag: ringen op de beat en opstijgende vonkjes
+      // fijne laag: ringen en opstijgende vonkjes
       const fx = document.getElementById('tvFx'); if (!fx) return;
-      const q = fx.getContext('2d'), FW = fx.width, FH = fx.height, dt = k * 16.7 / 1000;
+      const q = fx.getContext('2d'), FW = fx.width, FH = fx.height;
       q.clearRect(0, 0, FW, FH);
       const c0 = cols[0], c1 = cols[1], lite = (c) => `${(c[0] + 255 * 2) / 3 | 0},${(c[1] + 255 * 2) / 3 | 0},${(c[2] + 255 * 2) / 3 | 0}`;
-      TVB.rings = TVB.rings.filter((r) => (r.a += dt) < 2.2);
+      TVB.rings = TVB.rings.filter((r) => (r.a += dt) < r.d);
       TVB.rings.forEach((r) => {
-        const u = r.a / 2.2, rad = FW * (0.08 + u * 0.55);
-        q.strokeStyle = `rgba(${lite(r.i % 2 ? c1 : c0)},${(1 - u) * (1 - u) * 0.55 * r.s})`; q.lineWidth = 1.2 + (1 - u) * 1.8;
+        if (r.a < 0) return; const u = r.a / r.d, e = 1 - Math.pow(1 - u, 3), rad = FW * (0.1 + e * 0.6);
+        q.strokeStyle = `rgba(${lite(r.i % 2 ? c1 : c0)},${(1 - u) * (1 - u) * r.s})`; q.lineWidth = r.w * (1 - u * 0.6);
         q.beginPath(); q.ellipse(FW / 2, FH / 2, rad, rad * 0.56, 0, 0, Math.PI * 2); q.stroke();
       });
-      if (TVB.sparks.length < 70 && Math.random() < 0.25 + TVB.lvl * 0.6) TVB.sparks.push({ x: Math.random() * FW, y: FH + 5, v: 8 + Math.random() * 18, s: 0.6 + Math.random() * 1.4, w: Math.random() * 6.28, a: 0 });
-      const speed = 1 + TVB.lvl * 2.5 + pulse * 4;
+      if (TVB.sparks.length < 80 && Math.random() < 0.12 + I * 0.45) TVB.sparks.push({ x: Math.random() * FW, y: FH + 5, v: 8 + Math.random() * 16, s: 0.6 + Math.random() * 1.3, w: Math.random() * 6.28, a: 0 });
+      const speed = 0.7 + I * 1.6 + TVB.bloom * 3 + TVB.beat * 0.8;
       TVB.sparks = TVB.sparks.filter((p) => { p.y -= p.v * speed * dt; p.a += dt; p.x += Math.sin(p.a * 0.8 + p.w) * 0.25; return p.y > -10; });
       q.fillStyle = `rgb(${lite(c0)})`;
       TVB.sparks.forEach((p) => {
-        q.globalAlpha = Math.min(1, p.a) * (0.25 + 0.45 * (0.5 + 0.5 * Math.sin(p.a * 3 + p.w))) * Math.min(1, p.y / (FH * 0.35)) * (0.8 + pulse);
-        q.beginPath(); q.arc(p.x, p.y, p.s * (1 + pulse * 0.6), 0, Math.PI * 2); q.fill();
+        q.globalAlpha = Math.min(1, p.a) * (0.2 + 0.4 * (0.5 + 0.5 * Math.sin(p.a * 3 + p.w))) * Math.min(1, p.y / (FH * 0.35)) * (0.6 + I * 0.5);
+        q.beginPath(); q.arc(p.x, p.y, p.s, 0, Math.PI * 2); q.fill();
       });
       q.globalAlpha = 1;
     };
-    // een beat: ring + flits (voorspelde beat of rechtstreeks)
-    TVB.hit = (b) => { TVB.rings.push({ a: 0, s: b, i: TVB.rings.length }); if (TVB.rings.length > 6) TVB.rings.shift(); };
+    // een beat: zachte aanzet; om de 4 beats een fijne ring als de muziek vol zit
+    TVB.hit = (b) => {
+      TVB.kick = Math.max(TVB.kick, 0.35 + b * 0.35); TVB.n++;
+      if (TVB.n % 4 === 0 && TVB.I > 0.55) { TVB.rings.push({ a: 0, d: 2.6, s: 0.22, w: 1.2, i: TVB.n }); if (TVB.rings.length > 5) TVB.rings.shift(); }
+    };
+    // de drop na een rustiger stuk: grote gloed, brede ring en een wolk vonken
+    TVB.drop = () => {
+      TVB.lastDrop = performance.now(); TVB.bloom = 1;
+      TVB.rings.push({ a: 0, d: 3.6, s: 0.6, w: 3, i: 0 }, { a: -0.25, d: 3.6, s: 0.35, w: 1.5, i: 1 });
+      const fx = document.getElementById('tvFx'); const FW = fx ? fx.width : 960, FH = fx ? fx.height : 540;
+      for (let i = 0; i < 40; i++) TVB.sparks.push({ x: FW / 2 + (Math.random() - 0.5) * FW * 0.7, y: FH * (0.55 + Math.random() * 0.45), v: 20 + Math.random() * 30, s: 0.8 + Math.random() * 1.5, w: Math.random() * 6.28, a: 0.3 });
+    };
     TVB.raf = requestAnimationFrame(loop);
     // tik of druk op OK met de afstandsbediening: de code even tonen
     const show = () => { const c = document.getElementById('tvCode'); if (!c) return; c.classList.add('show'); clearTimeout(show.t); if (LINK.paired) show.t = setTimeout(() => c.classList.remove('show'), 12000); };
@@ -2298,7 +2332,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const k = JSON.stringify(m); if (k === LINK.nowKey && !force) return;
     LINK.nowKey = k; LINK.mq.pub(linkTopic('now'), m, true);
   }
-  function tabSendFx(o) { if (LINK.mq) LINK.mq.pub(linkTopic('fx'), o); }
+  function tabSendFx(o) { if (TV) { if (TVB.local) tvFx(o, 60); return; } if (LINK.mq) LINK.mq.pub(linkTopic('fx'), o); }
 
   // Bij een nieuw nummer: hoes en titel 10 seconden zacht in beeld
   let tvLast = null, tvT = 0;
