@@ -525,6 +525,29 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 .tile:active { transform: scale(.97); }
 .tile::after { content: ""; position: absolute; inset: 0; background: radial-gradient(80% 60% at 20% 0%, rgba(255,255,255,.28), transparent 60%); pointer-events: none; }
 .tile .tart { position: absolute; top: 10px; left: 10px; width: 58%; color: #fff; }
+/* Glans die af en toe over de tegels schuift */
+.tiles .tile:not(.off):not(.soon)::before { content: ""; position: absolute; top: -20%; bottom: -20%; left: -60%; width: 45%; z-index: 1; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.32), transparent); transform: skewX(-18deg) translateX(0); animation: shine 7s ease-in-out infinite; }
+.tiles .tile:nth-child(2)::before { animation-delay: .35s; } .tiles .tile:nth-child(3)::before { animation-delay: .7s; } .tiles .tile:nth-child(4)::before { animation-delay: 1.05s; }
+.tiles .tile:nth-child(5)::before { animation-delay: 1.4s; } .tiles .tile:nth-child(6)::before { animation-delay: 1.75s; } .tiles .tile:nth-child(7)::before { animation-delay: 2.1s; } .tiles .tile:nth-child(8)::before { animation-delay: 2.45s; }
+@keyframes shine { 0%, 70% { transform: skewX(-18deg) translateX(0); } 100% { transform: skewX(-18deg) translateX(460%); } }
+/* Kantelen naar je vinger */
+.tiles { perspective: 900px; }
+.tile.tilt { transition: transform .08s linear, box-shadow .2s ease; }
+/* Merknaam met bewegende kleuren */
+.brand { background: linear-gradient(90deg, var(--ivory), var(--t1), var(--t2), var(--ivory)); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: brandflow 9s linear infinite; }
+@keyframes brandflow { to { background-position: 300% 0; } }
+/* Live nieuwtjes van de avond */
+.ticker { position: relative; min-height: 46px; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--hair); overflow: hidden; }
+.ticker .ic { font-size: 20px; width: 26px; text-align: center; flex: none; }
+.ticker .tx { font: 500 14px/1.35 var(--f-ui); color: var(--ivory); min-width: 0; }
+.ticker .tx b { font-weight: 700; }
+.ticker.swap .ic, .ticker.swap .tx { animation: tickin .5s var(--ease); }
+@keyframes tickin { from { opacity: 0; transform: translateY(10px); } }
+.ticker .dots { position: absolute; right: 10px; bottom: 6px; display: flex; gap: 4px; }
+.ticker .dots i { width: 4px; height: 4px; border-radius: 50%; background: var(--hair-2); }
+.ticker .dots i.on { background: var(--gold); }
+@media (prefers-reduced-motion: reduce) { .tiles .tile::before, .brand { animation: none !important; } }
 .tile .tart svg { display: block; width: 100%; height: auto; filter: drop-shadow(0 6px 10px rgba(0,0,0,.18)); }
 .tile .tname { font: italic 600 25px/1.02 var(--f-serif); text-shadow: 0 2px 10px rgba(0,0,0,.2); overflow-wrap: anywhere; }
 .tile .tsub { font: 600 11px/1.3 var(--f-ui); letter-spacing: .04em; opacity: .85; }
@@ -1727,6 +1750,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     return `<div class="wrap">
       <header class="top"><div class="brand">Spelletjes</div><div style="display:flex;gap:12px;align-items:center">${syncChip()}<button class="btn ghost sm" data-act="toStart">Spelers</button></div></header>
       <section><p class="label">${firstStart() ? `<span class="live" id="liveClock">${liveTxt()}</span>` : esc(today())}</p><h1>Welk <em>spel</em>?</h1>${A.n ? `<p class="lead">${A.n} rondje${A.n > 1 ? 's' : ''} gespeeld</p>` : ''}</section>
+      ${tickerHTML()}
       ${gameTiles()}
       ${avondPanel()}
       ${items.length ? `<section class="panel"><h2>Rondjes</h2><div>${list}</div></section>` : ''}
@@ -1752,6 +1776,47 @@ if (typeof module !== 'undefined') module.exports = Logic;
         <button class="btn ghost block" type="button" data-act="freeRondje">Zonder geld spelen</button>
       </form></div>`;
   }
+
+  // ---------- Live nieuwtjes op het startscherm ----------
+  // Alle uitgespeelde rondjes van vanavond in volgorde: wie won, wie betaalde
+  function nightFeed() {
+    const out = [];
+    finished().forEach((r) => out.push({ t: r.end || r.start || 0, win: r.teams[r.winner].slice(), pay: r.price ? r.teams[1 - r.winner].map((i) => [i, r.price / 2]) : [] }));
+    PG_KEYS.forEach((g) => PG[g].st().rondjes.forEach((r) => {
+      if (!r.end) return;
+      const res = wPayPct(rankOf(g, r), r.pct);
+      out.push({ t: r.end, g, win: res.place.map((p, i) => (p === 0 ? i : -1)).filter((i) => i >= 0), pay: r.price ? res.out.map((o, i) => [i, (r.price * o) / 100]).filter((x) => x[1] > 0) : [] });
+    }));
+    return out.sort((a, b) => a.t - b.t);
+  }
+  function tickerItems() {
+    const feed = nightFeed(), items = [], P2 = (i) => `<b>${P(i)}</b>`;
+    if (!feed.length) return [['🃏', 'Kies een spel om te beginnen. Veel plezier!']];
+    // reeks: wie de laatste rondjes na elkaar won
+    const last = feed[feed.length - 1];
+    last.win.forEach((i) => { let k = 0; for (let j = feed.length - 1; j >= 0 && feed[j].win.includes(i); j--) k++; if (k >= 2) items.push(['🔥', `${P2(i)} wint al ${k} keer op rij`]); });
+    const wins = S.players.map((_, i) => feed.filter((x) => x.win.includes(i)).length), mw = Math.max(...wins);
+    if (mw) items.push(['👑', `${wins.map((w, i) => (w === mw ? P2(i) : null)).filter(Boolean).join(' & ')} won${wins.filter((w) => w === mw).length > 1 ? 'nen' : ''} al ${mw} rondje${mw > 1 ? 's' : ''}`]);
+    const A = owedAll(), mo = Math.max(...A.owed);
+    if (mo > 0) { const i = A.owed.indexOf(mo); items.push(['💸', `${P2(i)} betaalde al ${euro(mo)}`]); }
+    const zero = S.players.map((_, i) => i).filter((i) => !A.owed[i]);
+    if (A.total && zero.length && zero.length < S.players.length) items.push(['🍀', `${zero.map(P2).join(' & ')} ${zero.length > 1 ? 'betaalden' : 'betaalde'} nog niets`]);
+    if (A.total) items.push(['🍻', `Al ${euro(A.total)} aan rondjes vanavond`]);
+    items.push(['🎲', `${feed.length} rondje${feed.length > 1 ? 's' : ''} gespeeld${last.g ? `, laatst ${gName(last.g)}` : ', laatst Troeven'}`]);
+    return items;
+  }
+  let tickI = 0;
+  function tickerHTML() {
+    const it = tickerItems(), k = tickI % it.length;
+    return `<div class="ticker" id="ticker" aria-live="polite"><span class="ic">${it[k][0]}</span><span class="tx">${it[k][1]}</span>${it.length > 1 ? `<span class="dots">${it.map((_, j) => `<i class="${j === k ? 'on' : ''}"></i>`).join('')}</span>` : ''}</div>`;
+  }
+  setInterval(() => {
+    const el = document.getElementById('ticker'); if (!el || document.hidden) return;
+    tickI++;
+    const tmp = document.createElement('div'); tmp.innerHTML = tickerHTML(); const nw = tmp.firstElementChild;
+    if (!calm()) nw.classList.add('swap');
+    el.replaceWith(nw);
+  }, 4500);
 
   // Alle spellen als tegels; Poker heeft een eigen kassa en geen rondje
   function gameTiles() {
@@ -2703,6 +2768,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     renderModal();
     updateCalc();
     if (before) numLive(before);
+    if (!same && v === 'end') countUp(document.getElementById('settle'));
     if (partyDue) { partyDue = false; setTimeout(party, 120); }
   }
   let lastScreen = null, freshT = 0, partyDue = false;
@@ -2764,6 +2830,33 @@ if (typeof module !== 'undefined') module.exports = Logic;
     })(t0);
     if (navigator.vibrate) try { navigator.vibrate([18, 40, 18]); } catch (e) {}
   }
+  // Tegels kantelen mee met je vinger
+  document.addEventListener('pointermove', (e) => {
+    const el = e.target.closest && e.target.closest('.tiles .tile:not(.off):not(.soon)');
+    if (!el || calm() || e.pointerType === 'mouse' && !e.buttons) return;
+    const r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+    el.classList.add('tilt'); el.style.transform = `rotateX(${(-y * 10).toFixed(1)}deg) rotateY(${(x * 12).toFixed(1)}deg) scale(.97)`;
+  }, { passive: true });
+  const untilt = (e) => { document.querySelectorAll('.tile.tilt').forEach((el) => { el.classList.remove('tilt'); el.style.transform = ''; }); };
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => document.addEventListener(t, untilt, { passive: true }));
+  document.addEventListener('pointerdown', (e) => { const el = e.target.closest && e.target.closest('.tiles .tile:not(.off):not(.soon)'); if (el && !calm()) { el.classList.add('tilt'); el.style.transform = 'scale(.96)'; } }, { passive: true });
+
+  // Bedragen tellen op van 0 (bij het afrekenen)
+  function countUp(root) {
+    if (!root || calm()) return;
+    root.querySelectorAll('.total b, .tr .amt, .srow .owe, .prize .am, .pkstats b').forEach((el) => {
+      const t = el.textContent.trim(), m = /^([+−-]?\s*€\s*)([\d.]+,\d{2})$/.exec(t);
+      if (!m) return;
+      const to = parseFloat(m[2].replace(/\./g, '').replace(',', '.')); if (!to) return;
+      const pre = m[1], t0 = performance.now(), dur = 700;
+      (function step(now) {
+        const p = Math.min(1, (now - t0) / dur), v = to * (1 - Math.pow(1 - p, 3));
+        el.textContent = pre + v.toLocaleString('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (p < 1) requestAnimationFrame(step); else el.textContent = t;
+      })(t0);
+    });
+  }
+
   // Rimpel waar je tikt
   document.addEventListener('pointerdown', (e) => {
     const el = e.target.closest('.btn, .key, .chip, .opt, .tile, .payer');
@@ -3226,7 +3319,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     close() { ui.modal = null; renderModal(); },
     overlay(b, e) { if (e.target === b && ui.modal !== 'winner') { ui.modal = null; renderModal(); } },
     end() { ui.view = 'end'; render(); window.scrollTo(0, 0); },
-    payer(b) { ui.payer = +b.dataset.v; document.querySelectorAll('.payer').forEach((x) => x.classList.toggle('on', +x.dataset.v === ui.payer)); document.querySelectorAll('.step.wait').forEach((x) => x.classList.remove('wait')); document.getElementById('settle').innerHTML = renderSettle(); },
+    payer(b) { ui.payer = +b.dataset.v; document.querySelectorAll('.payer').forEach((x) => x.classList.toggle('on', +x.dataset.v === ui.payer)); document.querySelectorAll('.step.wait').forEach((x) => x.classList.remove('wait')); document.getElementById('settle').innerHTML = renderSettle(); countUp(document.getElementById('settle')); },
     async copy() {
       const msg = document.getElementById('copyMsg');
       const text = settleText();
