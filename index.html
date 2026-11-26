@@ -572,6 +572,9 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 .splash .suit { position: absolute; bottom: -40px; font: 400 28px/1 var(--f-serif); color: rgba(255,255,255,.08); animation: drift linear infinite; pointer-events: none; }
 @keyframes drift { from { transform: translateY(0) rotate(0); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } to { transform: translateY(-115vh) rotate(200deg); opacity: 0; } }
 .splash.leave { animation: splashout .55s var(--ease) forwards; }
+.splash.leave.swiped { animation: swipeout .5s var(--ease) forwards; }
+@keyframes swipeout { to { opacity: 0; transform: translate(var(--sx, 0), var(--sy, -40vh)); filter: blur(4px); } }
+.splash { touch-action: none; }
 /* ===== Kelder: chique aurora ===== */
 .splash { background: #04060f; }
 .splash .sky { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
@@ -2123,6 +2126,20 @@ if (typeof module !== 'undefined') module.exports = Logic;
     devHold = setTimeout(() => { devHold = 'done'; ui.devK = d.dataset.v; ui.modal = 'devApp'; render(); }, 650);
   }, { passive: true });
   ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => document.addEventListener(t, () => { if (devHold && devHold !== 'done') clearTimeout(devHold); setTimeout(() => { if (devHold === 'done') devHold = null; }, 50); }, { passive: true }));
+
+  // Vegen op het Kelder-scherm = verder (in elke richting)
+  let swipe0 = null;
+  document.addEventListener('pointerdown', (e) => { if (e.target.closest && e.target.closest('.splash') && !e.target.closest('button, input, .spcard')) swipe0 = { x: e.clientX, y: e.clientY, t: Date.now() }; else swipe0 = null; }, { passive: true });
+  document.addEventListener('pointerup', (e) => {
+    if (!swipe0) return;
+    const dx = e.clientX - swipe0.x, dy = e.clientY - swipe0.y, far = Math.hypot(dx, dy);
+    swipe0 = null;
+    if (far < 60) return;
+    const el = document.querySelector('.splash'); if (!el) return;
+    el.style.setProperty('--sx', `${Math.max(-1, Math.min(1, dx / far)) * 40}vw`); el.style.setProperty('--sy', `${Math.max(-1, Math.min(1, dy / far)) * 40}vh`);
+    el.classList.add('swiped'); actions.splashGo();
+  }, { passive: true });
+  document.addEventListener('pointercancel', () => { swipe0 = null; }, { passive: true });
 
   // Secondenring: vloeiend rond (elk beeldje), niet per seconde verspringen
   (function ringLoop() {
@@ -3683,6 +3700,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     },
     splashGo() {
       const el = document.querySelector('.splash');
+      if (el && el.classList.contains('leave')) return; // al aan het verdwijnen (tik + veeg)
       // Na de rustmodus terug naar waar je was; anders een nieuwe avond: eerst de spelers
       const fresh = !openAny() && !owedAll().n && !S.pk.on && !(S.pk.past || []).length;
       const go = ui.idle ? () => { ui.idle = false; ui.splashSeen = true; lastTouch = Date.now(); if (fresh && ui.atLoad && !ui.flow) { ui.names = null; ui.view = 'start'; } ui.atLoad = false; render(); window.scrollTo(0, ui.idleY || 0); }
@@ -3917,7 +3935,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 <script>
 // Installeerbare app: offline werken en vanzelf de nieuwste versie laden.
 (() => {
-  const APP_VERSION = '20261126-173616';
+  const APP_VERSION = '20261126-173956';
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
