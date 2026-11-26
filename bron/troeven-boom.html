@@ -3317,7 +3317,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     newRondje() { hideToast(); ui.flow = null; ui.result = null; ui.modal = null; ui.calc = { expr: '', target: null }; ui.view = null; render(); window.scrollTo(0, 0); },
     splashGo() {
       const el = document.querySelector('.splash');
-      const go = () => { ui.splashSeen = true; render(); window.scrollTo(0, 0); };
+      const go = () => { ui.splashSeen = true; ui.names = null; ui.view = 'start'; render(); window.scrollTo(0, 0); };
       if (el && !calm()) { el.classList.add('leave'); setTimeout(go, 450); } else go();
       if (navigator.vibrate) try { navigator.vibrate(12); } catch (e) {}
     },
