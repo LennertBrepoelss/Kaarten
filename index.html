@@ -2041,11 +2041,11 @@ if (typeof module !== 'undefined') module.exports = Logic;
       </div>`;
     }
     if (K.step === 'buyout') {
-      const tout = K.who.reduce((t, i) => t + (K.buyout[i] || 0), 0), all = K.who.every((i) => K.buyout[i] !== null && K.buyout[i] !== undefined);
+      const tout = K.who.reduce((t, i) => t + (K.buyout[i] || 0), 0), all = true;
       const rows = K.who.map((i) => `<div class="pkrow" style="--pc:var(--p${i})"><span class="who">${P(i)}<span class="meta">in ${euro(K.buyin[i])}</span></span>
-        <div class="pkin"><span>€</span><input id="pko${i}" inputmode="decimal" placeholder="0,00" value="${K.buyout[i] === null || K.buyout[i] === undefined ? '' : fmt(K.buyout[i])}" aria-label="Buy-out van ${P(i)}"></div></div>`).join('');
+        <div class="pkin"><span>€</span><input id="pko${i}" inputmode="decimal" placeholder="0" value="${K.buyout[i] ? fmt(K.buyout[i]) : ''}" aria-label="Buy-out van ${P(i)}"></div></div>`).join('');
       return `<div class="wrap">${head('Poker · buy-out')}
-        <section><h1>Buy-<em>out</em></h1><p class="lead">Met hoeveel stopt iedereen?</p></section>
+        <section><h1>Buy-<em>out</em></h1><p class="lead">Met hoeveel stopt iedereen? Wie niets meer heeft, laat je op 0 staan.</p></section>
         <section class="panel" style="gap:0;padding-block:6px">${rows}</section>
         <div class="totbar" id="pkTot">${pkTotHTML()}</div>
         <button class="btn primary xl" data-act="pkStep" data-v="done" id="pkCalc" ${all ? '' : 'disabled'}>Bereken <span class="arr">→</span></button>
@@ -3023,7 +3023,10 @@ if (typeof module !== 'undefined') module.exports = Logic;
     pkAddClose() { ui.pkAdd = false; render(); },
     pkAdd(b) { const K = S.pk, i = +b.dataset.v; if (K.who.includes(i)) return; K.who.push(i); K.buyin[i] = K.unit; K.buyout[i] = null; ui.pkAdd = false; save(); render(); showToast(`<b>${P(i)}</b> doet mee`, false); },
     pkBuy(b) { const K = S.pk, i = +b.dataset.i; K.buyin[i] = Math.max(K.unit, K.buyin[i] + +b.dataset.v * K.unit); save(); render(); if (navigator.vibrate) try { navigator.vibrate(10); } catch (e) {} },
-    pkStep(b) { S.pk.step = b.dataset.v; save(); render(); window.scrollTo(0, 0); },
+    pkStep(b) {
+      const K = S.pk; K.step = b.dataset.v;
+      save(); render(); window.scrollTo(0, 0);
+    },
     pkAgain() {
       const K = S.pk; if (!K.on || K.step !== 'done') return;
       const who = K.who.slice();
@@ -3288,7 +3291,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       const v = e.target.value.trim() === '' ? null : cents(e.target.value);
       S.pk.buyout[+po[1]] = v; save();
       const t = document.getElementById('pkTot'); if (t) t.innerHTML = pkTotHTML();
-      const btn = document.getElementById('pkCalc'); if (btn) btn.disabled = !S.pk.who.every((i) => S.pk.buyout[i] !== null && S.pk.buyout[i] !== undefined);
+      // leeg = 0, dus berekenen kan altijd
       return;
     }
     if (e.target.id === 'bill') {
@@ -3361,7 +3364,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 <script>
 // Installeerbare app: offline werken en vanzelf de nieuwste versie laden.
 (() => {
-  const APP_VERSION = '20261126-085934';
+  const APP_VERSION = '20261126-090036';
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
