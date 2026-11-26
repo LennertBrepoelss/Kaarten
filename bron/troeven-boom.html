@@ -2180,7 +2180,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     }
     if (typeof m.l === 'number') TVB.lvlT = Math.min(1, Math.max(0, m.l));
   }
-  const TVB = { beat: 0, kick: 0, lvl: 0, lvlT: 0, raf: 0, per: 0, next: 0, str: 0.8, sync: 0, rings: [], sparks: [], hit() {}, local: false,
+  const TVB = { beat: 0, hA: 0, hB: 0, hT: -1e9, lvl: 0, lvlT: 0, raf: 0, per: 0, next: 0, str: 0.8, sync: 0, rings: [], sparks: [], hit() {}, local: false,
     eF: 0, eS: 0.3, eQ: 0, I: 0.4, calm: 0, bloom: 0, lastDrop: 0, n: 0,
     lat: (() => { try { return +localStorage.getItem('kelder-tvlat') || 220; } catch (e) { return 220; } })() };
   function tvLinkStart() {
@@ -2197,9 +2197,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       }
     });
     LINK.mq.sub(linkTopic('fx')); LINK.mq.sub(linkTopic('now'));
-    // heeft de tv zelf een microfoon (of een usb-micro)? dan die gebruiken: geen vertraging over internet
-    const tryMic = () => { if (TVB.local || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return; audioCtx(); danceStart().then((ok) => { TVB.local = ok; }); };
-    tryMic(); document.addEventListener('keydown', () => { audioCtx(); tryMic(); }, { once: true });
+
     const DEF = ['rgba(70,240,190,.85)', 'rgba(150,110,255,.8)', 'rgba(60,170,255,.6)', 'rgba(255,120,210,.32)'];
     const parse = (c) => { const m = String(c).match(/[\d.]+/g) || [0, 0, 0, 0]; return [+m[0], +m[1], +m[2], m[3] == null ? 1 : +m[3]]; };
     const cols = DEF.map(parse);
@@ -2220,9 +2218,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
         else if (now >= TVB.next) { TVB.hit(TVB.str); TVB.next += TVB.per; if (TVB.next < now) TVB.next = now + TVB.per; }
       }
       // beat: zachte aanzet en rustig uitdoven (geen harde flits)
-      TVB.kick *= Math.pow(0.82, k);
-      TVB.beat += TVB.kick > TVB.beat ? (TVB.kick - TVB.beat) * (1 - Math.pow(0.55, k)) : 0;
-      TVB.beat *= Math.pow(0.955, k);
+      { const d = now - TVB.hT; TVB.beat = d < 90 ? TVB.hB + (TVB.hA - TVB.hB) * (d / 90) : TVB.hA * Math.exp(-(d - 90) / 380); }
       // opbouw: vlak voor een voorspelde beat zwelt het licht al aan
       let pre = 0; if (TVB.per) { const u = 1 - Math.max(0, Math.min(1, (TVB.next - now) / TVB.per)); pre = Math.pow(u, 4) * 0.1; }
       // energie: kort (eQ), middel (eF) en lang (eS). Stiller dan normaal = break, daarna terug luid = drop
@@ -2235,7 +2231,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       TVB.I = ema(TVB.I, live ? Math.max(0, Math.min(1, 0.25 + (TVB.eF - TVB.eS) * 2.5 + TVB.eF * 0.3)) : el.classList.contains('playing') ? 0.4 : 0.3, 1.6);
       TVB.bloom *= Math.pow(0.975, k);
       const I = TVB.I, breath = !live && el.classList.contains('playing') ? 0.08 * (1 - Math.cos(2 * Math.PI * now / 1000 / 3.2)) / 2 : 0;
-      const pulse = TVB.beat * 0.55 + pre + breath + TVB.bloom * 0.6, grow = 1 + pulse * 0.05 + I * 0.06 + TVB.bloom * 0.05;
+      const pulse = TVB.beat * 0.8 + pre + breath + TVB.bloom * 0.6, grow = 1 + pulse * 0.08 + I * 0.06 + TVB.bloom * 0.05;
       el.style.setProperty('--beat', Math.min(1, TVB.beat * 0.5 + TVB.bloom * 0.6).toFixed(3)); el.style.setProperty('--lvl', I.toFixed(3));
       const cv = document.getElementById('tvSky'); if (!cv) return;
       const cx = cv.getContext('2d'), W = cv.width, H = cv.height, V = W / 100, t = now / 1000;
@@ -2293,7 +2289,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     };
     // een beat: zachte aanzet; om de 4 beats een fijne ring als de muziek vol zit
     TVB.hit = (b) => {
-      TVB.kick = Math.max(TVB.kick, 0.35 + b * 0.35); TVB.n++;
+      const now = performance.now(); TVB.hB = TVB.beat || 0; TVB.hA = Math.max(TVB.hB, 0.4 + b * 0.4); TVB.hT = now; TVB.n++;
       if (TVB.n % 4 === 0 && TVB.I > 0.55) { TVB.rings.push({ a: 0, d: 2.6, s: 0.22, w: 1.2, i: TVB.n }); if (TVB.rings.length > 5) TVB.rings.shift(); }
     };
     // de drop na een rustiger stuk: grote gloed, brede ring en een wolk vonken
@@ -3945,7 +3941,7 @@ module.exports = QRRSBlock;
   // Na het herladen terug aanzetten; de geluidsverwerking start bij de eerste aanraking
   try { localStorage.removeItem(DANCE_KEY); } catch (e) {} // meedansen via de microfoon is van de tablet gehaald
   document.addEventListener('pointerdown', () => { if (D.st) audioCtx(); }, { passive: true });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) { if (D.st) danceStop(); } else if (LINK.mq) danceStart(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { if (D.st) danceStop(); } else if (LINK.mq && !TV) danceStart(); });
 
   // Klok op het beginscherm loopt elke seconde
   setInterval(() => {
