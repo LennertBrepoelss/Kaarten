@@ -4,7 +4,7 @@
 <meta name="theme-color" content="#060914">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Manrope:wght@200;300;400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Manrope:wght@200;300;400;500;600;700&family=Cinzel:wght@500;600;700&display=swap">
 <style>
 /* Layout: één kolom (max 460px), aurora: poolnacht-blauw met noorderlicht in mint, cyaan en violet. Serif voor cijfers en namen, Manrope voor bediening. Vaste dock onderaan. */
 :root {
@@ -625,7 +625,7 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 .splash.tv .sky::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse 75% 65% at 50% 50%, rgba(255,255,255,.3), transparent 70%); background: radial-gradient(ellipse 75% 65% at 50% 50%, color-mix(in srgb, var(--a1) 55%, #fff), transparent 70%); opacity: 0; will-change: opacity; }
 .splash.tv.playing .sky::after { animation: breathglow 3.2s ease-in-out infinite; }
 @keyframes breathglow { 50% { opacity: .35; } }
-.splash.tv .kname { filter: none; text-shadow: 0 0 40px rgba(150,200,255,.3); }
+.splash.tv .kname { filter: drop-shadow(0 0 28px rgba(255,255,255,.18)); }
 .tvfs { position: fixed; left: 50%; bottom: 4vh; transform: translateX(-50%); font: 500 1.8vh/1 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: rgba(220,232,255,.6); transition: opacity 1s ease; }
 :fullscreen .tvfs, .tvfs.hide { opacity: 0; }
 .splash.tv .sky b { opacity: .78; }
@@ -639,7 +639,15 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 /* Tv: dansen op de beat die de tablet doorstuurt */
 .splash.tv .sky.tvsky { animation: none !important; transform: none !important; filter: none !important; }
 .splash.tv .sky.tvsky::after { display: none; }
-.splash.tv .tvnow { display: none !important; }
+/* Tv: groot nummer onderaan in het midden */
+.splash.tv .tvnow { left: 0; right: 0; margin: 0 auto; width: max-content; max-width: 86vw; bottom: 6vh; gap: 2.4vw; padding: 0; background: none !important; border: 0; border-radius: 0; }
+.splash.tv .tvnow .art { width: 16vh; height: 16vh; border-radius: 1.4vh; box-shadow: 0 0 0 1px rgba(255,255,255,.12), 0 2vh 6vh -1vh var(--a1), 0 1vh 3vh rgba(0,0,0,.7); }
+.splash.tv .tvnow .t { font: 600 5.2vh/1.1 var(--f-serif); max-width: 55vw; text-shadow: 0 0 24px rgba(0,0,0,.6); }
+.splash.tv .tvnow .a { display: inline-block; margin-top: 1.2vh; font: 300 2vh/1 var(--f-ui); letter-spacing: .4em; text-transform: uppercase; color: rgba(230,236,255,.62); }
+.splash.tv .tvmid { margin-bottom: 14vh; }
+.splash.tv .tvnow > span:last-child { text-align: left; }
+.splash.tv .kname { font: 600 12.5vh/1 Cinzel, "Cormorant Garamond", Georgia, serif !important; letter-spacing: .24em; text-indent: .24em; }
+.tvfs { left: 3vw; top: 4vh; bottom: auto; transform: none; }
 /* Club: dunne klok, glans over KELDER, diep zwart */
 .splash.tv { background: #020206; }
 .splash.tv .tvmid { gap: 2.6vh; }
@@ -649,7 +657,7 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 @keyframes sheen { 0%, 55% { background-position: 100% 0; } 85%, 100% { background-position: 0% 0; } }
 .splash.tv .rule::after { background: #e8c27a; box-shadow: 0 0 14px #e8c27a; }
 #keepTv { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; object-fit: cover; pointer-events: none; }
-.splash.tv .tvnow { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(6,8,18,.72); }
+.splash.tv .tvnow { backdrop-filter: none; -webkit-backdrop-filter: none; }
 #tvFx { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .tvlat { position: fixed; left: 50%; top: 5vh; transform: translateX(-50%); font: 500 2vh/1 var(--f-ui); letter-spacing: .12em; color: rgba(230,240,255,.85); background: rgba(6,8,18,.7); padding: 1.2vh 2vh; border-radius: 99px; opacity: 0; transition: opacity .6s ease; pointer-events: none; }
 .tvlat.show { opacity: 1; }
@@ -2307,6 +2315,27 @@ if (typeof module !== 'undefined') module.exports = Logic;
         q.beginPath(); q.arc(p.x, p.y, p.s, 0, Math.PI * 2); q.fill();
       });
       q.globalAlpha = 1;
+      // spiegelbol: lichtpuntjes die traag over het scherm draaien
+      if (!TVB.ball) TVB.ball = Array.from({ length: 110 }, () => ({ u: Math.random(), y: Math.random(), s: 0.7 + Math.random() * 1.6, w: Math.random() * 6.28, f: 0.6 + Math.random() * 1.6 }));
+      q.globalCompositeOperation = 'lighter';
+      TVB.ball.forEach((p, i) => {
+        const u = (p.u + t * 0.012) % 1, x = u * FW, edge = Math.sin(u * Math.PI), tw = Math.max(0, Math.sin(t * p.f + p.w));
+        const a = edge * (0.08 + Math.pow(tw, 6) * 0.75); if (a < 0.03) return;
+        const c = cols[i % 3]; q.fillStyle = `rgba(${lite(c)},${a})`;
+        q.beginPath(); q.arc(x, p.y * FH, p.s * (1 + Math.pow(tw, 6)), 0, Math.PI * 2); q.fill();
+        if (tw > 0.97) { q.fillStyle = `rgba(255,255,255,${a * 0.5})`; q.fillRect(x - p.s * 5, p.y * FH - 0.4, p.s * 10, 0.8); q.fillRect(x - 0.4, p.y * FH - p.s * 5, 0.8, p.s * 10); }
+      });
+      // laserwaaier: om de ±25 s een paar seconden dunne stralen vanuit het plafond
+      const lz = (t % 25) / 4; if (lz < 1) {
+        const env = Math.sin(lz * Math.PI), sw = Math.sin(t * 1.3) * 0.5, c = lite(cols[(Math.floor(t / 25)) % 3]);
+        q.lineWidth = 1.1;
+        for (let j = 0; j < 9; j++) {
+          const ang = (j - 4) * 0.13 + sw, x2 = FW / 2 + Math.sin(ang) * FH * 1.6, y2 = Math.cos(ang) * FH * 1.6, g = q.createLinearGradient(FW / 2, 0, x2, y2);
+          g.addColorStop(0, `rgba(${c},${0.55 * env})`); g.addColorStop(1, `rgba(${c},0)`);
+          q.strokeStyle = g; q.beginPath(); q.moveTo(FW / 2, -2); q.lineTo(x2, y2); q.stroke();
+        }
+      }
+      q.globalCompositeOperation = 'source-over';
     };
     // een beat: zachte aanzet; om de 4 beats een fijne ring als de muziek vol zit
     TVB.hit = (b) => {
