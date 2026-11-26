@@ -2732,7 +2732,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       shown++;
       const r = el.getBoundingClientRect(), f = document.createElement('div');
       f.className = 'floatd ' + (d > 0 ? 'up' : 'down');
-      f.textContent = (d > 0 ? '+' : '−') + (now.includes('€') ? euro(Math.abs(d)) : String(Math.abs(d)).replace('.', ','));
+      f.textContent = (d > 0 ? '+' : '−') + (now.includes('€') ? euro(Math.round(Math.abs(d) * 100)) : String(Math.abs(d)).replace('.', ','));
       f.style.left = r.left + r.width / 2 + 'px'; f.style.top = r.top - 6 + 'px';
       document.body.appendChild(f); setTimeout(() => f.remove(), 1200);
     });
@@ -3361,7 +3361,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 <script>
 // Installeerbare app: offline werken en vanzelf de nieuwste versie laden.
 (() => {
-  const APP_VERSION = '20261126-084942';
+  const APP_VERSION = '20261126-085934';
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
