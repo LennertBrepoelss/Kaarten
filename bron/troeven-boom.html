@@ -1866,7 +1866,9 @@ if (typeof module !== 'undefined') module.exports = Logic;
       <div>${S.players.map((p, i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${esc(p)}</span><span class="owe ${A.owed[i] ? '' : 'zero'}">${euro(A.owed[i])}</span></div>`).join('')}</div></section>`;
   }
   const gameHeader = (name) => `<header class="top"><div class="brand">${name}</div>${syncChip()}</header>`;
-  const doneButtons = () => `<button class="btn primary xl" data-act="newRondje">Nieuw rondje <span class="arr">→</span></button><button class="btn ghost block" data-act="home">Overzicht</button>`;
+  // Na een spel: hetzelfde spel nog eens, of een ander spelletje kiezen
+  const gName = (g) => (GAMES.find((x) => x.k === g) || { name: 'spel' }).name;
+  const doneButtons = (g = ui.result || S.game) => `<button class="btn primary xl" data-act="pickGame" data-v="${g}">Nog eens ${gName(g)} <span class="arr">→</span></button><button class="btn ghost block" data-act="newRondje">Ander spelletje</button>`;
 
   // ---------- Wiezen: stand ----------
   function wRoundText(r) {
@@ -2004,7 +2006,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   // ---------- Poker: buy-in → buy-out → verrekening ----------
   const cents = (t) => { const x = String(t || '').trim().replace(/€/g, '').replace(/\s/g, '').replace(',', '.'); if (!/^\d+(\.\d{0,2})?$/.test(x)) return null; return Math.round(parseFloat(x) * 100); };
   function renderPoker() {
-    const K = S.pk, head = (label) => `<header class="top"><button class="btn ghost sm" data-act="pkBack">← ${K.on && K.step !== 'setup' ? 'Overzicht' : 'Terug'}</button><span class="label">${label}</span></header>`;
+    const K = S.pk, head = (label) => `<header class="top"><button class="btn ghost sm" data-act="pkBack">← ${K.on && K.step !== 'setup' ? 'Spelletjes' : 'Terug'}</button><span class="label">${label}</span></header>`;
     if (!K.on) {
       const sel = ui.pkSel || S.players.map((_, i) => i), tour = (ui.pkMode || K.mode || 'cash') === 'tour';
       const unitTxt = ui.pkUnitTxt !== undefined && ui.pkUnitTxt !== null ? ui.pkUnitTxt : fmt(K.unit), pot0 = sel.length * (cents(unitTxt) || 0);
@@ -2070,7 +2072,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     return `${past.length ? `<section class="panel"><div class="panel-head"><h2>Poker vanavond samen</h2><span class="label">${past.length + 1} keer</span></div>${pkTotRows(tot)}</section>` : ''}
       <p class="hint" style="margin:0;text-align:center">Dit resultaat is bewaard en telt mee bij het afrekenen.</p>
       <div class="row2"><button class="btn primary" data-act="pkAgain">Nog een keer</button><button class="btn soft" data-act="end">Afrekenen →</button></div>
-      <button class="btn ghost block" data-act="pkBack">Naar het overzicht</button>`;
+      <button class="btn ghost block" data-act="pkBack">Ander spelletje</button>`;
   }
   const pkTotRows = (tot) => `<div>${S.players.map((p, i) => i).filter((i) => tot && tot[i]).sort((a, b) => tot[b] - tot[a]).map((i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${P(i)}</span><span class="owe ${pn(tot[i])}">${tot[i] > 0 ? '+' : '−'}${euro(Math.abs(tot[i]))}</span></div>`).join('') || '<p class="empty">Iedereen staat gelijk.</p>'}</div>`;
   const readPay = () => [0, 1, 2].map((k) => { const el = document.getElementById('pkP' + k); return el ? cents(el.value) || 0 : 0; });
@@ -2652,8 +2654,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
       body = `<span class="crest">${TEAM[w]} · rondje ${S.rounds.length}</span>
         <canvas id="confetti"></canvas><h2><span class="tc">${tName(r, w)}</span> <em style="font-weight:500">winnen!</em></h2><div class="wl2"></div>
         ${r.price ? `<div class="pay"><span class="label">${tName(r, l)} betalen het rondje</span><b>${euro(r.price / 2)}</b><span class="muted" style="font-size:13px">per persoon, ${euro(r.price)} samen</span></div>` : '<div class="pay"><span class="label">Rondje zonder geld</span><b>Niemand betaalt</b></div>'}
-        <button class="btn primary xl" data-act="newRondje">Nieuw rondje <span class="arr">→</span></button>
-        <div class="row2" style="width:100%"><button class="btn ghost" data-act="toHome">Overzicht</button><button class="btn ghost" data-act="undoWin">Foutje, terug</button></div>`;
+        <button class="btn primary xl" data-act="pickGame" data-v="troeven">Nog eens Troeven <span class="arr">→</span></button>
+        <div class="row2" style="width:100%"><button class="btn ghost" data-act="newRondje">Ander spelletje</button><button class="btn ghost" data-act="undoWin">Foutje, terug</button></div>`;
     } else if (m === 'editPrice') {
       body = `<h2>Prijs van dit rondje</h2><form id="editPriceForm" class="steps">${calcHTML()}
         <p class="err" id="priceErr2"></p><div class="row2"><button type="button" class="btn ghost" data-act="close">Annuleer</button><button class="btn primary" type="submit">Bewaar</button></div></form>`;
@@ -2913,7 +2915,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     draw: startDraw,
     redraw: startDraw,
     next: startDraw,
-    home() { if (ui.view === 'draw' && ui.flow) { ui.draw = null; ui.view = 'npick'; render(); return; } ui.view = null; ui.draw = null; ui.modal = null; ui.result = null; render(); window.scrollTo(0, 0); },
+    home() { if (ui.view === 'draw' && ui.flow) { ui.draw = null; ui.view = 'nprice'; render(); return; } ui.view = null; ui.draw = null; ui.modal = null; ui.result = null; render(); window.scrollTo(0, 0); },
     toHome() { ui.modal = null; ui.view = null; render(); },
     accept() {
       const price = ui.flow ? ui.flow.price : null;
