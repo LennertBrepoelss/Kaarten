@@ -1224,7 +1224,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
   // ---------- Poker (kassa) ----------
   // Iedereen koopt in met een vast bedrag (buy-in), en kan bijkopen. Op het einde vul je in met hoeveel elke speler stopt
   // (buy-out). Winst of verlies = buy-out − buy-in. Klopt de pot niet, dan wordt het verschil gelijk over de spelers verdeeld.
-  function freshPk(prev) { return { unit: prev && prev.unit ? prev.unit : 1000, mode: prev && prev.mode ? prev.mode : 'cash', lvlMin: prev && prev.lvlMin ? prev.lvlMin : 5, on: false, step: 'setup', who: [], buyin: [], buyout: [] }; }
+  // past = pokers die vanavond al gedaan zijn (met hun winst/verlies); ze tellen mee in de afrekening
+  function freshPk(prev) { return { unit: prev && prev.unit ? prev.unit : 1000, mode: prev && prev.mode ? prev.mode : 'cash', lvlMin: prev && prev.lvlMin ? prev.lvlMin : 5, on: false, step: 'setup', who: [], buyin: [], buyout: [], past: prev && Array.isArray(prev.past) ? prev.past : [] }; }
   function splitEqually(total, n) {
     if (n <= 0) return [];
     const sg = total < 0 ? -1 : 1, base = Math.floor(Math.abs(total) / n) * sg, arr = Array(n).fill(base);
@@ -1295,9 +1296,17 @@ if (typeof module !== 'undefined') module.exports = Logic;
   }, 1000);
 
   // Winst/verlies per speler van de avond (in cent), null als de poker nog niet afgerekend is
+  // Winst/verlies van alle pokers van vanavond samen (in cent), null als er nog geen gedaan is
   function pokerNet() {
-    const K = S.pk;
-    if (!K || !K.on || K.step !== 'done') return null;
+    const K = S.pk; if (!K) return null;
+    const cur = K.on && K.step === 'done' ? pkSessionNet(K) : null, past = K.past || [];
+    if (!cur && !past.length) return null;
+    const net = S.players.map(() => 0);
+    [...past.map((p) => p.net), ...(cur ? [cur] : [])].forEach((a) => a.forEach((v, i) => { if (i < net.length) net[i] += v || 0; }));
+    return net;
+  }
+  // Winst/verlies van één poker
+  function pkSessionNet(K) {
     if (K.mode === 'tour') {
       const net = S.players.map(() => 0), pr = tPrizes(K);
       tOrder(K).forEach((i, k) => { net[i] = (pr[k] || 0) - (K.buyin[i] || 0); });
@@ -1507,8 +1516,10 @@ if (typeof module !== 'undefined') module.exports = Logic;
     });
     const pnet = pokerNet();
     if (pnet) {
-      rec.k = { who: S.pk.who.slice(), n: 1, r: 1, won: pnet.map((v) => (v > 0 ? 1 : 0)), lost: pnet.map((v) => (v < 0 ? 1 : 0)), paid: pnet.map((v) => (v < 0 ? -v : 0)), net: pnet };
-      starts.push(S.pk.start);
+      const ses = [...(S.pk.past || []), ...(S.pk.on && S.pk.step === 'done' ? [{ who: S.pk.who, net: pkSessionNet(S.pk), start: S.pk.start }] : [])];
+      const who = [...new Set(ses.flatMap((x) => x.who))].sort((a, b) => a - b);
+      rec.k = { who, n: ses.length, r: ses.length, won: S.players.map((_, i) => ses.filter((x) => (x.net[i] || 0) > 0).length), lost: S.players.map((_, i) => ses.filter((x) => (x.net[i] || 0) < 0).length), paid: pnet.map((v) => (v < 0 ? -v : 0)), net: pnet };
+      ses.forEach((x) => x.start && starts.push(x.start));
     }
     if (!rec.t && !rec.w && !rec.h && !rec.p && !rec.n && !rec.l && !rec.d && !rec.k) return null;
     rec.paid = settleAll(0, Logic.parsePrice(ui.bill)).per.map((c) => Math.round(c));
@@ -1723,7 +1734,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       <section class="panel"><h2>Back-up</h2>
         <div class="row2"><button class="btn soft" data-act="backupOut">Bewaren</button><button class="btn soft" data-act="backupIn">Terugzetten</button></div>
         <p class="muted" id="bkMsg" style="margin:0;font-size:13px"></p></section>
-    </div>${A.n || S.pk.on ? dock() : ''}`;
+    </div>${A.n || S.pk.on || (S.pk.past || []).length ? dock() : ''}`;
   }
 
   // ---------- Nieuw rondje: 1. prijs ----------
@@ -1746,7 +1757,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
   function gameTiles() {
     const n = S.players.length;
     const tiles = GAMES.map((g) => { const ok = n >= g.min && n <= g.max; return `<button class="tile ${g.cls} ${ok ? '' : 'off'}" data-act="pickGame" data-v="${g.k}" ${ok ? '' : 'disabled'}><span class="tart">${GAME_ART[g.k]}</span>${ok ? '' : `<span class="tstat">${g.min === g.max ? g.min : `${g.min}–${g.max}`} spelers</span>`}<span class="tname">${g.name}</span></button>`; }).join('');
-    const pkTxt = S.pk.on ? (S.pk.step === 'done' ? 'klaar' : S.pk.mode === 'tour' ? `${nf(BL[tState(S.pk).lv][0])}/${nf(BL[tState(S.pk).lv][1])}` : 'bezig') : '';
+    const nPast = (S.pk.past || []).length + (S.pk.on && S.pk.step === 'done' ? 1 : 0);
+    const pkTxt = S.pk.on && S.pk.step !== 'done' ? (S.pk.mode === 'tour' ? `${nf(BL[tState(S.pk).lv][0])}/${nf(BL[tState(S.pk).lv][1])}` : 'bezig') : nPast ? `${nPast}× gespeeld` : '';
     const poker = `<button class="tile g-poker ${n >= 2 ? '' : 'off'}" data-act="pkOpen" ${n >= 2 ? '' : 'disabled'}><span class="tart">${GAME_ART.poker}</span>${pkTxt ? `<span class="tstat">${pkTxt}</span>` : ''}<span class="tname">Poker</span></button>`;
     return `<div class="tiles">${tiles}${poker}</div>`;
   }
@@ -2000,6 +2012,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       return `<div class="wrap">${head('Poker')}
         <div class="seg money-seg"><button class="opt ${tour ? '' : 'on'}" type="button" data-act="pkMode" data-v="cash"><span class="big">Cash game</span></button><button class="opt ${tour ? 'on' : ''}" type="button" data-act="pkMode" data-v="tour"><span class="big">Toernooi</span></button></div>
         <p class="hint" style="margin:0">${tour ? 'Iedereen koopt even veel in en krijgt 3.000 fiches. De blinds gaan om de zoveel minuten omhoog. De laatste die overblijft wint; de pot gaat naar de 1ste, 2de (en 3de).' : 'Iedereen koopt fiches voor geld en kan bijkopen. Op het einde tel je met hoeveel geld iedereen stopt. Winst of verlies = wat je eruit haalt min wat je erin stak.'} De poker wordt bij "Einde avond" mee afgerekend.</p>
+        ${(K.past || []).length ? `<section class="panel"><div class="panel-head"><h2>Al gespeeld vanavond</h2><span class="label">${K.past.length} keer</span></div>${pkTotRows(pokerNet())}<p class="hint">Telt mee bij het afrekenen.</p></section>` : ''}
         <section><h1>Wie <em>pokert</em> er mee?</h1></section>
         <div class="chips">${S.players.map((p, i) => `<button class="chip ${sel.includes(i) ? 'on' : ''}" data-act="pkSel" data-v="${i}">${esc(p)}</button>`).join('')}</div>
         <div class="field"><label for="pkUnit">${tour ? 'Inkoop per speler (ook bij terug inkopen)' : 'Buy-in per keer'}</label><div class="money"><span>€</span><input id="pkUnit" inputmode="decimal" value="${esc(unitTxt)}"></div></div>
@@ -2040,17 +2053,26 @@ if (typeof module !== 'undefined') module.exports = Logic;
       </div>`;
     }
     // klaar: resultaat en wie wie betaalt (enkel poker)
-    const net = pokerNet();
+    const net = pkSessionNet(K);
     const tout = K.who.reduce((t, i) => t + (K.buyout[i] || 0), 0), D = tout - tin;
     const rows = K.who.slice().sort((a, b) => net[b] - net[a]).map((i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${P(i)}<span class="meta">in ${euro(K.buyin[i])} · uit ${euro(K.buyout[i] || 0)}</span></span><span class="pts ${pn(net[i])}">${net[i] > 0 ? '+' : net[i] < 0 ? '−' : ''}${euro(Math.abs(net[i])).replace('€ ', '€')}</span></div>`).join('');
     return `<div class="wrap">${head('Poker · resultaat')}
       <section><h1>Poker <em>klaar</em></h1></section>
       ${D ? `<div class="note">De pot klopt niet: ${euro(Math.abs(D))} ${D > 0 ? 'te veel' : 'te weinig'}. Dat verschil is gelijk over iedereen verdeeld.</div>` : ''}
       <section class="panel"><h2>Winst en verlies</h2><div>${rows}</div></section>
-      <button class="btn primary xl" data-act="end">Afrekenen <span class="arr">→</span></button>
-      <button class="btn ghost block" data-act="pkStep" data-v="buyout">Buy-out aanpassen</button>
+      ${pkAfterHTML()}
+      <button class="link" data-act="pkStep" data-v="buyout" style="align-self:center">Buy-out aanpassen</button>
     </div>`;
   }
+  // Na een poker: nog eens spelen of afrekenen. Het resultaat blijft bewaard voor de afrekening van vanavond.
+  function pkAfterHTML() {
+    const past = S.pk.past || [], tot = pokerNet();
+    return `${past.length ? `<section class="panel"><div class="panel-head"><h2>Poker vanavond samen</h2><span class="label">${past.length + 1} keer</span></div>${pkTotRows(tot)}</section>` : ''}
+      <p class="hint" style="margin:0;text-align:center">Dit resultaat is bewaard en telt mee bij het afrekenen.</p>
+      <div class="row2"><button class="btn primary" data-act="pkAgain">Nog een keer</button><button class="btn soft" data-act="end">Afrekenen →</button></div>
+      <button class="btn ghost block" data-act="pkBack">Naar het overzicht</button>`;
+  }
+  const pkTotRows = (tot) => `<div>${S.players.map((p, i) => i).filter((i) => tot && tot[i]).sort((a, b) => tot[b] - tot[a]).map((i) => `<div class="srow" style="--pc:var(--p${i})"><span class="who">${P(i)}</span><span class="owe ${pn(tot[i])}">${tot[i] > 0 ? '+' : '−'}${euro(Math.abs(tot[i]))}</span></div>`).join('') || '<p class="empty">Iedereen staat gelijk.</p>'}</div>`;
   const readPay = () => [0, 1, 2].map((k) => { const el = document.getElementById('pkP' + k); return el ? cents(el.value) || 0 : 0; });
   // Standaard: 75% voor de 1ste (afgerond op hele euro's), de rest voor de 2de
   const defPay = (pot) => { const a = Math.round((pot * 0.75) / 100) * 100; return [a, pot - a, 0]; };
@@ -2060,15 +2082,15 @@ if (typeof module !== 'undefined') module.exports = Logic;
   function renderTour(head) {
     const K = S.pk, pot = tPot(K), pr = tPrizes(K), alive = tAlive(K);
     if (K.step === 'done') {
-      const net = pokerNet();
+      const net = pkSessionNet(K);
       const rows = tOrder(K).map((i, k) => `<div class="prize" style="--pc:var(--p${i})"><span class="pl">${plc(k)}</span>
         <span class="nm">${P(i)}<small>inkoop ${euro(K.buyin[i])}${tReb(K, i) ? ` · ${tReb(K, i)}× terug ingekocht` : ''}${pr[k] ? ` · wint ${euro(pr[k])}` : ''}</small></span>
         <span class="am ${pn(net[i])}">${net[i] > 0 ? '+' : net[i] < 0 ? '−' : ''}${euro(Math.abs(net[i]))}</span></div>`).join('');
       return `<div class="wrap">${head('Toernooi · uitslag')}
         <section><p class="label">Pot ${euro(pot)}</p><h1>${P(alive[0])} <em>wint</em></h1></section>
         <section class="panel" style="gap:0;padding-block:6px">${rows}</section>
-        <button class="btn primary xl" data-act="end">Afrekenen <span class="arr">→</span></button>
-        <button class="btn ghost block" data-act="tUndo">Laatste uitschakeling ongedaan</button>
+        ${pkAfterHTML()}
+        <button class="link" data-act="tUndo" style="align-self:center">Laatste uitschakeling ongedaan</button>
       </div>`;
     }
     const t = tState(K), b = BL[t.lv], nx = BL[t.lv + 1];
@@ -2516,7 +2538,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       <section><h1>${!done.length && pk ? 'Poker <em>afrekenen</em>' : 'Einde avond: <em>afrekenen</em>'}</h1>
         ${parts.length && done.length ? `<p class="lead">${parts.map((p) => (p[0] === 'Poker' ? 'Poker: zit mee in de afrekening' : `${p[0]}: ${p[1]} rondje${p[1] > 1 ? 's' : ''} · ${euro(p[2])}`)).join('<br>')}</p>` : ''}</section>
       ${open ? `<div class="note">Een rondje dat nog bezig is, telt niet mee.</div>` : ''}
-      ${pkOpen ? `<div class="note">De poker is nog niet afgerekend en telt niet mee. Vul eerst de buy-outs in.</div>` : ''}
+      ${pkOpen ? `<div class="note">De poker die nu bezig is, telt nog niet mee. Speel hem eerst uit.</div>` : ''}
       ${!done.length && pk ? `<div id="settle">${renderSettle()}</div>` : ''}
       ${done.length ? `<div class="step"><div class="slabel"><span class="no">1</span><span class="label">Wie heeft de rekening aan de toog betaald?</span></div>
         <div class="payers">${payerBtns}</div></div>
@@ -2971,10 +2993,10 @@ if (typeof module !== 'undefined') module.exports = Logic;
         if (!pay[0]) { document.getElementById('pkErr').textContent = 'De winnaar moet iets krijgen.'; return; }
         if (pay[2] && sel.length < 3) { document.getElementById('pkErr').textContent = 'Met 2 spelers is er geen 3de plaats. Zet die op 0.'; return; }
         const now = Date.now();
-        S.pk = { mode: 'tour', unit: u, on: true, step: 'play', who: sel, buyin: S.players.map((_, i) => (sel.includes(i) ? u : 0)), buyout: S.players.map(() => null), out: [], pay, lvlMin: ui.pkLvl || S.pk.lvlMin || 5, t: { start: now, pausedAt: null, off: 0 }, lastLvl: 0, start: now };
+        S.pk = { past: S.pk.past || [], mode: 'tour', unit: u, on: true, step: 'play', who: sel, buyin: S.players.map((_, i) => (sel.includes(i) ? u : 0)), buyout: S.players.map(() => null), out: [], pay, lvlMin: ui.pkLvl || S.pk.lvlMin || 5, t: { start: now, pausedAt: null, off: 0 }, lastLvl: 0, start: now };
         audioCtx(); save(); render(); window.scrollTo(0, 0); keepAwake(); return;
       }
-      S.pk = { unit: u, on: true, step: 'buyin', who: sel, buyin: S.players.map((_, i) => (sel.includes(i) ? u : 0)), buyout: S.players.map(() => null), start: Date.now() };
+      S.pk = { past: S.pk.past || [], mode: 'cash', unit: u, on: true, step: 'buyin', who: sel, buyin: S.players.map((_, i) => (sel.includes(i) ? u : 0)), buyout: S.players.map(() => null), start: Date.now() };
       save(); render(); window.scrollTo(0, 0); keepAwake();
     },
     bigClock(b) {
@@ -3002,6 +3024,14 @@ if (typeof module !== 'undefined') module.exports = Logic;
     pkAdd(b) { const K = S.pk, i = +b.dataset.v; if (K.who.includes(i)) return; K.who.push(i); K.buyin[i] = K.unit; K.buyout[i] = null; ui.pkAdd = false; save(); render(); showToast(`<b>${P(i)}</b> doet mee`, false); },
     pkBuy(b) { const K = S.pk, i = +b.dataset.i; K.buyin[i] = Math.max(K.unit, K.buyin[i] + +b.dataset.v * K.unit); save(); render(); if (navigator.vibrate) try { navigator.vibrate(10); } catch (e) {} },
     pkStep(b) { S.pk.step = b.dataset.v; save(); render(); window.scrollTo(0, 0); },
+    pkAgain() {
+      const K = S.pk; if (!K.on || K.step !== 'done') return;
+      const who = K.who.slice();
+      K.past = [...(K.past || []), { mode: K.mode, who, net: pkSessionNet(K), start: K.start, end: Date.now() }];
+      S.pk = freshPk(K);
+      ui.pkSel = who; ui.pkMode = K.mode; ui.pkPay = null; ui.pkPayEdited = false; ui.pkUnitTxt = null; ui.pkLvl = null; ui.pkAdd = false; ui.pkSure = false; ui.bigClock = false;
+      save(); render(); window.scrollTo(0, 0); showToast('<b>Bewaard</b> · start de volgende poker', false);
+    },
     pkCancel() { if (!ui.pkSure) { ui.pkSure = true; render(); return; } S.pk = freshPk(S.pk); ui.pkSure = false; save(); ui.view = null; render(); },
     // Darts
     dModeSet(b) { ui.dmode = b.dataset.v; render(); },
@@ -3205,7 +3235,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     },
     askReset() { ui.modal = 'askReset'; renderModal(); },
     saveNight() { if (!storeNight()) { showToast('Nog niets om te bewaren: speel eerst een rondje uit', false); return; } save(); render(); showToast(`<b>Bewaard</b> in de geschiedenis · ${hhmm(S.savedAt)}`, false); },
-    reset(b) { const keep = !b || b.dataset.v !== '0'; if (keep) storeNight(); const archive = [...(S.archive || []), ...(keep || S.savedAt ? finished().map((r) => ({ teams: r.teams, winner: r.winner, date: r.end || r.start })) : [])]; const history = S.history || []; const wz = freshWz(S.wz), hj = freshHj(S.hj), pj = freshPj(S.pj), np = freshNp(S.np), lk = freshLk(S.lk), dt = freshDt(S.dt), pk = freshPk(S.pk); S = fresh(S.players); S.archive = archive; S.wz = wz; S.hj = hj; S.pj = pj; S.np = np; S.lk = lk; S.dt = dt; S.pk = pk; S.history = history; ui.hOpen = null; ui.hDel = null; ui.modal = null; ui.view = 'start'; ui.payer = null; ui.bill = ''; ui.hr = null; ui.wr = null; save(); render(); window.scrollTo(0, 0); },
+    reset(b) { const keep = !b || b.dataset.v !== '0'; if (keep) storeNight(); const archive = [...(S.archive || []), ...(keep || S.savedAt ? finished().map((r) => ({ teams: r.teams, winner: r.winner, date: r.end || r.start })) : [])]; const history = S.history || []; const wz = freshWz(S.wz), hj = freshHj(S.hj), pj = freshPj(S.pj), np = freshNp(S.np), lk = freshLk(S.lk), dt = freshDt(S.dt), pk = { ...freshPk(S.pk), past: [] }; S = fresh(S.players); S.archive = archive; S.wz = wz; S.hj = hj; S.pj = pj; S.np = np; S.lk = lk; S.dt = dt; S.pk = pk; S.history = history; ui.hOpen = null; ui.hDel = null; ui.modal = null; ui.view = 'start'; ui.payer = null; ui.bill = ''; ui.hr = null; ui.wr = null; save(); render(); window.scrollTo(0, 0); },
   };
 
   document.addEventListener('click', (e) => {
