@@ -640,10 +640,14 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 .splash.tv .sky.tvsky { animation: none !important; transform: none !important; filter: none !important; }
 .splash.tv .sky.tvsky::after { display: none; }
 .splash.tv .tvnow { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(6,8,18,.72); }
+#tvFx { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.tvlat { position: fixed; left: 50%; top: 5vh; transform: translateX(-50%); font: 500 2vh/1 var(--f-ui); letter-spacing: .12em; color: rgba(230,240,255,.85); background: rgba(6,8,18,.7); padding: 1.2vh 2vh; border-radius: 99px; opacity: 0; transition: opacity .6s ease; pointer-events: none; }
+.tvlat.show { opacity: 1; }
+.splash.tv .rule { transition: none; transform: scaleX(calc(1 + var(--lvl, 0) * 1.4 + var(--beat, 0) * .6)); }
 #tvSky { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .splash.tv.live .kname { transform: scale(calc(1 + var(--beat, 0) * .04)); text-shadow: 0 0 40px rgba(150,200,255,.3); }
 .splash.tv.live .kname, .splash.tv.live .tvmid { will-change: transform; }
-.splash.tv.live .rule { transform: scaleX(calc(1 + var(--beat, 0) * .5)); }
+
 .tvcode { position: fixed; right: 3vw; top: 4vh; text-align: right; font: 500 1.7vh/1.4 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: rgba(220,232,255,.55); opacity: 0; transition: opacity 1s ease; pointer-events: none; }
 .tvcode.show { opacity: 1; }
 .tvcode b { display: block; font: 300 6vh/1.1 var(--f-serif); letter-spacing: .18em; color: #fff; }
@@ -2095,7 +2099,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
   function renderTV() {
     const n = spNow;
     return `<div class="splash tv ${n && n.playing ? 'playing' : ''}" data-act="noop">
-      <div class="sky tvsky" aria-hidden="true"><canvas id="tvSky" width="320" height="180"></canvas></div>
+      <div class="sky tvsky" aria-hidden="true"><canvas id="tvSky" width="320" height="180"></canvas><canvas id="tvFx" width="960" height="540"></canvas></div>
+      <div class="tvlat" id="tvLat"></div>
       <div class="tvmid"><div class="kname">Kelder</div><div class="rule"></div></div>
       <div class="tvnow" id="tvNow"></div>
       ${document.documentElement.requestFullscreen && !document.fullscreenElement ? '<div class="tvfs" id="tvFs">Druk op OK voor volledig scherm</div>' : ''}
@@ -2161,14 +2166,24 @@ if (typeof module !== 'undefined') module.exports = Logic;
   })();
   const linkTopic = (k) => 'kelder-spelletjes/v1/' + LINK.code + '/' + k;
   // --- op de tv ---
-  const TVB = { beat: 0, lvl: 0, lvlT: 0, raf: 0 };
+  const TVB = { beat: 0, lvl: 0, lvlT: 0, raf: 0, per: 0, next: 0, str: 0.8, sync: 0, rings: [], sparks: [], hit() {},
+    lat: (() => { try { return +localStorage.getItem('kelder-tvlat') || 220; } catch (e) { return 220; } })() };
   function tvLinkStart() {
     LINK.mq = mqttClient((topic, m) => {
       if (!m || typeof m !== 'object') return;
       LINK.last = Date.now();
       if (!LINK.paired) { LINK.paired = true; try { localStorage.setItem('kelder-tvpaired', '1'); } catch (e) {} const c = document.getElementById('tvCode'); if (c) c.classList.remove('show'); const l = document.querySelector('.tvlink'); if (l) l.remove(); }
       if (topic.endsWith('/fx')) {
-        if (typeof m.b === 'number') TVB.beat = Math.max(TVB.beat, Math.min(1, m.b));
+        if (typeof m.b === 'number') {
+          const b = Math.min(1, m.b), now = performance.now();
+          if (typeof m.p === 'number' && m.p >= 300 && m.p <= 1000) {
+            // gelijkzetten: de echte beat was LAT ms geleden, de volgende komt dus over p - LAT
+            const real = now - TVB.lat; let nx = real + m.p; while (nx < now) nx += m.p;
+            if (!TVB.per || Math.abs(m.p - TVB.per) > TVB.per * 0.15) TVB.next = nx; else { let d = nx - TVB.next; if (d > m.p / 2) d -= m.p; if (d < -m.p / 2) d += m.p; TVB.next += d * 0.5; }
+            if (!TVB.per) TVB.beat = Math.max(TVB.beat, b);
+            TVB.per = m.p; TVB.str = b; TVB.sync = now;
+          } else { TVB.per = 0; TVB.beat = Math.max(TVB.beat, b); TVB.hit(b); }
+        }
         if (typeof m.l === 'number') TVB.lvlT = Math.min(1, Math.max(0, m.l));
       } else if (topic.endsWith('/now') && !spOn()) {
         const art = typeof m.art === 'string' && /^https:\/\/i\.scdn\.co\//.test(m.art) ? m.art : '';
@@ -2190,6 +2205,10 @@ if (typeof module !== 'undefined') module.exports = Logic;
       el.classList.toggle('live', live);
       const now = performance.now(), k = Math.min(30, (now - (TVB.t || now)) / 16.7); TVB.t = now;
       TVB.beat *= Math.pow(0.9, k); TVB.lvl += ((live ? TVB.lvlT : 0) - TVB.lvl) * (1 - Math.pow(0.88, k));
+      if (TVB.per) {
+        if (now - TVB.sync > TVB.per * 3) TVB.per = 0; // muziek stopt of tempo weg: niet verder blijven tikken
+        else if (now >= TVB.next) { TVB.beat = Math.max(TVB.beat, TVB.str); TVB.hit(TVB.str); TVB.next += TVB.per; if (TVB.next < now) TVB.next = now + TVB.per; }
+      }
       el.style.setProperty('--beat', TVB.beat.toFixed(3));
       const cv = document.getElementById('tvSky'); if (!cv) return;
       const cx = cv.getContext('2d'), W = cv.width, H = cv.height, V = W / 100, t = now / 1000;
@@ -2208,18 +2227,60 @@ if (typeof module !== 'undefined') module.exports = Logic;
         g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(0.45, `rgba(${rgb},${a * 0.55})`); g.addColorStop(1, `rgba(${rgb},0)`);
         cx.fillStyle = g; cx.beginPath(); cx.arc(0, 0, 1, 0, Math.PI * 2); cx.fill(); cx.restore();
       });
+      // noorderlicht-gordijnen bovenaan die zacht golven
+      for (let i = 0; i < 3; i++) {
+        const c = cols[i], h = H * (0.42 + i * 0.06), g = cx.createLinearGradient(0, 0, 0, h), rgb = `${c[0] | 0},${c[1] | 0},${c[2] | 0}`;
+        g.addColorStop(0, `rgba(${rgb},0)`); g.addColorStop(0.55, `rgba(${rgb},.55)`); g.addColorStop(0.8, `rgba(${rgb},.9)`); g.addColorStop(1, `rgba(${rgb},0)`);
+        cx.fillStyle = g;
+        for (let x = 0; x < W; x += 3) {
+          const y = H * (0.02 + i * 0.07) + Math.sin(x * 0.018 + t * (0.21 + i * 0.07) + i * 2) * H * 0.07 + Math.sin(x * 0.047 - t * 0.33 + i) * H * 0.03;
+          const ray = 0.5 + 0.5 * Math.sin(x * 0.11 + t * (0.6 + i * 0.2) + i * 1.7) * Math.sin(x * 0.031 - t * 0.25);
+          cx.globalAlpha = Math.min(1, (0.1 + ray * 0.22) * (0.75 + pulse * 1.1 + TVB.lvl * 0.4));
+          cx.save(); cx.translate(x, y); cx.fillRect(0, 0, 3, h); cx.restore();
+        }
+      }
+      cx.globalAlpha = 1;
       if (pulse > 0.02) { // flits in het midden op de beat
         const c = cols[0], g = cx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W * 0.45);
         g.addColorStop(0, `rgba(${(c[0] + 255) / 2 | 0},${(c[1] + 255) / 2 | 0},${(c[2] + 255) / 2 | 0},${Math.min(0.5, pulse * 0.45)})`); g.addColorStop(1, 'rgba(0,0,0,0)');
         cx.fillStyle = g; cx.fillRect(0, 0, W, H);
       }
       cx.globalCompositeOperation = 'source-over';
+      // fijne laag: ringen op de beat en opstijgende vonkjes
+      const fx = document.getElementById('tvFx'); if (!fx) return;
+      const q = fx.getContext('2d'), FW = fx.width, FH = fx.height, dt = k * 16.7 / 1000;
+      q.clearRect(0, 0, FW, FH);
+      const c0 = cols[0], c1 = cols[1], lite = (c) => `${(c[0] + 255 * 2) / 3 | 0},${(c[1] + 255 * 2) / 3 | 0},${(c[2] + 255 * 2) / 3 | 0}`;
+      TVB.rings = TVB.rings.filter((r) => (r.a += dt) < 2.2);
+      TVB.rings.forEach((r) => {
+        const u = r.a / 2.2, rad = FW * (0.08 + u * 0.55);
+        q.strokeStyle = `rgba(${lite(r.i % 2 ? c1 : c0)},${(1 - u) * (1 - u) * 0.55 * r.s})`; q.lineWidth = 1.2 + (1 - u) * 1.8;
+        q.beginPath(); q.ellipse(FW / 2, FH / 2, rad, rad * 0.56, 0, 0, Math.PI * 2); q.stroke();
+      });
+      if (TVB.sparks.length < 70 && Math.random() < 0.25 + TVB.lvl * 0.6) TVB.sparks.push({ x: Math.random() * FW, y: FH + 5, v: 8 + Math.random() * 18, s: 0.6 + Math.random() * 1.4, w: Math.random() * 6.28, a: 0 });
+      const speed = 1 + TVB.lvl * 2.5 + pulse * 4;
+      TVB.sparks = TVB.sparks.filter((p) => { p.y -= p.v * speed * dt; p.a += dt; p.x += Math.sin(p.a * 0.8 + p.w) * 0.25; return p.y > -10; });
+      q.fillStyle = `rgb(${lite(c0)})`;
+      TVB.sparks.forEach((p) => {
+        q.globalAlpha = Math.min(1, p.a) * (0.25 + 0.45 * (0.5 + 0.5 * Math.sin(p.a * 3 + p.w))) * Math.min(1, p.y / (FH * 0.35)) * (0.8 + pulse);
+        q.beginPath(); q.arc(p.x, p.y, p.s * (1 + pulse * 0.6), 0, Math.PI * 2); q.fill();
+      });
+      q.globalAlpha = 1;
     };
+    // een beat: ring + flits (voorspelde beat of rechtstreeks)
+    TVB.hit = (b) => { TVB.rings.push({ a: 0, s: b, i: TVB.rings.length }); if (TVB.rings.length > 6) TVB.rings.shift(); };
     TVB.raf = requestAnimationFrame(loop);
     // tik of druk op OK met de afstandsbediening: de code even tonen
     const show = () => { const c = document.getElementById('tvCode'); if (!c) return; c.classList.add('show'); clearTimeout(show.t); if (LINK.paired) show.t = setTimeout(() => c.classList.remove('show'), 12000); };
     document.addEventListener('pointerdown', show, { passive: true });
     document.addEventListener('keydown', show);
+    document.addEventListener('keydown', (e) => {
+      const d = e.key === 'ArrowLeft' ? -20 : e.key === 'ArrowRight' ? 20 : 0; if (!d) return;
+      TVB.lat = Math.max(0, Math.min(800, TVB.lat + d)); try { localStorage.setItem('kelder-tvlat', TVB.lat); } catch (x) {}
+      if (TVB.per) TVB.next -= d;
+      const el = document.getElementById('tvLat'); if (!el) return;
+      el.textContent = `Beat ${TVB.lat} ms vroeger  ·  ◀ later  ▶ vroeger`; el.classList.add('show'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 2500);
+    });
   }
   // --- op de tablet ---
   function tabLinkStart() {
@@ -3807,7 +3868,7 @@ module.exports = QRRSBlock;
     try {
       D.st = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
       const ac = audioCtx(); const src = ac.createMediaStreamSource(D.st);
-      D.an = ac.createAnalyser(); D.an.fftSize = 1024; D.an.smoothingTimeConstant = 0.55; src.connect(D.an);
+      D.an = ac.createAnalyser(); D.an.fftSize = 1024; D.an.smoothingTimeConstant = 0.15; src.connect(D.an);
       D.buf = new Uint8Array(D.an.frequencyBinCount);
       clearInterval(D.raf); D.raf = setInterval(danceLoop, 20); D.lt = 0;
       return true;
@@ -3831,7 +3892,11 @@ module.exports = QRRSBlock;
     D.prev = bass; D.avg = D.avg * 0.97 + bass * 0.03;
     // Drempels relatief aan het gemiddelde: werkt ook als de tablet ver van de boxen staat
     D.fl = (D.fl || 0) * 0.98 + Math.max(0, flux) * 0.02;
-    if (bass > 0.03 && flux > Math.max(0.012, D.fl * 2.2) && bass > D.avg * 1.08 && now - (D.last || 0) > 200) { D.beat = Math.min(1, 0.6 + flux / Math.max(0.02, D.avg) * 0.8); D.last = now; tabSendFx({ b: +D.beat.toFixed(2) }); }
+    if (bass > 0.03 && flux > Math.max(0.012, D.fl * 2.2) && bass > D.avg * 1.08 && now - (D.last || 0) > 200) { D.beat = Math.min(1, 0.6 + flux / Math.max(0.02, D.avg) * 0.8); const iv = now - (D.last || 0); D.last = now;
+      // tempo schatten uit de afstand tussen beats (60-200 bpm), zodat de tv de volgende beat kan voorspellen
+      if (iv > 280 && iv < 2000) { let x = iv; while (x > 1000) x /= 2; while (x < 300) x *= 2; (D.ivs = D.ivs || []).push(x); if (D.ivs.length > 10) D.ivs.shift(); }
+      let p = 0; if (D.ivs && D.ivs.length >= 5) { const so = [...D.ivs].sort((a, b) => a - b), med = so[so.length >> 1]; if (D.ivs.filter((x) => Math.abs(x - med) < med * 0.1).length >= D.ivs.length * 0.6) p = Math.round(med); }
+      tabSendFx(p ? { b: +D.beat.toFixed(2), p } : { b: +D.beat.toFixed(2) }); }
     else D.beat *= 0.88;
     D.lv = (D.lv || 0) * 0.8 + all * 0.2; D.lmax = Math.max(D.lv, (D.lmax || 0.05) * 0.9995);
     if (now - D.lt > 200) { D.lt = now; tabSendFx({ l: +Math.min(1, D.lv / Math.max(0.03, D.lmax)).toFixed(2) }); }
@@ -5698,7 +5763,7 @@ module.exports = QRRSBlock;
 <script>
 // Installeerbare app: offline werken en vanzelf de nieuwste versie laden.
 (() => {
-  const APP_VERSION = '20261126-234102';
+  const APP_VERSION = '20261126-234441';
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
