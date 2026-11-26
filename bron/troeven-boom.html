@@ -639,6 +639,7 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 /* Tv: dansen op de beat die de tablet doorstuurt */
 .splash.tv .sky.tvsky { animation: none !important; transform: none !important; filter: none !important; }
 .splash.tv .sky.tvsky::after { display: none; }
+.splash.tv .tvnow { display: none !important; }
 .splash.tv .tvnow { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(6,8,18,.72); }
 #tvFx { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .tvlat { position: fixed; left: 50%; top: 5vh; transform: translateX(-50%); font: 500 2vh/1 var(--f-ui); letter-spacing: .12em; color: rgba(230,240,255,.85); background: rgba(6,8,18,.7); padding: 1.2vh 2vh; border-radius: 99px; opacity: 0; transition: opacity .6s ease; pointer-events: none; }
@@ -2189,7 +2190,6 @@ if (typeof module !== 'undefined') module.exports = Logic;
       LINK.last = Date.now();
       if (!LINK.paired) { LINK.paired = true; try { localStorage.setItem('kelder-tvpaired', '1'); } catch (e) {} const c = document.getElementById('tvCode'); if (c) c.classList.remove('show'); const l = document.querySelector('.tvlink'); if (l) l.remove(); }
       if (topic.endsWith('/fx')) {
-        if (!TVB.local) tvFx(m, TVB.lat);
       } else if (topic.endsWith('/now') && !spOn()) {
         const art = typeof m.art === 'string' && /^https:\/\/i\.scdn\.co\//.test(m.art) ? m.art : '';
         spNow = m.id ? { id: String(m.id).slice(0, 80), title: String(m.title || '').slice(0, 200), artist: String(m.artist || '').slice(0, 200), art, playing: !!m.playing } : null;
@@ -2207,7 +2207,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const loop = () => {
       TVB.raf = requestAnimationFrame(loop);
       const el = document.querySelector('.splash.tv'); if (!el) return;
-      const live = Date.now() - LINK.last < 8000;
+      const live = false; // meedansen op de beat staat uit: rustig sfeerscherm
       el.classList.toggle('live', live);
       const now = performance.now(), k = Math.min(30, (now - (TVB.t || now)) / 16.7); TVB.t = now;
       const dt = k * 16.7 / 1000, ema = (x, y, tau) => x + (y - x) * (1 - Math.exp(-dt / tau));
@@ -2228,9 +2228,11 @@ if (typeof module !== 'undefined') module.exports = Logic;
         else if (TVB.calm > 2.5 && TVB.eQ > TVB.eS * 1.02 && now - TVB.lastDrop > 8000) { TVB.drop(); TVB.calm = 0; }
         else if (TVB.eF > TVB.eS * 0.9) TVB.calm = Math.max(0, TVB.calm - dt * 0.5);
       }
-      TVB.I = ema(TVB.I, live ? Math.max(0, Math.min(1, 0.25 + (TVB.eF - TVB.eS) * 2.5 + TVB.eF * 0.3)) : el.classList.contains('playing') ? 0.4 : 0.3, 1.6);
+      // heel traag aan- en afzwellend licht (±45 s), plus af en toe één zachte ring
+      TVB.I = 0.42 + 0.14 * Math.sin(now / 1000 / 45 * 2 * Math.PI) + 0.06 * Math.sin(now / 1000 / 17 * 2 * Math.PI);
+      if (now - (TVB.ringT || 0) > 16000) { TVB.ringT = now; TVB.rings.push({ a: 0, d: 6, s: 0.16, w: 1.1, i: TVB.n++ }); }
       TVB.bloom *= Math.pow(0.975, k);
-      const I = TVB.I, breath = !live && el.classList.contains('playing') ? 0.08 * (1 - Math.cos(2 * Math.PI * now / 1000 / 3.2)) / 2 : 0;
+      const I = TVB.I, breath = 0;
       const pulse = TVB.beat * 0.8 + pre + breath + TVB.bloom * 0.6, grow = 1 + pulse * 0.08 + I * 0.06 + TVB.bloom * 0.05;
       el.style.setProperty('--beat', Math.min(1, TVB.beat * 0.5 + TVB.bloom * 0.6).toFixed(3)); el.style.setProperty('--lvl', I.toFixed(3));
       const cv = document.getElementById('tvSky'); if (!cv) return;
@@ -2319,7 +2321,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     let wasUp = false;
     LINK.mq.onState = () => { const up = LINK.mq && LINK.mq.up(); if (up && !wasUp) tabSendNow(true); wasUp = up; if (ui.modal === 'tv') renderModal(); };
     LINK.nowKey = ''; tabSendNow();
-    danceStart().then((ok) => { LINK.mic = ok; if (!ok) showToast('De tv kan niet meedansen: sta de <b>microfoon</b> toe voor deze app.', false); if (ui.modal === 'tv') renderModal(); });
+
   }
   function tabLinkStop() { if (LINK.mq) LINK.mq.close(); LINK.mq = null; LINK.mic = false; danceStop(); }
   function tabSendNow(force) {
@@ -3941,7 +3943,7 @@ module.exports = QRRSBlock;
   // Na het herladen terug aanzetten; de geluidsverwerking start bij de eerste aanraking
   try { localStorage.removeItem(DANCE_KEY); } catch (e) {} // meedansen via de microfoon is van de tablet gehaald
   document.addEventListener('pointerdown', () => { if (D.st) audioCtx(); }, { passive: true });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) { if (D.st) danceStop(); } else if (LINK.mq && !TV) danceStart(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { if (D.st) danceStop(); } });
 
   // Klok op het beginscherm loopt elke seconde
   setInterval(() => {
@@ -4912,12 +4914,10 @@ module.exports = QRRSBlock;
         <button class="btn ghost block" data-act="close">Annuleren</button>`;
     } else if (m === 'tv') {
       if (LINK.code) {
-        const net = LINK.mq && LINK.mq.up(), mic = !!D.st;
-        body = `<h2>Tv danst mee</h2>
-          <p class="muted" style="margin:0">De tablet luistert met de microfoon naar de muziek en stuurt de beat naar de tv. Op de tablet zelf zie je niets bewegen.</p>
+        const net = LINK.mq && LINK.mq.up();
+        body = `<h2>Tv gekoppeld</h2>
+          <p class="muted" style="margin:0">De aurora op de tv kleurt mee met de hoes van wat er op Spotify speelt.</p>
           <div class="tvlinkst"><i class="${net ? 'ok' : ''}"></i>${net ? 'Verbonden met de tv' : 'Verbinden…'} · code ${esc(LINK.code)}</div>
-          <div class="tvlinkst"><i class="${mic ? 'ok' : ''}"></i>${mic ? 'Microfoon luistert' : 'Microfoon staat niet aan'}</div>
-          ${mic ? '' : '<button class="btn soft block" data-act="tvMic">Microfoon aanzetten</button>'}
           <button class="btn ghost block" data-act="tvUnlink">Loskoppelen</button>
           <button class="btn primary block" data-act="close">Klaar</button>`;
       } else {
@@ -5517,7 +5517,7 @@ module.exports = QRRSBlock;
       const v = ((document.getElementById('tvIn') || {}).value || '').replace(/\D/g, '');
       if (v.length !== 6) { const e = document.getElementById('tvErr'); if (e) e.textContent = 'De code heeft 6 cijfers. Je ziet hem rechtsboven op de tv.'; return; }
       tabLinkStop(); LINK.code = v; try { localStorage.setItem('kelder-tvlink', v); } catch (e) {}
-      tabLinkStart(); audioCtx(); render(); showToast('<b>Tv gekoppeld</b> · zet de muziek op en kijk naar de tv', false);
+      tabLinkStart(); audioCtx(); render(); showToast('<b>Tv gekoppeld</b> · de tv kleurt mee met de hoes', false);
     },
     tvMic() { audioCtx(); danceStart().then((ok) => { LINK.mic = ok; if (!ok) showToast('Geen toegang tot de microfoon. Sta de microfoon toe in de instellingen van de app.', false); renderModal(); }); },
     tvUnlink() { tabLinkStop(); LINK.code = ''; try { localStorage.removeItem('kelder-tvlink'); } catch (e) {} ui.modal = null; render(); showToast('Tv losgekoppeld', false); },
