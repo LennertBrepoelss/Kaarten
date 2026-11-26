@@ -4,7 +4,7 @@
 <meta name="theme-color" content="#060914">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Manrope:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Manrope:wght@200;300;400;500;600;700&display=swap">
 <style>
 /* Layout: één kolom (max 460px), aurora: poolnacht-blauw met noorderlicht in mint, cyaan en violet. Serif voor cijfers en namen, Manrope voor bediening. Vaste dock onderaan. */
 :root {
@@ -640,6 +640,15 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 .splash.tv .sky.tvsky { animation: none !important; transform: none !important; filter: none !important; }
 .splash.tv .sky.tvsky::after { display: none; }
 .splash.tv .tvnow { display: none !important; }
+/* Club: dunne klok, glans over KELDER, diep zwart */
+.splash.tv { background: #020206; }
+.splash.tv .tvmid { gap: 2.6vh; }
+.splash.tv .tvclock { margin-top: 2.5vh; font: 200 9vh/1 var(--f-ui); letter-spacing: .16em; text-indent: .16em; color: rgba(240,244,255,.88); font-variant-numeric: tabular-nums; text-shadow: 0 0 30px rgba(255,255,255,.12); }
+.splash.tv .tvdate { font: 300 1.7vh/1 var(--f-ui); letter-spacing: .5em; text-indent: .5em; text-transform: uppercase; color: rgba(220,228,255,.45); }
+.splash.tv .kname { background: linear-gradient(100deg, #b9c2de 0%, #b9c2de 42%, #ffffff 50%, #b9c2de 58%, #b9c2de 100%); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; animation: sheen 9s ease-in-out infinite; }
+@keyframes sheen { 0%, 55% { background-position: 100% 0; } 85%, 100% { background-position: 0% 0; } }
+.splash.tv .rule::after { background: #e8c27a; box-shadow: 0 0 14px #e8c27a; }
+#keepTv { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; object-fit: cover; pointer-events: none; }
 .splash.tv .tvnow { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(6,8,18,.72); }
 #tvFx { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .tvlat { position: fixed; left: 50%; top: 5vh; transform: translateX(-50%); font: 500 2vh/1 var(--f-ui); letter-spacing: .12em; color: rgba(230,240,255,.85); background: rgba(6,8,18,.7); padding: 1.2vh 2vh; border-radius: 99px; opacity: 0; transition: opacity .6s ease; pointer-events: none; }
@@ -2097,12 +2106,14 @@ if (typeof module !== 'undefined') module.exports = Logic;
       return localStorage.getItem('kelder-tv') === '1';
     } catch (e) { return false; }
   })();
+  const tvTime = () => new Date().toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
+  const tvDate = () => new Date().toLocaleDateString('nl-BE', { weekday: 'long', day: 'numeric', month: 'long' });
   function renderTV() {
     const n = spNow;
     return `<div class="splash tv ${n && n.playing ? 'playing' : ''}" data-act="noop">
       <div class="sky tvsky" aria-hidden="true"><canvas id="tvSky" width="320" height="180"></canvas><canvas id="tvFx" width="960" height="540"></canvas></div>
       <div class="tvlat" id="tvLat"></div>
-      <div class="tvmid"><div class="kname">Kelder</div><div class="rule"></div></div>
+      <div class="tvmid"><div class="kname">Kelder</div><div class="rule"></div><div class="tvclock" id="tvClock">${tvTime()}</div><div class="tvdate" id="tvDate">${tvDate()}</div></div>
       <div class="tvnow" id="tvNow"></div>
       ${document.documentElement.requestFullscreen && !document.fullscreenElement ? '<div class="tvfs" id="tvFs">Druk op OK voor volledig scherm</div>' : ''}
       <div class="tvcode ${LINK.paired ? '' : 'show'}" id="tvCode">Code voor de tablet<b>${LINK.code.replace(/(\d{3})(\d{3})/, '$1 $2')}</b></div>
@@ -2198,7 +2209,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     });
     LINK.mq.sub(linkTopic('fx')); LINK.mq.sub(linkTopic('now'));
 
-    const DEF = ['rgba(70,240,190,.85)', 'rgba(150,110,255,.8)', 'rgba(60,170,255,.6)', 'rgba(255,120,210,.32)'];
+    const DEF = ['rgba(255,50,160,.72)', 'rgba(110,60,255,.8)', 'rgba(30,190,255,.5)', 'rgba(255,175,80,.3)'];
     const parse = (c) => { const m = String(c).match(/[\d.]+/g) || [0, 0, 0, 0]; return [+m[0], +m[1], +m[2], m[3] == null ? 1 : +m[3]]; };
     const cols = DEF.map(parse);
     // [middelpunt x, y, straal x, y (in vmax), verschuiving x, y, schaal, duur in s]
@@ -2249,6 +2260,14 @@ if (typeof module !== 'undefined') module.exports = Logic;
         g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(0.45, `rgba(${rgb},${a * 0.55})`); g.addColorStop(1, `rgba(${rgb},0)`);
         cx.fillStyle = g; cx.beginPath(); cx.arc(0, 0, 1, 0, Math.PI * 2); cx.fill(); cx.restore();
       });
+      // spots: smalle lichtbundels van bovenaf die traag zwaaien
+      for (let i = 0; i < 4; i++) {
+        const c = cols[i % 3], ox = W * (0.14 + i * 0.24), ang = Math.sin(t * (0.09 + i * 0.023) + i * 1.9) * 0.55 + (i - 1.5) * 0.12, len = H * 1.25, wd = 0.075;
+        const tx = ox + Math.sin(ang) * len, ty = Math.cos(ang) * len, g = cx.createLinearGradient(ox, 0, tx, ty), rgb = `${c[0] | 0},${c[1] | 0},${c[2] | 0}`;
+        const al = 0.16 + 0.1 * Math.sin(t * 0.35 + i * 2.3);
+        g.addColorStop(0, `rgba(${rgb},${al * 1.6})`); g.addColorStop(0.6, `rgba(${rgb},${al * 0.5})`); g.addColorStop(1, `rgba(${rgb},0)`);
+        cx.fillStyle = g; cx.beginPath(); cx.moveTo(ox - 1, -2); cx.lineTo(ox + Math.sin(ang - wd) * len, Math.cos(ang - wd) * len); cx.lineTo(ox + Math.sin(ang + wd) * len, Math.cos(ang + wd) * len); cx.closePath(); cx.fill();
+      }
       // noorderlicht-gordijnen: worden langer en helderder naarmate de muziek opbouwt
       for (let i = 0; i < 3; i++) {
         const c = cols[i], h = H * (0.36 + i * 0.05) * (0.8 + I * 0.45 + TVB.bloom * 0.2), g = cx.createLinearGradient(0, 0, 0, h), rgb = `${c[0] | 0},${c[1] | 0},${c[2] | 0}`;
@@ -2257,7 +2276,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
         for (let x = 0; x < W; x += 3) {
           const y = H * (0.02 + i * 0.07) + Math.sin(x * 0.018 + t * (0.21 + i * 0.07) * (0.8 + I * 0.6) + i * 2) * H * 0.07 + Math.sin(x * 0.047 - t * 0.33 + i) * H * 0.03;
           const ray = 0.5 + 0.5 * Math.sin(x * 0.11 + t * (0.6 + i * 0.2) + i * 1.7) * Math.sin(x * 0.031 - t * 0.25);
-          cx.globalAlpha = Math.min(1, (0.07 + ray * 0.2) * (0.5 + I * 0.75 + pulse * 0.45));
+          cx.globalAlpha = Math.min(1, (0.05 + ray * 0.14) * (0.5 + I * 0.75 + pulse * 0.45));
           cx.save(); cx.translate(x, y); cx.fillRect(0, 0, 3, h); cx.restore();
         }
       }
@@ -2302,6 +2321,15 @@ if (typeof module !== 'undefined') module.exports = Logic;
       for (let i = 0; i < 40; i++) TVB.sparks.push({ x: FW / 2 + (Math.random() - 0.5) * FW * 0.7, y: FH * (0.55 + Math.random() * 0.45), v: 20 + Math.random() * 30, s: 0.8 + Math.random() * 1.5, w: Math.random() * 6.28, a: 0.3 });
     };
     TVB.raf = requestAnimationFrame(loop);
+    setInterval(() => { const c = document.getElementById('tvClock'), d = document.getElementById('tvDate'); if (c && c.textContent !== tvTime()) c.textContent = tvTime(); if (d && d.textContent !== tvDate()) d.textContent = tvDate(); }, 1000);
+    (() => {
+      const v = document.createElement('video'); v.id = 'keepTv'; v.muted = true; v.loop = true; v.autoplay = true; v.setAttribute('playsinline', ''); v.setAttribute('muted', '');
+      v.src = 'data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAOabW9vdgAAAGxtdmhkAAAAAAAAAAAAAAAAAAAD6AAAC7gAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAsR0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAAC7gAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAEAAAAAkAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAAu4AAAAAAABAAAAAAI8bWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAAAoAAAAeABVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAAB521pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAAadzdGJsAAAAt3N0c2QAAAAAAAAAAQAAAKdhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAEAAJABIAAAASAAAAAAAAAABFUxhdmM2MC4zMS4xMDIgbGlieDI2NAAAAAAAAAAAAAAAGP//AAAALWF2Y0MBQsAK/+EAFmdCwAraEf58BEAAAAMAQAAABQPEiagBAARozg/IAAAAEHBhc3AAAAABAAAAAQAAABRidHJ0AAAAAAAACdAAAAnQAAAAGHN0dHMAAAAAAAAAAQAAAB4AAAQAAAAAFHN0c3MAAAAAAAAAAQAAAAEAAAAcc3RzYwAAAAAAAAABAAAAAQAAAB4AAAABAAAAjHN0c3oAAAAAAAAAAAAAAB4AAAKMAAAACgAAAAoAAAAKAAAACgAAAAoAAAAKAAAACgAAAAoAAAAKAAAACgAAAAoAAAAKAAAACgAAAAoAAAAKAAAACgAAAAoAAAAKAAAACgAAAAoAAAAKAAAACgAAAAoAAAAKAAAACgAAAAoAAAAKAAAACgAAAAoAAAAUc3RjbwAAAAAAAAABAAADygAAAGJ1ZHRhAAAAWm1ldGEAAAAAAAAAIWhkbHIAAAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAALWlsc3QAAAAlqXRvbwAAAB1kYXRhAAAAAQAAAABMYXZmNjAuMTYuMTAwAAAACGZyZWUAAAO2bWRhdAAAAm4GBf//atxF6b3m2Ui3lizYINkj7u94MjY0IC0gY29yZSAxNjQgcjMxMDggMzFlMTlmOSAtIEguMjY0L01QRUctNCBBVkMgY29kZWMgLSBDb3B5bGVmdCAyMDAzLTIwMjMgLSBodHRwOi8vd3d3LnZpZGVvbGFuLm9yZy94MjY0Lmh0bWwgLSBvcHRpb25zOiBjYWJhYz0wIHJlZj0xIGRlYmxvY2s9MTowOjAgYW5hbHlzZT0weDE6MHgxIG1lPWhleCBzdWJtZT0yIHBzeT0xIHBzeV9yZD0xLjAwOjAuMDAgbWl4ZWRfcmVmPTAgbWVfcmFuZ2U9MTYgY2hyb21hX21lPTEgdHJlbGxpcz0wIDh4OGRjdD0wIGNxbT0wIGRlYWR6b25lPTIxLDExIGZhc3RfcHNraXA9MSBjaHJvbWFfcXBfb2Zmc2V0PTAgdGhyZWFkcz0xIGxvb2thaGVhZF90aHJlYWRzPTEgc2xpY2VkX3RocmVhZHM9MCBucj0wIGRlY2ltYXRlPTEgaW50ZXJsYWNlZD0wIGJsdXJheV9jb21wYXQ9MCBjb25zdHJhaW5lZF9pbnRyYT0wIGJmcmFtZXM9MCB3ZWlnaHRwPTAga2V5aW50PTI1MCBrZXlpbnRfbWluPTEwIHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9MTAgcmM9Y3JmIG1idHJlZT0xIGNyZj0yMy4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAAAFmWIhA////w9FAAEgXycnJ111111114AAAAGQZogP8bAAAAABkGaQD/GwAAAAAZBmmA/xsAAAAAGQZqAP8bAAAAABkGaoD/GwAAAAAZBmsA/xsAAAAAGQZrgP8bAAAAABkGbAD/GwAAAAAZBmyA/xsAAAAAGQZtAP8bAAAAABkGbYD/GwAAAAAZBm4A/xsAAAAAGQZugP8bAAAAABkGbwD/GwAAAAAZBm+A/xsAAAAAGQZoAP8bAAAAABkGaID/GwAAAAAZBmkA/xsAAAAAGQZpgP8bAAAAABkGagD/GwAAAAAZBmqA/xsAAAAAGQZrAP8bAAAAABkGa4D/GwAAAAAZBmwA/xsAAAAAGQZsgP8bAAAAABkGbQD/GwAAAAAZBm2A/xsAAAAAGQZuAO8bAAAAABkGboDfGwA==';
+      document.body.appendChild(v);
+      const go = () => { const p = v.play(); if (p && p.catch) p.catch(() => {}); };
+      go(); ['pointerdown', 'keydown', 'click'].forEach((t) => document.addEventListener(t, go, { passive: true }));
+      setInterval(() => { if (v.paused) go(); }, 30000);
+    })();
     // tik of druk op OK met de afstandsbediening: de code even tonen
     const show = () => { const c = document.getElementById('tvCode'); if (!c) return; c.classList.add('show'); clearTimeout(show.t); if (LINK.paired) show.t = setTimeout(() => c.classList.remove('show'), 12000); };
     document.addEventListener('pointerdown', show, { passive: true });
