@@ -547,7 +547,7 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 .splash .ring { position: relative; width: min(78vw, 46vh, 420px); aspect-ratio: 1; display: grid; place-items: center; }
 .splash .ring svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .splash .ring .trk { fill: none; stroke: rgba(255,255,255,.07); stroke-width: 1.2; }
-.splash .ring .sec { fill: none; stroke: url(#spg); stroke-width: 2.4; stroke-linecap: round; transition: stroke-dashoffset .95s linear; filter: drop-shadow(0 0 6px rgba(94,240,192,.6)); }
+.splash .ring .sec { fill: none; stroke: url(#spg); stroke-width: 2.4; stroke-linecap: round; filter: drop-shadow(0 0 6px rgba(94,240,192,.6)); }
 .splash .ring .tick { stroke: rgba(255,255,255,.18); stroke-width: 1.2; }
 .splash .ring .tick.big { stroke: rgba(255,255,255,.4); stroke-width: 2; }
 .splash .ring .dot { fill: var(--gold); filter: drop-shadow(0 0 8px var(--gold)); }
@@ -2051,14 +2051,23 @@ if (typeof module !== 'undefined') module.exports = Logic;
   }, { passive: true });
   ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => document.addEventListener(t, () => { if (devHold && devHold !== 'done') clearTimeout(devHold); setTimeout(() => { if (devHold === 'done') devHold = null; }, 50); }, { passive: true }));
 
+  // Secondenring: vloeiend rond (elk beeldje), niet per seconde verspringen
+  (function ringLoop() {
+    const c = document.getElementById('spSec'), dot = document.getElementById('spDot');
+    if (c || dot) {
+      const d = new Date(), f = (d.getSeconds() + d.getMilliseconds() / 1000) / 60, R = 46, C = 2 * Math.PI * R;
+      if (c) c.setAttribute('stroke-dashoffset', (C * (1 - f)).toFixed(3));
+      if (dot) { const a = f * 2 * Math.PI; dot.setAttribute('cx', (50 + R * Math.sin(a)).toFixed(3)); dot.setAttribute('cy', (50 - R * Math.cos(a)).toFixed(3)); }
+    }
+    requestAnimationFrame(ringLoop);
+  })();
+
   // Klok op het beginscherm loopt elke seconde
   setInterval(() => {
     const t = document.getElementById('spTime'); if (!t) return;
     const d = new Date(), sec = d.getSeconds(), R = 46, C = 2 * Math.PI * R;
     const hm = spTime(d); if (t.dataset.hm !== hm) { t.innerHTML = hm; t.dataset.hm = hm; }
     const c = document.getElementById('spSec'), dot = document.getElementById('spDot');
-    if (c) { if (sec === 0) { c.style.transition = 'none'; } else c.style.transition = ''; c.setAttribute('stroke-dashoffset', (C * (1 - (sec || 60) / 60)).toFixed(2)); }
-    if (dot) { const a = (sec / 60) * 2 * Math.PI; dot.setAttribute('cx', 50 + R * Math.sin(a)); dot.setAttribute('cy', 50 - R * Math.cos(a)); }
     if (spNow && spNow.dur) {
       const prog = Math.min(spNow.dur, spNow.prog + (spNow.playing ? Date.now() - spNow.t : 0));
       const pe = document.getElementById('spPos'), be = document.getElementById('spBar');
