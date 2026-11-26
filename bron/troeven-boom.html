@@ -603,6 +603,25 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 .wificard .wh { font: 500 13px/1.4 var(--f-ui); color: rgba(220,232,255,.75); }
 .wificard .wx { position: absolute; top: 12px; right: 12px; }
 .wifiform { display: flex; flex-direction: column; gap: 10px; }
+/* Tv-modus */
+.splash.tv, .splash.tv:is(*) { display: grid !important; grid-template-columns: 1fr !important; grid-template-rows: 1fr !important; place-items: center; justify-content: center; align-content: center; cursor: default; padding: 0; }
+.splash.tv .tvmid { grid-column: 1 / -1; grid-row: 1 / -1; }
+.splash.tv .tvmid { display: flex; flex-direction: column; align-items: center; gap: 2.2vh; animation: unblur 2s var(--ease) both; }
+.splash.tv .kname { font: 300 13vh/1 var(--f-serif); letter-spacing: .34em; text-indent: .34em; text-transform: uppercase;
+  background: linear-gradient(180deg, #ffffff, #b9c7e6); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 40px rgba(150,200,255,.25)); }
+.splash.tv .rule { width: 22vh; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent); }
+.splash.tv .rule::after { content: ""; display: block; width: 7px; height: 7px; margin: -3px auto 0; transform: rotate(45deg); background: var(--gold); box-shadow: 0 0 12px var(--gold); }
+/* zacht ademen zolang er muziek speelt */
+.splash.tv.playing .sky { animation: breath 3.2s ease-in-out infinite; }
+@keyframes breath { 50% { transform: scale(1.05); filter: brightness(1.25) saturate(1.2); } }
+.splash.tv .sky b { opacity: .78; }
+.tvnow { position: fixed; left: 4vw; bottom: 5vh; display: flex; align-items: center; gap: 1.6vw; padding: 1.2vh 1.6vw 1.2vh 1.2vh; border-radius: 2.4vh; background: rgba(8,10,22,.35); border: 1px solid rgba(255,255,255,.1);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); opacity: 0; transform: translateY(12px); transition: opacity 1.2s ease, transform 1.2s var(--ease); pointer-events: none; }
+.tvnow.show { opacity: 1; transform: none; }
+.tvnow .art { width: 9vh; height: 9vh; border-radius: 1.2vh; background: #222 center/cover; box-shadow: 0 1.2vh 3vh -1vh rgba(0,0,0,.8); }
+.tvnow .t { font: 500 3vh/1.15 var(--f-serif); color: #fff; max-width: 40vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tvnow .a { font: 500 1.9vh/1.3 var(--f-ui); color: rgba(220,232,255,.7); letter-spacing: .04em; }
+.tvlink { position: fixed; right: 3vw; bottom: 4vh; font: 500 1.8vh/1 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: rgba(220,232,255,.55); background: none; border: 1px solid rgba(255,255,255,.15); border-radius: 99px; padding: 1.2vh 2vh; cursor: pointer; }
 /* Intro bij het aanzetten */
 @property --r { syntax: '<percentage>'; inherits: false; initial-value: -20%; }
 #intro { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: #02030a; pointer-events: none;
@@ -1667,6 +1686,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 
   // Een avond: spelers → (per rondje) prijs → spel → percentages (niet bij troeven) → spelen.
   function view() {
+    if (TV) return 'tv';
     if (ui.idle) return 'splash';
     if (!ui.splashSeen && !ui.view && !ui.flow && !openAny() && !owedAll().n && !S.pk.on && !(S.pk.past || []).length) return 'splash';
     if (ui.view === 'start' || ui.view === 'end' || (ui.view === 'draw' && ui.draw) || (ui.view === 'hist' && ui.hist) || ui.view === 'poker' || ui.view === 'choose') return ui.view;
@@ -2029,6 +2049,38 @@ if (typeof module !== 'undefined') module.exports = Logic;
     for (let i = 0; i < 9; i++) { const x = (i * 23 + 5) % 96, z = 6 + ((i * 7) % 14); h += `<span class="orb" style="left:${x}%;bottom:-30px;width:${z}px;height:${z}px;animation-duration:${26 + ((i * 9) % 20)}s;animation-delay:-${(i * 4.3).toFixed(1)}s"></span>`; }
     return h;
   }
+  // ---------- Tv-modus: open het adres met ?tv op de tv. Daarna blijft die tv altijd in tv-modus (?app om terug te gaan). ----------
+  const TV = (() => {
+    try {
+      const q = new URLSearchParams(location.search);
+      if (q.has('app')) { localStorage.removeItem('kelder-tv'); return false; }
+      if (q.has('tv')) { localStorage.setItem('kelder-tv', '1'); return true; }
+      return localStorage.getItem('kelder-tv') === '1';
+    } catch (e) { return false; }
+  })();
+  function renderTV() {
+    const n = spNow;
+    return `<div class="splash tv ${n && n.playing ? 'playing' : ''}" data-act="noop">
+      <div class="sky" aria-hidden="true"><b></b><b></b><b></b><b></b>${skyBits()}</div>
+      <div class="tvmid"><div class="kname">Kelder</div><div class="rule"></div></div>
+      <div class="tvnow" id="tvNow"></div>
+      ${spOn() ? '' : '<button class="tvlink" data-act="spSetup">Spotify koppelen</button>'}
+    </div>`;
+  }
+  // Bij een nieuw nummer: hoes en titel 10 seconden zacht in beeld
+  let tvLast = null, tvT = 0;
+  function tvPaint() {
+    const el = document.querySelector('.splash.tv'); if (!el) return;
+    el.classList.toggle('playing', !!(spNow && spNow.playing));
+    const box = document.getElementById('tvNow'); if (!box) return;
+    const id = spNow && spNow.playing ? spNow.id : null;
+    if (id && id !== tvLast) {
+      box.innerHTML = `<span class="art" style="${spNow.art ? `background-image:url('${esc(spNow.art)}')` : ''}"></span><span><span class="t">${esc(spNow.title)}</span><br><span class="a">${esc(spNow.artist)}</span></span>`;
+      box.classList.add('show'); clearTimeout(tvT); tvT = setTimeout(() => box.classList.remove('show'), 10000);
+    }
+    tvLast = id;
+  }
+
   // ---------- Spotify (wat er speelt + bediening) ----------
   // Werkt met een eigen Spotify-ontwikkelaarscode (Client ID) en aanmelden via Spotify (PKCE, geen geheim nodig).
   // Alleen op dit toestel bewaard, niet in de back-up.
@@ -2087,7 +2139,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const it = j && j.item;
     spNow = it ? { id: it.id, title: it.name, artist: it.artists ? it.artists.map((a) => a.name).join(', ') : (it.show ? it.show.name : ''),
       art: ((it.album || it).images || [])[0] ? (it.album || it).images[0].url : '', dur: it.duration_ms || 0, prog: j.progress_ms || 0, playing: !!j.is_playing, t: Date.now(),
-      dev: j.device ? j.device.name : '', vol: j.device && j.device.volume_percent != null ? j.device.volume_percent : null } : null;
+      dev: j.device ? j.device.name : '', devType: j.device ? j.device.type : '',
+      vol: j.device && j.device.supports_volume !== false && j.device.volume_percent != null ? j.device.volume_percent : null } : null;
     spPaint();
   }
   const mmss2 = (ms) => { const x = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(x / 60)}:${String(x % 60).padStart(2, '0')}`; };
@@ -2112,7 +2165,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
         <span class="ttl">${esc(n.title)}</span><span class="art2">${esc(n.artist)}</span>
         <span class="prog"><span id="spPos">${mmss2(prog)}</span><span class="pbar"><i id="spBar" style="width:${n.dur ? ((prog / n.dur) * 100).toFixed(1) : 0}%"></i></span><span>${mmss2(n.dur)}</span></span>
         <span class="ctl"><button data-act="spCmd" data-v="prev" aria-label="Vorig nummer">${IC.prev}</button><button class="pp" data-act="spCmd" data-v="${n.playing ? 'pause' : 'play'}" aria-label="${n.playing ? 'Pauze' : 'Afspelen'}">${n.playing ? IC.pause : IC.play}</button><button data-act="spCmd" data-v="next" aria-label="Volgend nummer">${IC.next}</button></span>
-        ${n.vol !== null ? `<span class="vol">${IC.vol}<input type="range" id="spVol" min="0" max="100" value="${n.vol}" aria-label="Volume"></span>` : ''}
+        ${n.vol !== null ? `<span class="vol">${IC.vol}<input type="range" id="spVol" min="0" max="100" value="${n.vol}" aria-label="Volume"></span>` : n.devType ? `<span class="vol" style="font-size:11.5px">${IC.vol}Volume regel je op ${/smartphone/i.test(n.devType) ? 'je gsm' : 'het toestel'} zelf</span>` : ''}
       </span></div>`;
   }
   // Kleuren uit de hoes: de 3-4 sterkste kleuren worden de kleuren van de aurora
@@ -2153,6 +2206,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   }
   function spPaint() {
     auroraFromArt(spNow && spNow.art ? spNow.art : null);
+    if (TV) { tvPaint(); return; }
     const side = document.querySelector('.splash .side'); if (!side) return;
     const el = document.getElementById('spCard');
     const a = document.activeElement; if (a && a.id === 'spVol') return; // niet storen terwijl je het volume schuift
@@ -2183,8 +2237,22 @@ if (typeof module !== 'undefined') module.exports = Logic;
   document.addEventListener('change', (e) => {
     if (e.target.id !== 'spVol') return;
     const v = +e.target.value; if (spNow) spNow.vol = v;
-    spApi('/me/player/volume?volume_percent=' + v, 'PUT');
+    spSetVol(v);
   });
+  // Volume zetten. Spotify laat het volume van een gsm niet regelen van op afstand: dan een duidelijke melding.
+  let volT = 0;
+  function spSetVol(v) {
+    clearTimeout(volT);
+    volT = setTimeout(async () => {
+      const t = await spToken(); if (!t) return;
+      try {
+        const r = await fetch('https://api.spotify.com/v1/me/player/volume?volume_percent=' + v, { method: 'PUT', headers: { Authorization: 'Bearer ' + t } });
+        if (!r.ok) showToast(spNow && /smartphone/i.test(spNow.devType || '') ? 'Spotify laat het volume van een gsm niet regelen. Zet het volume op je gsm zelf.' : 'Volume regelen lukt niet op dit toestel.', false);
+        setTimeout(spPoll, 600);
+      } catch (x) {}
+    }, 120);
+  }
+  document.addEventListener('input', (e) => { if (e.target.id === 'spVol') { if (spNow) spNow.vol = +e.target.value; spSetVol(+e.target.value); } });
 
   // ---------- Toestellen in de kelder: elke knop opent de app die erbij hoort ----------
   const DEVS = [
@@ -2194,7 +2262,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     { k: 'dance', n: 'Meedansen', c: '#5ef0c0', svg: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="9" width="2.6" height="10" rx="1.2"/><rect x="9" y="5" width="2.6" height="14" rx="1.2"/><rect x="14" y="8" width="2.6" height="11" rx="1.2"/><rect x="19" y="11" width="2.6" height="8" rx="1.2"/></svg>' },
     { k: 'lamp', n: 'Lampen', c: '#ffd36b', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3z"/></svg>' },
   ];
-  { const o = ['fan', 'led', 'lamp', 'wifi', 'dance']; DEVS.sort((a, b) => o.indexOf(a.k) - o.indexOf(b.k)); }
+  { const o = ['fan', 'led', 'lamp', 'wifi']; for (let i = DEVS.length - 1; i >= 0; i--) if (!o.includes(DEVS[i].k)) DEVS.splice(i, 1); DEVS.sort((a, b) => o.indexOf(a.k) - o.indexOf(b.k)); }
   const DEV_APPS = [['Smart Life', 'com.tuya.smartlife'], ['Tuya Smart', 'com.tuya.smart'], ['Philips Hue', 'com.philips.lighting.hue2'], ['Govee Home', 'com.govee.home'], ['SmartThings', 'com.samsung.android.oneconnect'], ['Google Home', 'com.google.android.apps.chromecast.app'], ['LG ThinQ', 'com.lgeha.nuts'], ['Spotify', 'com.spotify.music']];
   const DEV_KEY = 'kelder-apps';
   let DEVMAP = (() => { try { return JSON.parse(localStorage.getItem(DEV_KEY)) || {}; } catch (e) { return {}; } })();
@@ -3600,7 +3668,7 @@ module.exports = QRRSBlock;
     render(); showToast('<b>Meedansen</b> staat aan · zet de muziek maar luid', false);
   }
   // Na het herladen terug aanzetten; de geluidsverwerking start bij de eerste aanraking
-  if (danceOn()) setTimeout(() => danceStart(), 800);
+  try { localStorage.removeItem(DANCE_KEY); } catch (e) {} // meedansen via de microfoon is van de tablet gehaald
   document.addEventListener('pointerdown', () => { if (D.st) audioCtx(); }, { passive: true });
   document.addEventListener('visibilitychange', () => { if (document.hidden) { if (D.st) danceStop(); } else if (danceOn()) danceStart(); });
 
@@ -3623,7 +3691,7 @@ module.exports = QRRSBlock;
   let lastTouch = Date.now();
   ['pointerdown', 'keydown', 'input', 'wheel', 'touchmove'].forEach((t) => document.addEventListener(t, () => { lastTouch = Date.now(); }, { passive: true, capture: true }));
   setInterval(() => {
-    if (ui.idle || Date.now() - lastTouch < 30000) return;
+    if (TV || ui.idle || Date.now() - lastTouch < 30000) return;
     const v = view();
     if (v === 'splash' || ui.modal || ui.bigClock || (S.pk.on && S.pk.mode === 'tour' && S.pk.step === 'play')) return;
     const a = document.activeElement; if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
@@ -4650,7 +4718,7 @@ module.exports = QRRSBlock;
   function render() {
     const v = view();
     if (!ui.idle) ui.view = ['draw', 'end', 'wround', 'hround', 'pround', 'start', 'nprice', 'npick', 'npct', 'hist', 'poker', 'choose'].includes(v) ? v : null;
-    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound, ngame: renderNGame, lgame: renderLGame, hist: renderHist, dgame: renderDGame, poker: renderPoker, choose: renderChoose, splash: renderSplash };
+    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound, ngame: renderNGame, lgame: renderLGame, hist: renderHist, dgame: renderDGame, poker: renderPoker, choose: renderChoose, splash: renderSplash, tv: renderTV };
     const same = v === lastScreen, before = same ? numSnap() : null;
     $app.innerHTML = screens[v]();
     $app.classList.toggle('fresh', !same);
@@ -4659,7 +4727,8 @@ module.exports = QRRSBlock;
     renderModal();
     updateCalc();
     if (before) numLive(before);
-    if (v === 'splash') applyArtCols();
+    if (v === 'splash' || v === 'tv') applyArtCols();
+    if (v === 'tv') { tvLast = null; tvPaint(); }
     if (!same && v === 'end') countUp(document.getElementById('settle'));
     if (partyDue) { partyDue = false; setTimeout(party, 120); }
   }
@@ -5401,7 +5470,8 @@ module.exports = QRRSBlock;
 
   // Liep er een toernooi toen de app dichtging? Dan meteen terug naar de klok.
   if (S.pk && S.pk.on && S.pk.mode === 'tour' && S.pk.step === 'play') { ui.view = 'poker'; try { keepAwake(); } catch (e) {} }
-  if (!(S.pk.on && S.pk.mode === 'tour' && S.pk.step === 'play')) { ui.idle = true; ui.atLoad = true; }
+  if (!TV && !(S.pk.on && S.pk.mode === 'tour' && S.pk.step === 'play')) { ui.idle = true; ui.atLoad = true; }
+  if (TV) { try { keepAwake(); } catch (e) {} document.addEventListener('pointerdown', () => { try { keepAwake(); } catch (e) {} if (document.documentElement.requestFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {}); }, { passive: true }); }
   // Welkom: KELDER licht op en de aurora gaat open (alleen bij het opstarten, niet na een update)
   (() => {
     let upd = false; try { upd = new URL(location.href).searchParams.has('v') || /[?&]code=/.test(location.search); } catch (e) {}
