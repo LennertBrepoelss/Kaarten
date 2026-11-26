@@ -1496,6 +1496,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 
   // Een avond: spelers → (per rondje) prijs → spel → percentages (niet bij troeven) → spelen.
   function view() {
+    if (ui.idle) return 'splash';
     if (!ui.splashSeen && !ui.view && !ui.flow && !openAny() && !owedAll().n && !S.pk.on && !(S.pk.past || []).length) return 'splash';
     if (ui.view === 'start' || ui.view === 'end' || (ui.view === 'draw' && ui.draw) || (ui.view === 'hist' && ui.hist) || ui.view === 'poker' || ui.view === 'choose') return ui.view;
     if (ui.flow && ['nprice', 'npick', 'npct'].includes(ui.view)) return ui.view;
@@ -1844,7 +1845,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
         </div>
         <div class="icons">${icons}</div>
       </div>
-      <div class="bottom"><span class="tap">Tik om de avond te starten <span class="arr">→</span></span>${last ? `<span class="last">${last}</span>` : ''}</div>
+      <div class="bottom"><span class="tap">${ui.idle ? 'Tik om verder te spelen' : 'Tik om de avond te starten'} <span class="arr">→</span></span>${ui.idle ? (owedAll().n ? `<span class="last">${owedAll().n} rondje${owedAll().n > 1 ? 's' : ''} gespeeld vanavond</span>` : '') : last ? `<span class="last">${last}</span>` : ''}</div>
     </div>`;
   }
   // Klok op het beginscherm loopt elke seconde
@@ -1857,6 +1858,18 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (dot) { const a = (sec / 60) * 2 * Math.PI; dot.setAttribute('cx', 50 + R * Math.sin(a)); dot.setAttribute('cy', 50 - R * Math.cos(a)); }
     const g = document.getElementById('spGreet'); if (g) g.textContent = greet(d.getHours());
   }, 1000);
+
+  // Rustmodus: 1 minuut niets aangeraakt = terug naar het beginscherm met de klok.
+  // Niet tijdens een pokertoernooi (de klok moet zichtbaar blijven) en niet terwijl je iets typt.
+  let lastTouch = Date.now();
+  ['pointerdown', 'keydown', 'input', 'wheel', 'touchmove'].forEach((t) => document.addEventListener(t, () => { lastTouch = Date.now(); }, { passive: true, capture: true }));
+  setInterval(() => {
+    if (ui.idle || Date.now() - lastTouch < 60000) return;
+    const v = view();
+    if (v === 'splash' || ui.modal || ui.bigClock || (S.pk.on && S.pk.mode === 'tour' && S.pk.step === 'play')) return;
+    const a = document.activeElement; if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+    ui.idleY = window.scrollY; ui.idle = true; hideToast(); render();
+  }, 5000);
 
   // ---------- Live nieuwtjes op het startscherm ----------
   // Alle uitgespeelde rondjes van vanavond in volgorde: wie won, wie betaalde
@@ -2839,7 +2852,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 
   function render() {
     const v = view();
-    ui.view = ['draw', 'end', 'wround', 'hround', 'pround', 'start', 'nprice', 'npick', 'npct', 'hist', 'poker', 'choose'].includes(v) ? v : null;
+    if (!ui.idle) ui.view = ['draw', 'end', 'wround', 'hround', 'pround', 'start', 'nprice', 'npick', 'npct', 'hist', 'poker', 'choose'].includes(v) ? v : null;
     const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound, ngame: renderNGame, lgame: renderLGame, hist: renderHist, dgame: renderDGame, poker: renderPoker, choose: renderChoose, splash: renderSplash };
     const same = v === lastScreen, before = same ? numSnap() : null;
     $app.innerHTML = screens[v]();
@@ -3317,7 +3330,9 @@ if (typeof module !== 'undefined') module.exports = Logic;
     newRondje() { hideToast(); ui.flow = null; ui.result = null; ui.modal = null; ui.calc = { expr: '', target: null }; ui.view = null; render(); window.scrollTo(0, 0); },
     splashGo() {
       const el = document.querySelector('.splash');
-      const go = () => { ui.splashSeen = true; ui.names = null; ui.view = 'start'; render(); window.scrollTo(0, 0); };
+      // Na de rustmodus terug naar waar je was; anders een nieuwe avond: eerst de spelers
+      const go = ui.idle ? () => { ui.idle = false; lastTouch = Date.now(); render(); window.scrollTo(0, ui.idleY || 0); }
+        : () => { ui.splashSeen = true; ui.names = null; ui.view = 'start'; render(); window.scrollTo(0, 0); };
       if (el && !calm()) { el.classList.add('leave'); setTimeout(go, 450); } else go();
       if (navigator.vibrate) try { navigator.vibrate(12); } catch (e) {}
     },
