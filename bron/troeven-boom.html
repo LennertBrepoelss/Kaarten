@@ -525,6 +525,43 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 .tile:active { transform: scale(.97); }
 .tile::after { content: ""; position: absolute; inset: 0; background: radial-gradient(80% 60% at 20% 0%, rgba(255,255,255,.28), transparent 60%); pointer-events: none; }
 .tile .tart { position: absolute; top: 10px; left: 10px; width: 58%; color: #fff; }
+/* Beginscherm: grote klok, tik om te starten */
+.splash { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: space-between; text-align: center; cursor: pointer; overflow: hidden;
+  padding: max(28px, env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) max(34px, env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));
+  background: radial-gradient(90% 55% at 50% 42%, rgba(94,240,192,.10), transparent 70%), radial-gradient(70% 50% at 85% 10%, rgba(182,140,255,.14), transparent 70%); -webkit-tap-highlight-color: transparent; user-select: none; }
+.splash .sptop { display: flex; flex-direction: column; align-items: center; gap: 10px; animation: rise .9s var(--ease) both; }
+.splash .sptop .brand { font-size: 30px; }
+.splash .greet { font: 600 11px/1 var(--f-ui); letter-spacing: .32em; text-transform: uppercase; color: var(--dim); }
+.splash .mid { display: flex; flex-direction: column; align-items: center; gap: 14px; animation: rise 1s var(--ease) .1s both; }
+.splash .ring { position: relative; width: min(78vw, 46vh, 420px); aspect-ratio: 1; display: grid; place-items: center; }
+.splash .ring svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.splash .ring .trk { fill: none; stroke: rgba(255,255,255,.07); stroke-width: 1.2; }
+.splash .ring .sec { fill: none; stroke: url(#spg); stroke-width: 2.4; stroke-linecap: round; transition: stroke-dashoffset .95s linear; filter: drop-shadow(0 0 6px rgba(94,240,192,.6)); }
+.splash .ring .tick { stroke: rgba(255,255,255,.18); stroke-width: 1.2; }
+.splash .ring .tick.big { stroke: rgba(255,255,255,.4); stroke-width: 2; }
+.splash .ring .dot { fill: var(--gold); filter: drop-shadow(0 0 8px var(--gold)); }
+.splash .time { font: 500 clamp(64px, 21vw, 150px)/1 var(--f-serif); letter-spacing: -.03em; font-variant-numeric: lining-nums tabular-nums; color: var(--ivory); text-shadow: 0 0 40px rgba(94,240,192,.22); }
+.splash .time .col { display: inline-block; margin: 0 .02em; animation: colon 1s steps(1) infinite; color: var(--t1); }
+@keyframes colon { 50% { opacity: .25; } }
+.splash .date { white-space: nowrap; font: italic 500 clamp(17px, 4.6vw, 24px)/1.2 var(--f-serif); color: var(--t2); margin-top: 10px; }
+.splash .icons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; max-width: 360px; }
+.splash .icons span { width: 34px; height: 34px; border-radius: 10px; background: var(--tg); display: grid; place-items: center; box-shadow: 0 6px 14px -6px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.3); animation: bob 4s ease-in-out infinite; }
+.splash .icons span:nth-child(2n) { animation-delay: -1.3s; } .splash .icons span:nth-child(3n) { animation-delay: -2.6s; }
+.splash .icons svg { width: 26px; height: 26px; }
+.splash .bottom { display: flex; flex-direction: column; align-items: center; gap: 14px; animation: rise 1s var(--ease) .25s both; }
+.splash .tap { position: relative; display: inline-flex; align-items: center; gap: 12px; padding: 16px 26px; border-radius: 999px; font: 600 16px/1 var(--f-ui); letter-spacing: .02em; color: #06121a;
+  background: linear-gradient(100deg, var(--t1), var(--t2)); box-shadow: 0 14px 40px -14px var(--t1); }
+.splash .tap::before, .splash .tap::after { content: ""; position: absolute; inset: 0; border-radius: inherit; border: 1.5px solid var(--t1); animation: halo 2.4s ease-out infinite; }
+.splash .tap::after { animation-delay: 1.2s; }
+@keyframes halo { from { transform: scale(1); opacity: .7; } to { transform: scale(1.35, 1.8); opacity: 0; } }
+.splash .last { font: 500 12.5px/1.4 var(--f-ui); color: var(--dim); max-width: 320px; }
+.splash .suit { position: absolute; bottom: -40px; font: 400 28px/1 var(--f-serif); color: rgba(255,255,255,.08); animation: drift linear infinite; pointer-events: none; }
+@keyframes drift { from { transform: translateY(0) rotate(0); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } to { transform: translateY(-115vh) rotate(200deg); opacity: 0; } }
+.splash.leave { animation: splashout .55s var(--ease) forwards; }
+@keyframes splashout { to { opacity: 0; transform: scale(1.06); filter: blur(6px); } }
+@media (orientation: landscape) and (max-height: 520px) { .splash .ring { width: min(52vh, 300px); } .splash .date { font-size: 4.6vh; margin-top: 4px; } .splash .last { display: none; } .splash .time { font-size: 15vh; } .splash .icons { display: none; } }
+@media (prefers-reduced-motion: reduce) { .splash .suit { display: none; } .splash .tap::before, .splash .tap::after, .splash .time .col { animation: none; } }
+
 /* Glans die af en toe over de tegels schuift */
 .tiles .tile:not(.off):not(.soon)::before { content: ""; position: absolute; top: -20%; bottom: -20%; left: -60%; width: 45%; z-index: 1; pointer-events: none;
   background: linear-gradient(100deg, transparent, rgba(255,255,255,.32), transparent); transform: skewX(-18deg) translateX(0); animation: shine 7s ease-in-out infinite; }
@@ -1459,6 +1496,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 
   // Een avond: spelers → (per rondje) prijs → spel → percentages (niet bij troeven) → spelen.
   function view() {
+    if (!ui.splashSeen && !ui.view && !ui.flow && !openAny() && !owedAll().n && !S.pk.on && !(S.pk.past || []).length) return 'splash';
     if (ui.view === 'start' || ui.view === 'end' || (ui.view === 'draw' && ui.draw) || (ui.view === 'hist' && ui.hist) || ui.view === 'poker' || ui.view === 'choose') return ui.view;
     if (ui.flow && ['nprice', 'npick', 'npct'].includes(ui.view)) return ui.view;
     if (!S.ready) return 'start';
@@ -1776,6 +1814,49 @@ if (typeof module !== 'undefined') module.exports = Logic;
         <button class="btn ghost block" type="button" data-act="freeRondje">Zonder geld spelen</button>
       </form></div>`;
   }
+
+  // ---------- Beginscherm ----------
+  const greet = (h) => (h < 6 ? 'Goede nacht' : h < 12 ? 'Goedemorgen' : h < 18 ? 'Goedemiddag' : 'Goedenavond');
+  const spTime = (d) => `${String(d.getHours()).padStart(2, '0')}<span class="col">:</span>${String(d.getMinutes()).padStart(2, '0')}`;
+  function lastNightTxt() {
+    const h = (S.history || []).slice(-1)[0]; if (!h) return '';
+    const n = HKEYS.reduce((t, k) => t + (h[k] ? h[k].r || h[k].n || 0 : 0), 0);
+    const paid = h.players.map((_, i) => HKEYS.reduce((t, k) => t + (h[k] && h[k].paid ? h[k].paid[i] || 0 : 0), 0)), mx = Math.max(...paid);
+    return `Vorige avond · ${esc(hDate(h.date))}${n ? ` · ${n} rondje${n > 1 ? 's' : ''}` : ''}${mx > 0 ? ` · ${esc(tidy(h.players[paid.indexOf(mx)]))} betaalde het meest` : ''}`;
+  }
+  function renderSplash() {
+    const d = new Date(), sec = d.getSeconds(), R = 46, C = 2 * Math.PI * R;
+    const ticks = Array.from({ length: 60 }, (_, i) => { const a = (i / 60) * 2 * Math.PI, big = i % 5 === 0, r1 = big ? 41.5 : 43, r2 = 44.2;
+      return `<line class="tick ${big ? 'big' : ''}" x1="${50 + r1 * Math.sin(a)}" y1="${50 - r1 * Math.cos(a)}" x2="${50 + r2 * Math.sin(a)}" y2="${50 - r2 * Math.cos(a)}"/>`; }).join('');
+    const suits = ['♠', '♥', '♦', '♣', '♠', '♥', '♦', '♣', '♠', '♥'].map((x, i) => `<span class="suit" style="left:${(i * 37 + 7) % 96}%;font-size:${20 + ((i * 13) % 22)}px;animation-duration:${14 + ((i * 7) % 11)}s;animation-delay:-${(i * 2.3).toFixed(1)}s">${x}</span>`).join('');
+    const icons = GAMES.map((g) => `<span class="${g.cls}">${GAME_ART[g.k]}</span>`).join('') + `<span class="g-poker">${GAME_ART.poker}</span>`;
+    const last = lastNightTxt();
+    return `<div class="splash" data-act="splashGo" role="button" aria-label="Tik om de avond te starten">
+      ${suits}
+      <div class="sptop"><div class="brand">Spelletjes</div><span class="greet" id="spGreet">${greet(d.getHours())}</span></div>
+      <div class="mid">
+        <div class="ring">
+          <svg viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="spg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--t1)"/><stop offset="1" stop-color="var(--t2)"/></linearGradient></defs>
+            ${ticks}<circle class="trk" cx="50" cy="50" r="${R}"/>
+            <circle class="sec" id="spSec" cx="50" cy="50" r="${R}" transform="rotate(-90 50 50)" stroke-dasharray="${C.toFixed(2)}" stroke-dashoffset="${(C * (1 - sec / 60)).toFixed(2)}"/>
+            <circle class="dot" id="spDot" r="1.8" cx="${50 + R * Math.sin((sec / 60) * 2 * Math.PI)}" cy="${50 - R * Math.cos((sec / 60) * 2 * Math.PI)}"/></svg>
+          <div><div class="time" id="spTime">${spTime(d)}</div><div class="date" id="spDate">${esc(today())}</div></div>
+        </div>
+        <div class="icons">${icons}</div>
+      </div>
+      <div class="bottom"><span class="tap">Tik om de avond te starten <span class="arr">→</span></span>${last ? `<span class="last">${last}</span>` : ''}</div>
+    </div>`;
+  }
+  // Klok op het beginscherm loopt elke seconde
+  setInterval(() => {
+    const t = document.getElementById('spTime'); if (!t) return;
+    const d = new Date(), sec = d.getSeconds(), R = 46, C = 2 * Math.PI * R;
+    const hm = spTime(d); if (t.dataset.hm !== hm) { t.innerHTML = hm; t.dataset.hm = hm; }
+    const c = document.getElementById('spSec'), dot = document.getElementById('spDot');
+    if (c) { if (sec === 0) { c.style.transition = 'none'; } else c.style.transition = ''; c.setAttribute('stroke-dashoffset', (C * (1 - (sec || 60) / 60)).toFixed(2)); }
+    if (dot) { const a = (sec / 60) * 2 * Math.PI; dot.setAttribute('cx', 50 + R * Math.sin(a)); dot.setAttribute('cy', 50 - R * Math.cos(a)); }
+    const g = document.getElementById('spGreet'); if (g) g.textContent = greet(d.getHours());
+  }, 1000);
 
   // ---------- Live nieuwtjes op het startscherm ----------
   // Alle uitgespeelde rondjes van vanavond in volgorde: wie won, wie betaalde
@@ -2759,7 +2840,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
   function render() {
     const v = view();
     ui.view = ['draw', 'end', 'wround', 'hround', 'pround', 'start', 'nprice', 'npick', 'npct', 'hist', 'poker', 'choose'].includes(v) ? v : null;
-    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound, ngame: renderNGame, lgame: renderLGame, hist: renderHist, dgame: renderDGame, poker: renderPoker, choose: renderChoose };
+    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound, ngame: renderNGame, lgame: renderLGame, hist: renderHist, dgame: renderDGame, poker: renderPoker, choose: renderChoose, splash: renderSplash };
     const same = v === lastScreen, before = same ? numSnap() : null;
     $app.innerHTML = screens[v]();
     $app.classList.toggle('fresh', !same);
@@ -3234,6 +3315,12 @@ if (typeof module !== 'undefined') module.exports = Logic;
     freeRondje() { if (!ui.flow) return; ui.flow.price = 0; ui.calc = { expr: '', target: null }; afterPrice(); },
     // "Nieuw rondje" brengt je terug naar de spelkeuze
     newRondje() { hideToast(); ui.flow = null; ui.result = null; ui.modal = null; ui.calc = { expr: '', target: null }; ui.view = null; render(); window.scrollTo(0, 0); },
+    splashGo() {
+      const el = document.querySelector('.splash');
+      const go = () => { ui.splashSeen = true; render(); window.scrollTo(0, 0); };
+      if (el && !calm()) { el.classList.add('leave'); setTimeout(go, 450); } else go();
+      if (navigator.vibrate) try { navigator.vibrate(12); } catch (e) {}
+    },
     pickGame(b) { hideToast(); ui.flow = { price: null, game: b.dataset.v }; ui.result = null; ui.modal = null; ui.calc = { expr: '', target: null }; ui.view = 'nprice'; render(); window.scrollTo(0, 0); },
     flowBack() {
       if (ui.view === 'npct') ui.view = 'nprice';
@@ -3333,7 +3420,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     },
     askReset() { ui.modal = 'askReset'; renderModal(); },
     saveNight() { if (!storeNight()) { showToast('Nog niets om te bewaren: speel eerst een rondje uit', false); return; } save(); render(); showToast(`<b>Bewaard</b> in de geschiedenis · ${hhmm(S.savedAt)}`, false); },
-    reset(b) { const keep = !b || b.dataset.v !== '0'; if (keep) storeNight(); const archive = [...(S.archive || []), ...(keep || S.savedAt ? finished().map((r) => ({ teams: r.teams, winner: r.winner, date: r.end || r.start })) : [])]; const history = S.history || []; const wz = freshWz(S.wz), hj = freshHj(S.hj), pj = freshPj(S.pj), np = freshNp(S.np), lk = freshLk(S.lk), dt = freshDt(S.dt), pk = { ...freshPk(S.pk), past: [] }; S = fresh(S.players); S.archive = archive; S.wz = wz; S.hj = hj; S.pj = pj; S.np = np; S.lk = lk; S.dt = dt; S.pk = pk; S.history = history; ui.hOpen = null; ui.hDel = null; ui.modal = null; ui.view = 'start'; ui.payer = null; ui.bill = ''; ui.hr = null; ui.wr = null; save(); render(); window.scrollTo(0, 0); },
+    reset(b) { const keep = !b || b.dataset.v !== '0'; if (keep) storeNight(); const archive = [...(S.archive || []), ...(keep || S.savedAt ? finished().map((r) => ({ teams: r.teams, winner: r.winner, date: r.end || r.start })) : [])]; const history = S.history || []; const wz = freshWz(S.wz), hj = freshHj(S.hj), pj = freshPj(S.pj), np = freshNp(S.np), lk = freshLk(S.lk), dt = freshDt(S.dt), pk = { ...freshPk(S.pk), past: [] }; S = fresh(S.players); S.archive = archive; S.wz = wz; S.hj = hj; S.pj = pj; S.np = np; S.lk = lk; S.dt = dt; S.pk = pk; S.history = history; ui.hOpen = null; ui.hDel = null; ui.modal = null; ui.splashSeen = false; ui.view = null; ui.payer = null; ui.bill = ''; ui.hr = null; ui.wr = null; save(); render(); window.scrollTo(0, 0); },
   };
 
   document.addEventListener('click', (e) => {
