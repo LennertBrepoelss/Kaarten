@@ -2040,9 +2040,16 @@ if (typeof module !== 'undefined') module.exports = Logic;
   const devApp = (k) => (k === 'games' ? 'games' : DEVMAP[k] || '');
   const devSave = () => { try { localStorage.setItem(DEV_KEY, JSON.stringify(DEVMAP)); } catch (e) {} };
   // Android: open een app via zijn pakketnaam; lukt dat niet, dan de Play Store-pagina met de knop "Openen"
+  // Geen Play Store meer als het niet lukt: dan een duidelijke melding.
   function openAndroidApp(pkg) {
-    const store = 'https://play.google.com/store/apps/details?id=' + pkg;
-    location.href = `intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=${pkg};S.browser_fallback_url=${encodeURIComponent(store)};end`;
+    let left = false;
+    const onHide = () => { if (document.hidden) left = true; };
+    document.addEventListener('visibilitychange', onHide);
+    try { location.href = `intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=${pkg};end`; } catch (e) {}
+    setTimeout(() => {
+      document.removeEventListener('visibilitychange', onHide);
+      if (!left && !document.hidden) showToast('Deze app laat zich niet openen vanuit een andere app. Tip: zet hem in de taakbalk of zijbalk van je tablet.', false);
+    }, 1500);
   }
   // Lang drukken op een knop = de app ervan kiezen
   let devHold = null;
@@ -3843,7 +3850,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
 <script>
 // Installeerbare app: offline werken en vanzelf de nieuwste versie laden.
 (() => {
-  const APP_VERSION = '20261126-172135';
+  const APP_VERSION = '20261126-172431';
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
@@ -3853,13 +3860,22 @@ if (typeof module !== 'undefined') module.exports = Logic;
     const v = t.ui.view;
     return !t.ui.modal && !['wround', 'hround', 'draw', 'wsetup'].includes(v);
   };
-  let pending = false, bar = null;
+  // ?v=... in het adres (van een vorige update) weer weghalen
+  try { const u = new URL(location.href); if (u.searchParams.has('v')) { u.searchParams.delete('v'); history.replaceState(null, '', u.pathname + (u.search || '') + u.hash); } } catch (e) {}
+  let pending = false, bar = null, newV = null;
+  // Herladen met de nieuwe versie in het adres: zo krijg je zeker de nieuwe pagina en niet een oude kopie van de server.
+  // Hooguit één keer per versie, zodat hij nooit blijft herladen.
+  function reload() {
+    const key = 'reloaded-' + newV;
+    try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1'); } catch (e) {}
+    location.replace(location.pathname + '?v=' + encodeURIComponent(newV || Date.now()));
+  }
   function showBar() {
     if (bar) return;
     bar = document.createElement('div');
     bar.className = 'toast'; bar.style.bottom = 'calc(16px + env(safe-area-inset-bottom, 0px))'; bar.style.zIndex = 30;
     bar.innerHTML = '<span class="tx"><b>Nieuwe versie klaar</b> · laadt zodra je klaar bent</span><button class="btn soft sm" type="button">Nu laden</button>';
-    bar.querySelector('button').onclick = () => location.reload();
+    bar.querySelector('button').onclick = () => reload();
     document.body.appendChild(bar);
   }
   async function check() {
@@ -3867,12 +3883,12 @@ if (typeof module !== 'undefined') module.exports = Logic;
     try {
       const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
       const { v } = await r.json();
-      if (v && v !== APP_VERSION) pending = true;
+      if (v && v !== APP_VERSION) { pending = true; newV = v; }
     } catch (e) {}
-    if (pending) { if (safe()) location.reload(); else showBar(); }
+    if (pending) { if (safe()) reload(); else showBar(); }
   }
   // Ook herladen zodra je terugkeert naar een rustig scherm.
-  document.addEventListener('click', () => { if (pending && safe()) setTimeout(() => { if (safe()) location.reload(); }, 400); }, true);
+  document.addEventListener('click', () => { if (pending && safe()) setTimeout(() => { if (safe()) reload(); }, 400); }, true);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
   setInterval(check, 20000);
   setTimeout(check, 1500);

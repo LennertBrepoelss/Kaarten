@@ -2040,9 +2040,16 @@ if (typeof module !== 'undefined') module.exports = Logic;
   const devApp = (k) => (k === 'games' ? 'games' : DEVMAP[k] || '');
   const devSave = () => { try { localStorage.setItem(DEV_KEY, JSON.stringify(DEVMAP)); } catch (e) {} };
   // Android: open een app via zijn pakketnaam; lukt dat niet, dan de Play Store-pagina met de knop "Openen"
+  // Geen Play Store meer als het niet lukt: dan een duidelijke melding.
   function openAndroidApp(pkg) {
-    const store = 'https://play.google.com/store/apps/details?id=' + pkg;
-    location.href = `intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=${pkg};S.browser_fallback_url=${encodeURIComponent(store)};end`;
+    let left = false;
+    const onHide = () => { if (document.hidden) left = true; };
+    document.addEventListener('visibilitychange', onHide);
+    try { location.href = `intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=${pkg};end`; } catch (e) {}
+    setTimeout(() => {
+      document.removeEventListener('visibilitychange', onHide);
+      if (!left && !document.hidden) showToast('Deze app laat zich niet openen vanuit een andere app. Tip: zet hem in de taakbalk of zijbalk van je tablet.', false);
+    }, 1500);
   }
   // Lang drukken op een knop = de app ervan kiezen
   let devHold = null;
