@@ -1702,7 +1702,11 @@ if (typeof module !== 'undefined') module.exports = Logic;
   async function keepAwake() {
     try { if (!lock && navigator.wakeLock) { lock = await navigator.wakeLock.request('screen'); lock.addEventListener('release', () => { lock = null; }); } } catch (e) {}
   }
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && (current() || (S.pk && S.pk.on && S.pk.mode === 'tour' && S.pk.step === 'play'))) keepAwake(); });
+  // Kelder-scherm: de app houdt het scherm altijd aan (opnieuw bij terugkomen en bij elke aanraking)
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') keepAwake(); });
+  document.addEventListener('pointerdown', () => { if (!lock) keepAwake(); }, { passive: true });
+  setInterval(() => { if (!lock && document.visibilityState === 'visible') keepAwake(); }, 15000);
+  setTimeout(keepAwake, 0);
 
   // ---------- Helpers ----------
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
