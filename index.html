@@ -613,7 +613,21 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 .splash.tv .rule::after { content: ""; display: block; width: 7px; height: 7px; margin: -3px auto 0; transform: rotate(45deg); background: var(--gold); box-shadow: 0 0 12px var(--gold); }
 /* zacht ademen zolang er muziek speelt */
 .splash.tv.playing .sky { animation: breath 3.2s ease-in-out infinite; }
-@keyframes breath { 50% { transform: scale(1.05); filter: brightness(1.25) saturate(1.2); } }
+@keyframes breath { 50% { transform: scale(1.05); } }
+/* Tv: lichte versie. Een tv-browser is traag, dus geen blur, geen mengmodus en geen filters die elk beeldje opnieuw getekend moeten worden. Alleen schalen en doorzichtigheid. */
+.splash.tv .sky { will-change: transform; filter: none !important; }
+.splash.tv .sky b { filter: none; mix-blend-mode: normal; will-change: auto; transform: translateZ(0); }
+.splash.tv .sky b:nth-child(1) { background: radial-gradient(closest-side, var(--a1), 35%, transparent); }
+.splash.tv .sky b:nth-child(2) { background: radial-gradient(closest-side, var(--a2), 35%, transparent); }
+.splash.tv .sky b:nth-child(3) { background: radial-gradient(closest-side, var(--a3), 35%, transparent); }
+.splash.tv .sky b:nth-child(4) { background: radial-gradient(closest-side, var(--a4), 35%, transparent); }
+.splash.tv .sky .orb { display: none; }
+.splash.tv .sky::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse 75% 65% at 50% 50%, rgba(255,255,255,.3), transparent 70%); background: radial-gradient(ellipse 75% 65% at 50% 50%, color-mix(in srgb, var(--a1) 55%, #fff), transparent 70%); opacity: 0; will-change: opacity; }
+.splash.tv.playing .sky::after { animation: breathglow 3.2s ease-in-out infinite; }
+@keyframes breathglow { 50% { opacity: .35; } }
+.splash.tv .kname { filter: none; text-shadow: 0 0 40px rgba(150,200,255,.3); }
+.tvfs { position: fixed; left: 50%; bottom: 4vh; transform: translateX(-50%); font: 500 1.8vh/1 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: rgba(220,232,255,.6); transition: opacity 1s ease; }
+:fullscreen .tvfs, .tvfs.hide { opacity: 0; }
 .splash.tv .sky b { opacity: .78; }
 .tvnow { position: fixed; left: 4vw; bottom: 5vh; display: flex; align-items: center; gap: 1.6vw; padding: 1.2vh 1.6vw 1.2vh 1.2vh; border-radius: 2.4vh; background: rgba(8,10,22,.35); border: 1px solid rgba(255,255,255,.1);
   backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); opacity: 0; transform: translateY(12px); transition: opacity 1.2s ease, transform 1.2s var(--ease); pointer-events: none; }
@@ -623,8 +637,11 @@ h2 { margin: 0; font: 600 22px/1.15 var(--f-serif); }
 .tvnow .a { font: 500 1.9vh/1.3 var(--f-ui); color: rgba(220,232,255,.7); letter-spacing: .04em; }
 .tvlink { position: fixed; right: 3vw; bottom: 4vh; font: 500 1.8vh/1 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: rgba(220,232,255,.55); background: none; border: 1px solid rgba(255,255,255,.15); border-radius: 99px; padding: 1.2vh 2vh; cursor: pointer; }
 /* Tv: dansen op de beat die de tablet doorstuurt */
-.splash.tv.live .sky { animation: none; transform: scale(calc(1 + var(--beat, 0) * .09)); filter: brightness(calc(.95 + var(--beat, 0) * .8 + var(--lvl, 0) * .5)) saturate(calc(1 + var(--lvl, 0) * .8)); transition: none; }
-.splash.tv.live .kname { filter: drop-shadow(0 0 calc(30px + var(--beat, 0) * 70px) rgba(150,200,255,calc(.2 + var(--beat, 0) * .5))); }
+.splash.tv.live .sky { animation: none; transform: scale(calc(1.02 + var(--beat, 0) * .14 + var(--lvl, 0) * .04)); transition: none; }
+.splash.tv.live .sky::after { animation: none; opacity: calc(var(--beat, 0) * 1.4 + var(--lvl, 0) * .3); }
+.splash.tv.live .sky b { opacity: calc(.55 + var(--lvl, 0) * .3 + var(--beat, 0) * .3); }
+.splash.tv.live .kname { transform: scale(calc(1 + var(--beat, 0) * .04)); text-shadow: 0 0 40px rgba(150,200,255,.3); }
+.splash.tv.live .kname, .splash.tv.live .tvmid { will-change: transform; }
 .splash.tv.live .rule { transform: scaleX(calc(1 + var(--beat, 0) * .5)); }
 .tvcode { position: fixed; right: 3vw; top: 4vh; text-align: right; font: 500 1.7vh/1.4 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: rgba(220,232,255,.55); opacity: 0; transition: opacity 1s ease; pointer-events: none; }
 .tvcode.show { opacity: 1; }
@@ -2076,6 +2093,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
       <div class="sky" aria-hidden="true"><b></b><b></b><b></b><b></b>${skyBits()}</div>
       <div class="tvmid"><div class="kname">Kelder</div><div class="rule"></div></div>
       <div class="tvnow" id="tvNow"></div>
+      ${document.documentElement.requestFullscreen && !document.fullscreenElement ? '<div class="tvfs" id="tvFs">Druk op OK voor volledig scherm</div>' : ''}
       <div class="tvcode ${LINK.paired ? '' : 'show'}" id="tvCode">Code voor de tablet<b>${LINK.code.replace(/(\d{3})(\d{3})/, '$1 $2')}</b></div>
       ${spOn() || LINK.paired ? '' : '<button class="tvlink" data-act="spSetup">Spotify koppelen</button>'}
     </div>`;
@@ -2195,10 +2213,9 @@ if (typeof module !== 'undefined') module.exports = Logic;
     el.classList.toggle('playing', !!(spNow && spNow.playing));
     const box = document.getElementById('tvNow'); if (!box) return;
     const id = spNow && spNow.playing ? spNow.id : null;
-    if (id && id !== tvLast) {
-      box.innerHTML = `<span class="art" style="${spNow.art ? `background-image:url('${esc(spNow.art)}')` : ''}"></span><span><span class="t">${esc(spNow.title)}</span><br><span class="a">${esc(spNow.artist)}</span></span>`;
-      box.classList.add('show'); clearTimeout(tvT); tvT = setTimeout(() => box.classList.remove('show'), 10000);
-    }
+    // het nummer staat altijd in beeld zolang er iets speelt
+    if (id && id !== tvLast) box.innerHTML = `<span class="art" style="${spNow.art ? `background-image:url('${esc(spNow.art)}')` : ''}"></span><span><span class="t">${esc(spNow.title)}</span><br><span class="a">${esc(spNow.artist)}</span></span>`;
+    box.classList.toggle('show', !!id); clearTimeout(tvT);
     tvLast = id;
   }
 
@@ -3779,10 +3796,12 @@ module.exports = QRRSBlock;
     // Beat = de bas springt plots omhoog (en niet vlak na de vorige beat)
     const now = performance.now(), flux = bass - (D.prev || 0);
     D.prev = bass; D.avg = D.avg * 0.97 + bass * 0.03;
-    if (flux > 0.05 && bass > 0.15 && bass > D.avg * 1.1 && now - (D.last || 0) > 180) { D.beat = Math.min(1, 0.55 + flux * 3); D.last = now; tabSendFx({ b: +D.beat.toFixed(2) }); }
+    // Drempels relatief aan het gemiddelde: werkt ook als de tablet ver van de boxen staat
+    D.fl = (D.fl || 0) * 0.98 + Math.max(0, flux) * 0.02;
+    if (bass > 0.03 && flux > Math.max(0.012, D.fl * 2.2) && bass > D.avg * 1.08 && now - (D.last || 0) > 200) { D.beat = Math.min(1, 0.6 + flux / Math.max(0.02, D.avg) * 0.8); D.last = now; tabSendFx({ b: +D.beat.toFixed(2) }); }
     else D.beat *= 0.88;
-    D.lv = (D.lv || 0) * 0.8 + all * 0.2;
-    if (now - D.lt > 250) { D.lt = now; tabSendFx({ l: +Math.min(1, D.lv * 1.6).toFixed(2) }); }
+    D.lv = (D.lv || 0) * 0.8 + all * 0.2; D.lmax = Math.max(D.lv, (D.lmax || 0.05) * 0.9995);
+    if (now - D.lt > 200) { D.lt = now; tabSendFx({ l: +Math.min(1, D.lv / Math.max(0.03, D.lmax)).toFixed(2) }); }
   }
   async function danceToggle() {
     if (danceOn()) { try { localStorage.removeItem(DANCE_KEY); } catch (e) {} danceStop(); render(); showToast('Meedansen staat uit', false); return; }
@@ -5621,7 +5640,13 @@ module.exports = QRRSBlock;
   // Liep er een toernooi toen de app dichtging? Dan meteen terug naar de klok.
   if (S.pk && S.pk.on && S.pk.mode === 'tour' && S.pk.step === 'play') { ui.view = 'poker'; try { keepAwake(); } catch (e) {} }
   if (!TV && !(S.pk.on && S.pk.mode === 'tour' && S.pk.step === 'play')) { ui.idle = true; ui.atLoad = true; }
-  if (TV) { try { keepAwake(); } catch (e) {} document.addEventListener('pointerdown', () => { try { keepAwake(); } catch (e) {} if (document.documentElement.requestFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {}); }, { passive: true }); }
+  if (TV) {
+    try { keepAwake(); } catch (e) {}
+    const fs = () => { try { keepAwake(); } catch (e) {} const d = document.documentElement; if (d.requestFullscreen && !document.fullscreenElement) { try { const p = d.requestFullscreen(); if (p && p.catch) p.catch(() => {}); } catch (e) {} } };
+    ['pointerdown', 'click', 'keydown'].forEach((t) => document.addEventListener(t, fs, { passive: true }));
+    document.addEventListener('fullscreenchange', () => { const h = document.getElementById('tvFs'); if (h) h.classList.toggle('hide', !!document.fullscreenElement); });
+    setTimeout(() => { const h = document.getElementById('tvFs'); if (h) h.classList.add('hide'); }, 30000);
+  }
   // Welkom: KELDER licht op en de aurora gaat open (alleen bij het opstarten, niet na een update)
   (() => {
     let upd = false; try { upd = new URL(location.href).searchParams.has('v') || /[?&]code=/.test(location.search); } catch (e) {}
@@ -5640,7 +5665,7 @@ module.exports = QRRSBlock;
 <script>
 // Installeerbare app: offline werken en vanzelf de nieuwste versie laden.
 (() => {
-  const APP_VERSION = '20261126-194144';
+  const APP_VERSION = '20261126-195937';
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
