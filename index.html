@@ -672,6 +672,7 @@ html.tvmode, html.tvmode body { background: #020206; }
 .tvcode.show { opacity: 1; }
 .tvcode b { display: block; font: 300 6vh/1.1 var(--f-serif); letter-spacing: .18em; color: #fff; }
 .dev.tv.on { box-shadow: 0 0 0 1px color-mix(in srgb, var(--dc) 60%, transparent), 0 0 24px -6px var(--dc); }
+.xcode { font: 500 44px/1 var(--f-ui); letter-spacing: .25em; text-indent: .25em; text-align: center; padding: 14px 0; }
 .tvlinkst { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--card2, rgba(127,127,127,.08)); font-size: 14px; }
 .tvlinkst i { width: 9px; height: 9px; border-radius: 50%; background: #e0a030; flex: none; }
 .tvlinkst i.ok { background: #3ccf8e; box-shadow: 0 0 8px #3ccf8e; }
@@ -2005,6 +2006,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
         <p class="err" id="startErr" style="min-height:0"></p>
         <button class="btn primary xl" type="submit">Verder <span class="arr">→</span></button>
         <button class="btn ghost block" type="button" data-act="histOpen">Geschiedenis</button>
+        <div class="row2"><button class="btn ghost" type="button" data-act="xferSend">Naar ander toestel</button><button class="btn ghost" type="button" data-act="xferGet">Van ander toestel</button></div>
       </form></div>`;
   }
 
@@ -2044,7 +2046,8 @@ if (typeof module !== 'undefined') module.exports = Logic;
       ${items.length ? `<section class="panel"><h2>Rondjes</h2><div>${list}</div></section>` : ''}
       <button class="btn ghost block" data-act="histOpen">Geschiedenis</button>
       <section class="panel"><h2>Back-up</h2>
-        <div class="row2"><button class="btn soft" data-act="backupOut">Bewaren</button><button class="btn soft" data-act="backupIn">Terugzetten</button></div>
+        <div class="row2"><button class="btn primary" data-act="xferSend">Naar ander toestel</button><button class="btn primary" data-act="xferGet">Van ander toestel</button></div>
+        <div class="row2"><button class="btn soft" data-act="backupOut">Bewaren als bestand</button><button class="btn soft" data-act="backupIn">Terugzetten</button></div>
         <p class="muted" id="bkMsg" style="margin:0;font-size:13px"></p></section>
     </div>${A.n || S.pk.on || (S.pk.past || []).length ? dock() : ''}`;
   }
@@ -2130,6 +2133,16 @@ if (typeof module !== 'undefined') module.exports = Logic;
       ${spOn() || LINK.paired ? '' : '<button class="tvlink" data-act="spSetup">Spotify koppelen</button>'}
     </div>`;
   }
+  // ---------- Overzetten tussen toestellen ----------
+  const b64 = (u) => { let s2 = ''; for (let i = 0; i < u.length; i += 8192) s2 += String.fromCharCode.apply(null, u.subarray(i, i + 8192)); return btoa(s2); };
+  const unb64 = (t) => Uint8Array.from(atob(t), (c) => c.charCodeAt(0));
+  async function xferKey(code) {
+    const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(code), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: new TextEncoder().encode('kelder-spelletjes-overzetten'), iterations: 150000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  }
+  async function xferTopic(code) { const h = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('kelder-xfer:' + code))); return 'kelder-spelletjes/v1/xfer/' + Array.from(h.slice(0, 12), (x) => x.toString(16).padStart(2, '0')).join(''); }
+  function xferEnd() { const X = ui.xfer; if (!X) return; clearTimeout(X.t); if (X.mq) { if (X.ok) try { X.mq.clear(X.topic); } catch (e) {} setTimeout(() => { try { X.mq.close(); } catch (e) {} }, 600); } ui.xfer = null; }
+
   // ---------- Tablet ↔ tv: de tablet hoort de muziek en stuurt de beat via internet naar de tv ----------
   // Kleine MQTT-client over WebSocket naar twee gratis openbare servers tegelijk (valt er één uit, dan werkt de andere).
   const BROKERS = ['wss://broker.hivemq.com:8884/mqtt', 'wss://broker.emqx.io:8084/mqtt'];
@@ -2169,6 +2182,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     function retry(c) { if (c.stop) return; clearTimeout(c.rt); c.fail = (c.fail || 0) + 1; c.rt = setTimeout(() => open(c), Math.min(30000, 1500 * c.fail)); }
     const api = {
       sub(t) { subs.add(t); conns.forEach((c) => { if (c.up) c.ws.send(subPkt(t)); }); },
+      clear(t) { const p = pkt(0x31, [...str(t)]); conns.forEach((c) => { if (c.up) try { c.ws.send(p); } catch (x) {} }); },
       pub(t, obj, retain) { const p = pkt(0x30 | (retain ? 1 : 0), [...str(t), ...te.encode(JSON.stringify(obj))]); conns.forEach((c) => { if (c.up && c.ws.bufferedAmount < 4096) try { c.ws.send(p); } catch (x) {} }); },
       up: () => conns.some((c) => c.up),
       close() { conns.forEach((c) => { c.stop = true; clearTimeout(c.rt); clearInterval(c.ping); try { c.ws && c.ws.close(); } catch (x) {} }); conns.length = 0; },
@@ -5058,6 +5072,24 @@ module.exports = QRRSBlock;
         <button class="btn primary block" data-act="reset" data-v="1">Ja, bewaren</button>
         <button class="btn danger block" data-act="reset" data-v="0">Nee, niet bewaren</button>
         <button class="btn ghost block" data-act="close">Annuleren</button>`;
+    } else if (m === 'xferSend') {
+      const X = ui.xfer || {};
+      body = `<h2>Naar ander toestel</h2>
+        ${X.code ? `<p class="muted" style="margin:0">Tik op het andere toestel op <b>Van ander toestel</b> en typ deze code:</p>
+        <div class="xcode">${X.code.replace(/(\d{3})(\d{3})/, '$1 $2')}</div>
+        <p class="muted" style="margin:0;font-size:13px;text-align:center">${X.ok ? 'Klaar om op te halen · 10 minuten geldig' : 'Versturen…'}</p>` : `<p class="muted" style="margin:0">${X.err ? esc(X.err) : 'Even geduld…'}</p>`}
+        <button class="btn primary block" data-act="xferClose">Klaar</button>`;
+    } else if (m === 'xferGet') {
+      const X = ui.xfer || {};
+      body = X.found ? `<h2>Gevonden</h2>
+        <p class="muted" style="margin:0">Back-up van <b>${esc(X.found.when)}</b> met ${X.found.np} spelers, ${X.found.nr} rondjes en ${X.found.nh} avonden in de geschiedenis.</p>
+        <p class="muted" style="margin:0">Wat er nu op dit toestel staat, wordt vervangen.</p>
+        <div class="row2"><button class="btn ghost" data-act="xferClose">Annuleer</button><button class="btn primary" data-act="xferApply">Overzetten</button></div>`
+        : `<h2>Van ander toestel</h2>
+        <p class="muted" style="margin:0">Tik op het andere toestel op <b>Naar ander toestel</b> en typ hier de code.</p>
+        <input class="input" id="xIn" inputmode="numeric" maxlength="7" placeholder="000 000" autocomplete="off" style="font:500 30px/1 var(--f-ui);letter-spacing:.3em;text-align:center">
+        <p class="err" id="xErr" style="min-height:0">${X.err ? esc(X.err) : ''}</p>
+        <div class="row2"><button class="btn ghost" data-act="xferClose">Annuleer</button><button class="btn primary" data-act="xferFetch">${X.busy ? 'Zoeken…' : 'Ophalen'}</button></div>`;
     } else if (m === 'backup') {
       body = `<h2>Back-up terugzetten</h2>
         <input class="input" type="file" id="bkFile" accept=".json,application/json,text/plain">
@@ -5540,6 +5572,53 @@ module.exports = QRRSBlock;
       catch (e) { msg.textContent = 'Bewaren lukt hier niet.'; }
     },
     backupIn() { ui.bkSure = false; ui.modal = 'backup'; renderModal(); },
+    // Overzetten met een code: versleuteld via dezelfde gratis servers als de tv-koppeling, 10 minuten bewaard en daarna gewist
+    async xferSend() {
+      xferEnd(); ui.xfer = {}; ui.modal = 'xferSend'; renderModal();
+      try {
+        const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
+        const k = await xferKey(code), topic = await xferTopic(code);
+        let raw = new TextEncoder().encode(JSON.stringify(S)), z = 0;
+        if (window.CompressionStream) { raw = new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer()); z = 1; }
+        const iv = crypto.getRandomValues(new Uint8Array(12)), ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, k, raw));
+        const msg = { x: 1, z, iv: b64(iv), d: b64(ct) };
+        const mq = mqttClient(() => {}); ui.xfer = { code, mq, topic };
+        if (ui.modal === 'xferSend') renderModal();
+        const t0 = Date.now(); while (!mq.up() && Date.now() - t0 < 10000) await new Promise((r) => setTimeout(r, 200));
+        if (!mq.up()) throw new Error('net');
+        mq.pub(topic, msg, true); await new Promise((r) => setTimeout(r, 500));
+        ui.xfer.ok = true; if (ui.modal === 'xferSend') renderModal();
+        ui.xfer.t = setTimeout(xferEnd, 600000);
+      } catch (e) { ui.xfer = { err: e && e.message === 'net' ? 'Geen verbinding. Kijk of er internet is en probeer opnieuw.' : 'Overzetten lukt niet op dit toestel. Gebruik "Bewaren als bestand".' }; if (ui.modal === 'xferSend') renderModal(); }
+    },
+    xferGet() { xferEnd(); ui.xfer = {}; ui.modal = 'xferGet'; renderModal(); setTimeout(() => { const i = document.getElementById('xIn'); if (i) i.focus(); }, 80); },
+    async xferFetch() {
+      const code = ((document.getElementById('xIn') || {}).value || '').replace(/\D/g, '');
+      if (code.length !== 6) { const e = document.getElementById('xErr'); if (e) e.textContent = 'De code heeft 6 cijfers.'; return; }
+      ui.xfer = { busy: true }; renderModal(); document.getElementById('xIn').value = code;
+      try {
+        const k = await xferKey(code), topic = await xferTopic(code);
+        const got = await new Promise((res) => {
+          const mq = mqttClient((t, m) => { if (t === topic && m && m.x === 1) { clearTimeout(to); res({ m, mq }); } });
+          mq.sub(topic); const to = setTimeout(() => res({ mq }), 12000);
+        });
+        if (!got.m) { got.mq.close(); ui.xfer = { err: 'Niets gevonden. Kijk de code na, of verstuur opnieuw (de code is 10 minuten geldig).' }; renderModal(); return; }
+        let raw = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(got.m.iv) }, k, unb64(got.m.d)));
+        if (got.m.z) raw = new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
+        const d = JSON.parse(new TextDecoder().decode(raw));
+        if (!d || d.v !== 1 || !Array.isArray(d.players) || !Array.isArray(d.rounds)) throw new Error('bad');
+        const when = new Date(d.updatedAt || Date.now()).toLocaleString('nl-BE', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        ui.xfer = { data: d, mq: got.mq, topic, found: { when, np: d.players.length, nr: d.rounds.length, nh: (d.history || []).length } }; renderModal();
+      } catch (e) { ui.xfer = { err: 'Dat lukte niet. Kijk de code na en probeer opnieuw.' }; renderModal(); }
+    },
+    xferApply() {
+      const X = ui.xfer; if (!X || !X.data) return;
+      try { X.mq.clear(X.topic); } catch (e) {}
+      S = normalize(X.data); S.updatedAt = Date.now(); save();
+      setTimeout(xferEnd, 800); ui.modal = null; ui.view = null; ui.result = null; render(); window.scrollTo(0, 0);
+      showToast('<b>Overgezet</b> · alles van het andere toestel staat nu hier', false);
+    },
+    xferClose() { const X = ui.xfer; if (X && X.mq && X.ok) { /* code blijft 10 min geldig, ook als je dit venster sluit */ } else xferEnd(); ui.modal = null; renderModal(); },
     backupApply() {
       const err = document.getElementById('bkErr'), txt = (document.getElementById('bkText').value || '').trim();
       let d = null;
@@ -5863,7 +5942,7 @@ module.exports = QRRSBlock;
 <script>
 // Installeerbare app: offline werken en vanzelf de nieuwste versie laden.
 (() => {
-  const APP_VERSION = '20261127-001608';
+  const APP_VERSION = '20261127-091915';
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
