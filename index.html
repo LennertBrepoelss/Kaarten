@@ -920,6 +920,26 @@ html.tvmode, html.tvmode body { background: #020206; }
 .prize .am small { display: block; font-size: 12px; margin-top: 3px; }
 .totbar { display: flex; justify-content: space-between; gap: 12px; background: var(--surface); border: 1px solid var(--hair); border-radius: 16px; padding: 14px 16px; }
 .totbar b { display: block; font: 600 24px/1.1 var(--f-serif); font-variant-numeric: lining-nums tabular-nums; margin-top: 4px; }
+.g-imp { --tg: linear-gradient(150deg, #9aa8ff, #3b3fa8 55%, #b3123f); --tglow: #6a3fd0; }
+.seg .opt:disabled { opacity: .3; }
+.impnames { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.impname { position: relative; min-height: 96px; border-radius: 18px; border: 1px solid var(--hair-2); background: linear-gradient(160deg, rgba(255,255,255,.08), rgba(255,255,255,.02)); font: 600 22px/1.15 var(--f-serif); color: var(--ivory); padding: 14px; }
+.impname small { display: block; margin-top: 6px; font: 600 11px/1 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.impname.seen { opacity: .38; }
+.impname.seen small { color: var(--gold); }
+.impov { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 24px; background: rgba(3,4,12,.82); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); animation: fadein .25s ease both; }
+.impcard { width: min(440px, 100%); border-radius: 28px; padding: 34px 26px 26px; text-align: center; color: #fff; display: flex; flex-direction: column; gap: 14px; animation: impflip .5s var(--ease) both; }
+.impcard.crew { background: linear-gradient(160deg, #3b8cff, #1d4fd8 60%, #142f8a); box-shadow: 0 30px 80px -20px rgba(40,110,255,.7); }
+.impcard.imp { background: linear-gradient(160deg, #ff4d6d, #c8102e 60%, #6e0a1d); box-shadow: 0 30px 80px -20px rgba(230,20,60,.7); }
+.impcard .who { font: 600 13px/1 var(--f-ui); letter-spacing: .2em; text-transform: uppercase; opacity: .8; }
+.impcard .role { font: 600 30px/1.1 var(--f-serif); }
+.impcard .word { font: 700 clamp(34px, 9vw, 52px)/1.05 var(--f-serif); padding: 18px 8px; border-radius: 18px; background: rgba(255,255,255,.14); word-break: break-word; }
+.impcard .hintl { font: 600 12px/1 var(--f-ui); letter-spacing: .2em; text-transform: uppercase; opacity: .8; }
+.impcard .btn { margin-top: 6px; background: rgba(255,255,255,.95); color: #111; }
+@keyframes fadein { from { opacity: 0; } }
+@keyframes impflip { from { transform: perspective(900px) rotateY(80deg) scale(.9); opacity: 0; } to { transform: none; opacity: 1; } }
+.impbig { font: 600 clamp(36px, 8vw, 56px)/1.05 var(--f-serif); }
+.impwho { font: 700 clamp(30px, 7vw, 48px)/1.1 var(--f-serif); color: #ff5a78; }
 .g-darts { --tg: linear-gradient(150deg, #8af7e0, #22b8a8 65%, #127a8a); --tglow: #22b8a8; }
 .drow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--hair); }
 .drow:last-child { border-bottom: 0; }
@@ -1748,7 +1768,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (TV) return 'tv';
     if (ui.idle) return 'splash';
     if (!ui.splashSeen && !ui.view && !ui.flow && !openAny() && !owedAll().n && !S.pk.on && !(S.pk.past || []).length) return 'splash';
-    if (ui.view === 'start' || ui.view === 'end' || (ui.view === 'draw' && ui.draw) || (ui.view === 'hist' && ui.hist) || ui.view === 'poker' || ui.view === 'choose') return ui.view;
+    if (ui.view === 'start' || ui.view === 'end' || (ui.view === 'draw' && ui.draw) || (ui.view === 'hist' && ui.hist) || ui.view === 'poker' || ui.view === 'choose' || ui.view === 'imp') return ui.view;
     if (ui.flow && ['nprice', 'npick', 'npct'].includes(ui.view)) return ui.view;
     if (!S.ready) return 'start';
     const r = current();
@@ -4048,7 +4068,7 @@ module.exports = QRRSBlock;
   let lastTouch = Date.now();
   ['pointerdown', 'keydown', 'input', 'wheel', 'touchmove'].forEach((t) => document.addEventListener(t, () => { lastTouch = Date.now(); }, { passive: true, capture: true }));
   setInterval(() => {
-    if (TV || ui.idle || Date.now() - lastTouch < 30000) return;
+    if (TV || ui.idle || ui.view === 'imp' || Date.now() - lastTouch < 30000) return;
     const v = view();
     if (v === 'splash' || ui.modal || ui.bigClock || (S.pk.on && S.pk.mode === 'tour' && S.pk.step === 'play')) return;
     const a = document.activeElement; if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
@@ -4103,7 +4123,78 @@ module.exports = QRRSBlock;
     const nPast = (S.pk.past || []).length + (S.pk.on && S.pk.step === 'done' ? 1 : 0);
     const pkTxt = S.pk.on && S.pk.step !== 'done' ? (S.pk.mode === 'tour' ? `${nf(BL[tState(S.pk).lv][0])}/${nf(BL[tState(S.pk).lv][1])}` : 'bezig') : nPast ? `${nPast}× gespeeld` : '';
     const poker = `<button class="tile g-poker ${n >= 2 ? '' : 'off'}" data-act="pkOpen" ${n >= 2 ? '' : 'disabled'}><span class="tart">${GAME_ART.poker}</span>${pkTxt ? `<span class="tstat">${pkTxt}</span>` : ''}<span class="tname">Poker</span></button>`;
-    return `<div class="tiles">${tiles}${poker}</div>`;
+    const imp = `<button class="tile g-imp ${n >= 3 ? '' : 'off'}" data-act="impOpen" ${n >= 3 ? '' : 'disabled'}><span class="tart">${GAME_ART.imp}</span>${n >= 3 ? '' : '<span class="tstat">3+ spelers</span>'}<span class="tname">Imposter</span></button>`;
+    return `<div class="tiles">${tiles}${poker}${imp}</div>`;
+  }
+
+  // ---------- Imposter: iedereen krijgt hetzelfde woord, behalve de imposter (die krijgt een hint) ----------
+  const IMP_WORDS = [['Pizza','Italië'],['Frietkot','saus'],['Strand','zand'],['Skivakantie','sneeuw'],['Kerstmis','december'],['Verjaardag','kaarsjes'],['Bioscoop','popcorn'],['Tandarts','stoel'],['Ziekenhuis','wit'],['Vliegtuig','reizen'],['Trein','perron'],['Fiets','pedalen'],['Camping','tent'],['Zwembad','chloor'],['Sauna','zweten'],['Kermis','draaien'],['Carnaval','verkleden'],['Festival','wei'],['Voetbal','stadion'],['Rode Duivels','België'],['Tennis','racket'],['Bowling','kegels'],['Biljart','krijt'],['Casino','fiches'],['Monopoly','straten'],['Schaken','koning'],['Kerk','klokken'],['School','bel'],['Examen','stress'],['Bibliotheek','stil'],['Supermarkt','kassa'],['Ikea','meubels'],['Bakker','vroeg'],['Slager','mes'],['Kapper','schaar'],['Politie','blauw'],['Brandweer','ladder'],['Leraar','bord'],['Kok','keuken'],['Piloot','hoogte'],['Boer','veld'],['Astronaut','ruimte'],['Koffie','ochtend'],['Bier','schuim'],['Wijn','druiven'],['Champagne','bubbels'],['Jenever','Hasselt'],['Cocktail','rietje'],['Chocolade','zoet'],['Wafel','ijzer'],['Spaghetti','vork'],['Sushi','rauw'],['Hamburger','broodje'],['Mosselen','pot'],['Stoofvlees','saus'],['IJsje','zomer'],['Hond','trouw'],['Kat','spinnen'],['Paard','zadel'],['Koe','wei'],['Haai','vin'],['Olifant','slurf'],['Spin','draad'],['Pinguïn','koud'],['Telefoon','scherm'],['Afstandsbediening','zetel'],['Laptop','toetsen'],['PlayStation','controller'],['Instagram','foto'],['TikTok','filmpje'],['Netflix','serie'],['Spotify','muziek'],['Paraplu','regen'],['Zonnebril','zon'],['Horloge','pols'],['Rugzak','dragen'],['Kussen','bed'],['Wekker','ochtend'],['Douche','water'],['Tandenborstel','mond'],['Spiegel','kijken'],['Kaars','vlam'],['Vuurwerk','knal'],['Ballon','lucht'],['Brug','rivier'],['Kasteel','ridder'],['Vulkaan','heet'],['Regenboog','kleuren'],['Maan','nacht'],['Sneeuwman','wortel'],['Sinterklaas','schoen'],['Halloween','eng'],['Bruiloft','ringen'],['Koffer','reis'],['Parijs','toren'],['Amsterdam','grachten'],['Brussel','hoofdstad'],['Lego','blokjes'],['Harry Potter','tovenaar'],['Superman','cape'],['James Bond','geheim'],['Tattoo','naald'],['Gitaar','snaren'],['Piano','toetsen'],['Karaoke','micro'],['Fitness','zweet'],['Marathon','lopen'],['Barbecue','zomer'],['Picknick','mand'],['Pyjama','slapen'],['Rolschaatsen','wielen'],['Achtbaan','gillen'],['Dierentuin','kooi'],['Aquarium','vissen'],['Taxi','rit'],['Benzinestation','tanken']];
+  const IMP_SPICY = [['Condoom','bescherming'],['Tinder','swipen'],['One night stand','ochtend'],['Kater','hoofdpijn'],['Striptease','muziek'],['Lingerie','kant'],['Handboeien','politie'],['Vrijgezellenfeest','laatste'],['Sexshop','winkel'],['Naaktstrand','zon'],['Zuigzoen','nek'],['Tongzoen','mond'],['Scharrel','geheim'],['Ex','verleden'],['Walk of shame','ochtend'],['Kotfeest','studenten'],['Overgeven','toilet'],['String','klein'],['Massage','olie'],['Jacuzzi','bubbels'],['Stripclub','geld'],['Kamasutra','boek'],['Vibrator','batterijen'],['Blind date','onbekend'],['Afterparty','laat'],['Nudes','telefoon'],['Wallen','raam'],['Spin the bottle','fles'],['Truth or dare','durven'],['Hotelkamer','bed'],['Sexy kostuum','verkleden'],['Boxershort','elastiek'],['Flirten','knipoog'],['Lap dance','stoel'],['Ochtendwip','wekker'],['Strippoker','kaarten'],['Beha','haakje'],['Liefdesbrief','papier']];
+  const IMP_KEY = 'kelder-imposter';
+  const impPrefs = () => { try { return JSON.parse(localStorage.getItem(IMP_KEY)) || {}; } catch (e) { return {}; } };
+  const impSave = (o) => { try { localStorage.setItem(IMP_KEY, JSON.stringify({ ...impPrefs(), ...o })); } catch (e) {} };
+  const rnd = (n) => crypto.getRandomValues(new Uint32Array(1))[0] % n;
+  function impDeal() {
+    const I = ui.imp, P = impPrefs(), pool = [...IMP_WORDS, ...(I.spicy ? IMP_SPICY : [])], used = P.used || [];
+    let fresh = pool.filter((w) => !used.includes(w[0])); if (!fresh.length) fresh = pool;
+    const [word, hint] = fresh[rnd(fresh.length)];
+    const order = [...I.sel], imps = [];
+    while (imps.length < I.nimp) { const k = order[rnd(order.length)]; if (!imps.includes(k)) imps.push(k); }
+    const crew = order.filter((k) => !imps.includes(k));
+    Object.assign(I, { step: 'pass', word, hint, imps, seen: [], open: null, starter: crew[rnd(crew.length)], round: (I.round || 0) + 1 });
+    impSave({ used: [...used, word].slice(-(pool.length - 10)), spicy: I.spicy, hint: I.hint, nimp: I.nimp, sel: I.sel.map((k) => S.players[k]) });
+  }
+  function renderImp() {
+    const I = ui.imp, head = (label) => `<header class="top"><button class="btn ghost sm" data-act="impBack">← ${I.step === 'setup' ? 'Terug' : 'Stoppen'}</button><span class="label">${label}</span></header>`;
+    if (I.step === 'setup') {
+      const n = I.sel.length, maxImp = n >= 7 ? 2 : 1;
+      return `<div class="wrap">${head('Imposter')}
+        <section><h1>Wie speelt <em>mee</em>?</h1><p class="lead">Iedereen krijgt hetzelfde woord, behalve de imposter. Die krijgt alleen een kleine hint en moet doen alsof.</p></section>
+        <div class="chips">${S.players.map((p, i) => `<button class="chip ${I.sel.includes(i) ? 'on' : ''}" data-act="impSel" data-v="${i}">${esc(p)}</button>`).join('')}</div>
+        <section class="panel">
+          <div class="pctrow"><span class="pl">Imposters</span><div class="seg" style="min-width:150px">${[1, 2].map((v) => `<button class="opt ${I.nimp === v ? 'on' : ''}" type="button" data-act="impN" data-v="${v}" ${v > maxImp ? 'disabled' : ''}>${v}</button>`).join('')}</div></div>
+          <div class="pctrow"><span class="pl">Vettige woorden<small>ook pikante woorden ertussen</small></span><div class="seg" style="min-width:150px"><button class="opt ${I.spicy ? '' : 'on'}" type="button" data-act="impSpicy" data-v="0">Nee</button><button class="opt ${I.spicy ? 'on' : ''}" type="button" data-act="impSpicy" data-v="1">Ja</button></div></div>
+          <div class="pctrow"><span class="pl">Hint voor imposter</span><div class="seg" style="min-width:150px"><button class="opt ${I.hint ? '' : 'on'}" type="button" data-act="impHint" data-v="0">Nee</button><button class="opt ${I.hint ? 'on' : ''}" type="button" data-act="impHint" data-v="1">Ja</button></div></div>
+        </section>
+        <p class="err" style="min-height:0">${n < 3 ? 'Kies minstens 3 spelers.' : ''}</p>
+        <button class="btn primary xl" data-act="impStart" ${n < 3 ? 'disabled' : ''}>Woorden uitdelen <span class="arr">→</span></button>
+      </div>`;
+    }
+    if (I.step === 'pass') {
+      const left = I.sel.filter((k) => !I.seen.includes(k)).length;
+      const card = I.open !== null ? (() => {
+        const isImp = I.imps.includes(I.open);
+        return `<div class="impov"><div class="impcard ${isImp ? 'imp' : 'crew'}">
+          <div class="who">${esc(S.players[I.open])}</div>
+          ${isImp ? `<div class="role">Jij bent de imposter</div>${I.hint ? `<div class="hintl">Hint</div><div class="word">${esc(I.hint)}</div>` : '<div class="word">Geen hint</div>'}<p style="margin:0;opacity:.85;font-size:14px">Doe alsof je het woord kent. Laat je niet betrappen!</p>`
+            : `<div class="role">Geen imposter</div><div class="hintl">Het woord is</div><div class="word">${esc(I.word)}</div>`}
+          <button class="btn block" data-act="impHide">Verbergen en doorgeven</button>
+        </div></div>`;
+      })() : '';
+      return `<div class="wrap">${head('Imposter · ronde ' + I.round)}
+        <section><h1>Geef de tablet <em>door</em></h1><p class="lead">Zie je je naam? Tik erop, kijk stiekem en geef door.${left ? ` Nog ${left} te gaan.` : ''}</p></section>
+        <div class="impnames">${I.sel.map((k) => { const sn = I.seen.includes(k); return `<button class="impname ${sn ? 'seen' : ''}" data-act="impShow" data-v="${k}" ${sn ? 'disabled' : ''} style="--pc:var(--p${k})">${esc(S.players[k])}<small>${sn ? 'gezien ✓' : 'tik om te kijken'}</small></button>`; }).join('')}</div>
+        ${left ? '' : `<button class="btn primary xl" data-act="impPlay">Iedereen heeft gekeken <span class="arr">→</span></button>`}
+      </div>${card}`;
+    }
+    if (I.step === 'play') {
+      const st = I.sel.indexOf(I.starter), order = [...I.sel.slice(st), ...I.sel.slice(0, st)];
+      return `<div class="wrap">${head('Imposter · ronde ' + I.round)}
+        <section><p class="label">Wie begint</p><div class="impbig">${esc(S.players[I.starter])}</div>
+        <p class="lead">Om de beurt zegt iedereen één woord dat bij het geheime woord past. Niet te duidelijk, anders raadt de imposter het! Daarna stemmen jullie wie de imposter is.</p></section>
+        <section class="panel"><h2>Volgorde</h2><div>${order.map((k, j) => `<div class="pkrow" style="--pc:var(--p${k})"><span class="who">${j + 1}. ${esc(S.players[k])}</span></div>`).join('')}</div></section>
+        <button class="btn primary xl" data-act="impReveal">${I.sure ? 'Zeker? Iedereen heeft gestemd?' : 'Onthul de imposter'}</button>
+      </div>`;
+    }
+    // onthullen
+    return `<div class="wrap">${head('Imposter · ronde ' + I.round)}
+      <section style="text-align:center"><p class="label">De imposter${I.imps.length > 1 ? 's waren' : ' was'}</p>
+        <div class="impwho">${I.imps.map((k) => esc(S.players[k])).join(' & ')}</div>
+        <p class="label" style="margin-top:22px">Het woord was</p><div class="impbig">${esc(I.word)}</div>
+        ${I.hint ? `<p class="lead">Hint voor de imposter: <b>${esc(I.hint)}</b></p>` : ''}</section>
+      <button class="btn primary xl" data-act="impAgain">Nog een ronde <span class="arr">→</span></button>
+      <button class="btn ghost block" data-act="impSetup">Spelers of instellingen aanpassen</button>
+    </div>`;
   }
 
   // ---------- Start: poker of andere spellen ----------
@@ -4125,6 +4216,7 @@ module.exports = QRRSBlock;
   // ---------- Nieuw rondje: 2. spel ----------
   // Een nieuw spel = één regel in GAMES + een tekening in GAME_ART.
   const GAME_ART = {
+    imp: `<svg viewBox="0 0 96 96" aria-hidden="true"><circle cx="30" cy="38" r="11" fill="#fff" opacity=".55"/><path d="M12 80c0-12 8-22 18-22s18 10 18 22z" fill="#fff" opacity=".55"/><circle cx="62" cy="34" r="13" fill="#fff"/><path d="M40 82c0-14 10-25 22-25s22 11 22 25z" fill="#fff"/><text x="62" y="41" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="20" fill="#c8102e">?</text></svg>`,
     troeven: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M48 14v70" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity=".55"/>${[0, 1, 2, 3, 4, 5].map((k) => `<rect x="${24 + (k % 2) * 4}" y="${70 - k * 10}" width="${44 - (k % 2) * 8 - k * 2}" height="4.5" rx="2.2" fill="currentColor" opacity="${k > 3 ? .35 : 1}"/>`).join('')}<g transform="translate(58 8) rotate(12)"><rect width="26" height="36" rx="4" fill="#fff"/><text x="13" y="24" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-weight="700" font-size="18" fill="#2b1d55">B</text></g></svg>`,
     wiezen: `<svg viewBox="0 0 96 96" aria-hidden="true">${[-20, 0, 20].map((a, k) => `<g transform="rotate(${a} 48 84)"><rect x="32" y="22" width="32" height="46" rx="5" fill="#fff" opacity="${.55 + k * .22}"/></g>`).join('')}<g transform="rotate(20 48 84)"><path d="M54 32c-5 6-11 9-11 15a5 5 0 0 0 9 3l-2 6h8l-2-6a5 5 0 0 0 9-3c0-6-6-9-11-15z" fill="#07324a"/></g></svg>`,
     pietjes: `<svg viewBox="0 0 96 96" aria-hidden="true">${[[14, 40, -14], [40, 18, 8], [50, 50, 18]].map(([x, y, a], k) => `<g transform="rotate(${a} ${x + 16} ${y + 16})"><rect x="${x}" y="${y}" width="32" height="32" rx="7" fill="#fff" opacity="${.75 + k * .12}"/>${[[[16, 16]], [[9, 9], [23, 23]], [[9, 9], [16, 16], [23, 23]]][k].map(([cx, cy]) => `<circle cx="${x + cx}" cy="${y + cy}" r="3.4" fill="#5a3300"/>`).join('')}</g>`).join('')}</svg>`,
@@ -5108,8 +5200,8 @@ module.exports = QRRSBlock;
 
   function render() {
     const v = view();
-    if (!ui.idle) ui.view = ['draw', 'end', 'wround', 'hround', 'pround', 'start', 'nprice', 'npick', 'npct', 'hist', 'poker', 'choose'].includes(v) ? v : null;
-    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound, ngame: renderNGame, lgame: renderLGame, hist: renderHist, dgame: renderDGame, poker: renderPoker, choose: renderChoose, splash: renderSplash, tv: renderTV };
+    if (!ui.idle) ui.view = ['draw', 'end', 'wround', 'hround', 'pround', 'start', 'nprice', 'npick', 'npct', 'hist', 'poker', 'choose', 'imp'].includes(v) ? v : null;
+    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound, ngame: renderNGame, lgame: renderLGame, hist: renderHist, dgame: renderDGame, poker: renderPoker, choose: renderChoose, splash: renderSplash, tv: renderTV, imp: renderImp };
     const same = v === lastScreen, before = same ? numSnap() : null;
     $app.innerHTML = screens[v]();
     $app.classList.toggle('fresh', !same);
@@ -5426,6 +5518,24 @@ module.exports = QRRSBlock;
     chooseGo(b) { if (b.dataset.v === 'poker') actions.pkOpen(); else actions.newRondje(); },
     chooseBack() { if (S.ready && (owedAll().n || S.pk.on)) { ui.view = null; } else { ui.names = null; ui.view = 'start'; } render(); window.scrollTo(0, 0); },
     pkOpen() { hideToast(); ui.pkSel = null; ui.pkMode = null; ui.pkPay = null; ui.pkPayEdited = false; ui.pkUnitTxt = null; ui.pkLvl = null; ui.pkSure = false; ui.pkAdd = false; ui.view = 'poker'; render(); window.scrollTo(0, 0); },
+    impOpen() {
+      hideToast(); const P = impPrefs(), all = S.players.map((_, i) => i);
+      let sel = Array.isArray(P.sel) ? P.sel.map((nm) => S.players.indexOf(nm)).filter((i) => i >= 0) : all; if (sel.length < 3) sel = all;
+      ui.imp = { step: 'setup', sel, nimp: P.nimp === 2 && sel.length >= 7 ? 2 : 1, spicy: P.spicy !== false, hint: P.hint !== false, round: 0 };
+      ui.view = 'imp'; render(); window.scrollTo(0, 0);
+    },
+    impBack() { const I = ui.imp; if (I && I.step !== 'setup' && I.step !== 'reveal') { I.step = 'setup'; I.open = null; render(); return; } ui.imp = null; ui.view = null; render(); window.scrollTo(0, 0); },
+    impSel(b) { const I = ui.imp, i = +b.dataset.v; I.sel = I.sel.includes(i) ? I.sel.filter((x) => x !== i) : [...I.sel, i].sort((a, c) => a - c); if (I.sel.length < 7) I.nimp = 1; render(); },
+    impN(b) { ui.imp.nimp = +b.dataset.v; render(); },
+    impSpicy(b) { ui.imp.spicy = b.dataset.v === '1'; render(); },
+    impHint(b) { ui.imp.hint = b.dataset.v === '1'; render(); },
+    impStart() { if (ui.imp.sel.length < 3) return; impDeal(); render(); window.scrollTo(0, 0); },
+    impShow(b) { const I = ui.imp, k = +b.dataset.v; if (I.seen.includes(k)) return; I.open = k; render(); },
+    impHide() { const I = ui.imp; if (I.open !== null && !I.seen.includes(I.open)) I.seen.push(I.open); I.open = null; render(); },
+    impPlay() { ui.imp.step = 'play'; ui.imp.sure = false; render(); window.scrollTo(0, 0); },
+    impReveal() { const I = ui.imp; if (!I.sure) { I.sure = true; render(); return; } I.step = 'reveal'; render(); window.scrollTo(0, 0); },
+    impAgain() { impDeal(); render(); window.scrollTo(0, 0); },
+    impSetup() { ui.imp.step = 'setup'; render(); window.scrollTo(0, 0); },
     pkBack() { ui.bigClock = false; ui.view = null; ui.pkSure = false; render(); window.scrollTo(0, 0); },
     pkSel(b) { const i = +b.dataset.v; const sel = ui.pkSel || S.players.map((_, k) => k); ui.pkSel = sel.includes(i) ? sel.filter((x) => x !== i) : [...sel, i].sort((a, c) => a - c); render(); },
     pkMode(b) { ui.pkMode = b.dataset.v; render(); },
@@ -5942,7 +6052,7 @@ module.exports = QRRSBlock;
 <script>
 // Installeerbare app: offline werken en vanzelf de nieuwste versie laden.
 (() => {
-  const APP_VERSION = '20261127-091915';
+  const APP_VERSION = '20261127-183622';
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
