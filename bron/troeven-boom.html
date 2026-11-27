@@ -922,6 +922,38 @@ html.tvmode, html.tvmode body { background: #020206; }
 .totbar b { display: block; font: 600 24px/1.1 var(--f-serif); font-variant-numeric: lining-nums tabular-nums; margin-top: 4px; }
 .g-imp { --tg: linear-gradient(150deg, #9aa8ff, #3b3fa8 55%, #b3123f); --tglow: #6a3fd0; }
 .seg .opt:disabled { opacity: .3; }
+.g-30s { --tg: linear-gradient(150deg, #ff9fd0, #e0368a 50%, #3a2fb8); --tglow: #e0368a; }
+.tscore { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tscore .tm { border-radius: 18px; padding: 14px 16px; border: 1px solid var(--hair-2); background: var(--surface-2); position: relative; overflow: hidden; }
+.tscore .tm.on { border-color: var(--tc); box-shadow: 0 0 0 1px var(--tc), 0 10px 30px -12px var(--tc); }
+.tscore .tm .n { font: 700 11px/1 var(--f-ui); letter-spacing: .2em; text-transform: uppercase; color: var(--tc); }
+.tscore .tm .p { font: 600 40px/1.1 var(--f-serif); font-variant-numeric: tabular-nums; }
+.tscore .tm .p small { font: 500 14px/1 var(--f-ui); color: var(--dim); }
+.tscore .tm .bar { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--tc); transition: width .6s var(--ease); }
+.tscore .tm .who { font: 500 12.5px/1.35 var(--f-ui); color: var(--dim); margin-top: 4px; }
+.t1 { --tc: #4da3ff; } .t2 { --tc: #ff5c8a; }
+.tlist { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tlist .tm { border-radius: 18px; padding: 16px; border: 1px solid var(--tc); background: color-mix(in srgb, var(--tc) 10%, transparent); }
+.tlist .tm h3 { margin: 0 0 10px; font: 700 12px/1 var(--f-ui); letter-spacing: .2em; text-transform: uppercase; color: var(--tc); }
+.tlist .tm div { font: 600 22px/1.4 var(--f-serif); animation: tpop .5s var(--ease) both; }
+@keyframes tpop { from { opacity: 0; transform: translateY(8px) scale(.96); } }
+.s30who { text-align: center; }
+.s30who .lead { margin-inline: auto; }
+.s30who .big { font: 600 clamp(40px, 9vw, 72px)/1.05 var(--f-serif); color: var(--tc); }
+.s30timer { display: flex; align-items: center; justify-content: center; gap: 16px; }
+.s30timer .ring { --p: 1; width: 92px; height: 92px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(var(--tc) calc(var(--p) * 360deg), var(--hair) 0); position: relative; }
+.s30timer .ring::before { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: var(--bg, #0b0d1a); }
+.s30timer .ring b { position: relative; font: 600 38px/1 var(--f-serif); font-variant-numeric: tabular-nums; }
+.s30timer.hurry .ring { animation: hurry .5s ease-in-out infinite alternate; --tc: #ff4d6d; }
+@keyframes hurry { to { transform: scale(1.07); } }
+.s30words { display: grid; gap: 10px; }
+.s30words button { display: flex; align-items: center; gap: 14px; text-align: left; min-height: 66px; padding: 12px 18px; border-radius: 16px; border: 1px solid var(--hair-2); background: var(--surface-2); color: var(--ivory); font: 600 clamp(22px, 4.6vw, 30px)/1.15 var(--f-serif); transition: background .2s, transform .15s; }
+.s30words button i { flex: none; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--hair-2); display: grid; place-items: center; font: 700 16px/1 var(--f-ui); font-style: normal; }
+.s30words button.ok { background: color-mix(in srgb, #3ccf8e 22%, var(--surface-2)); border-color: #3ccf8e; }
+.s30words button.ok i { background: #3ccf8e; border-color: #3ccf8e; color: #062a1a; }
+.s30words button.ok span { text-decoration: line-through; text-decoration-thickness: 2px; opacity: .75; }
+.s30words button:active { transform: scale(.98); }
+.s30tag { font: 700 10px/1 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: #ff7aa8; margin-left: auto; }
 .g-song { --tg: linear-gradient(150deg, #ffd27a, #e0902a 50%, #7a2f8a); --tglow: #e0902a; }
 .songov { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; text-align: center; padding: 24px; overflow: hidden;
   background: radial-gradient(ellipse 60% 70% at 50% 35%, rgba(255,214,140,.16), transparent 70%), #04040a; animation: fadein .4s ease both; }
@@ -1797,7 +1829,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (TV) return 'tv';
     if (ui.idle) return 'splash';
     if (!ui.splashSeen && !ui.view && !ui.flow && !openAny() && !owedAll().n && !S.pk.on && !(S.pk.past || []).length) return 'splash';
-    if (ui.view === 'start' || ui.view === 'end' || (ui.view === 'draw' && ui.draw) || (ui.view === 'hist' && ui.hist) || ui.view === 'poker' || ui.view === 'choose' || ui.view === 'imp' || ui.view === 'song') return ui.view;
+    if (ui.view === 'start' || ui.view === 'end' || (ui.view === 'draw' && ui.draw) || (ui.view === 'hist' && ui.hist) || ui.view === 'poker' || ui.view === 'choose' || ui.view === 'imp' || ui.view === 'song' || ui.view === 's30') return ui.view;
     if (ui.flow && ['nprice', 'npick', 'npct'].includes(ui.view)) return ui.view;
     if (!S.ready) return 'start';
     const r = current();
@@ -4097,7 +4129,7 @@ module.exports = QRRSBlock;
   let lastTouch = Date.now();
   ['pointerdown', 'keydown', 'input', 'wheel', 'touchmove'].forEach((t) => document.addEventListener(t, () => { lastTouch = Date.now(); }, { passive: true, capture: true }));
   setInterval(() => {
-    if (TV || ui.idle || ui.view === 'imp' || ui.view === 'song' || Date.now() - lastTouch < 30000) return;
+    if (TV || ui.idle || ui.view === 'imp' || ui.view === 'song' || ui.view === 's30' || Date.now() - lastTouch < 30000) return;
     const v = view();
     if (v === 'splash' || ui.modal || ui.bigClock || (S.pk.on && S.pk.mode === 'tour' && S.pk.step === 'play')) return;
     const a = document.activeElement; if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
@@ -4154,7 +4186,8 @@ module.exports = QRRSBlock;
     const poker = `<button class="tile g-poker ${n >= 2 ? '' : 'off'}" data-act="pkOpen" ${n >= 2 ? '' : 'disabled'}><span class="tart">${GAME_ART.poker}</span>${pkTxt ? `<span class="tstat">${pkTxt}</span>` : ''}<span class="tname">Poker</span></button>`;
     const imp = `<button class="tile g-imp ${n >= 3 ? '' : 'off'}" data-act="impOpen" ${n >= 3 ? '' : 'disabled'}><span class="tart">${GAME_ART.imp}</span>${n >= 3 ? '' : '<span class="tstat">3+ spelers</span>'}<span class="tname">Imposter</span></button>`;
     const song = `<button class="tile g-song ${n >= 3 ? '' : 'off'}" data-act="songOpen" ${n >= 3 ? '' : 'disabled'}><span class="tart">${GAME_ART.song}</span>${n >= 3 ? '' : '<span class="tstat">3+ spelers</span>'}<span class="tname">Raad het liedje</span></button>`;
-    return `<div class="tiles">${tiles}${poker}${imp}${song}</div>`;
+    const s30 = `<button class="tile g-30s ${n >= 4 ? '' : 'off'}" data-act="s30Open" ${n >= 4 ? '' : 'disabled'}><span class="tart">${GAME_ART.s30}</span>${n >= 4 ? '' : '<span class="tstat">4+ spelers</span>'}<span class="tname">30 Seconds</span></button>`;
+    return `<div class="tiles">${tiles}${poker}${imp}${song}${s30}</div>`;
   }
 
   // ---------- Imposter: iedereen krijgt hetzelfde woord, behalve de imposter (die krijgt een hint) ----------
@@ -4287,6 +4320,96 @@ module.exports = QRRSBlock;
     </div>${win}`;
   }
 
+  // ---------- 30 Seconds: 2 teams, 5 woorden in 30 seconden, eerst aan 20 wint ----------
+  const S30_N = 'Eden Hazard|Kevin De Bruyne|Romelu Lukaku|Thibaut Courtois|Nafi Thiam|Remco Evenepoel|Wout van Aert|Tom Boonen|Eddy Merckx|Kim Clijsters|Stromae|Angèle|Lost Frequencies|Dimitri Vegas|Bart Peeters|Gert Verhulst|Samson en Marie|K3|Kabouter Plop|Urbanus|Jacques Brel|Kuifje|Suske en Wiske|Jommeke|Lucky Luke|De Smurfen|Cristiano Ronaldo|Lionel Messi|Taylor Swift|Beyoncé|Rihanna|Ed Sheeran|Michael Jackson|Elvis Presley|Freddie Mercury|Elon Musk|Mr. Bean|Shrek|Harry Potter|Darth Vader|Spider-Man|Batman|Mickey Mouse|Bart Simpson|SpongeBob|Pikachu|Super Mario|Sherlock Holmes|Napoleon|Albert Einstein|Mona Lisa|Tarzan|Sinterklaas|Kerstman|Paashaas|Assepoester|Sneeuwwitje|Roodkapje|Pinokkio|Shakira|Adele|Usain Bolt|Max Verstappen|Roger Federer|James Bond|Indiana Jones|Jack Sparrow|Dracula|Frankenstein|Barbie|Ken|Garfield|Bambi|Dumbo|Simba|Nemo|Olaf|Hasselt|Genk|Bilzen|Tongeren|Maastricht|Antwerpen|Gent|Brugge|Leuven|Oostende|Knokke|De Panne|Bokrijk|Atomium|Manneken Pis|Walibi|Plopsaland|Efteling|Disneyland|Eiffeltoren|Big Ben|Colosseum|Vrijheidsbeeld|Las Vegas|New York|Ibiza|Benidorm|Lloret de Mar|Sunny Beach|Mallorca|Tenerife|De Alpen|Sahara|Noordpool|Mount Everest|Venetië|Rome|Barcelona|Londen|Parijs|Amsterdam|Dubai|Australië|Japan|Piramides|Hollywood|Tomorrowland|Pukkelpop|Rock Werchter|Graspop|Ardennen|Durbuy|Kust|Frietkot|Stoofvlees|Mosselen met friet|Bicky burger|Curryworst|Mayonaise|Samurai saus|Bitterballen|Speculoos|Pralines|Wafel|Jupiler|Duvel|Westmalle|Kriek|Jenever|Aperol spritz|Mojito|Gin-tonic|Red Bull|Choco|Nutella|Croque monsieur|Spaghetti bolognaise|Lasagne|Pizza|Kebab|Durum|Sushi|Taco|Kaasfondue|Gourmet|Raclette|Barbecue|Pannenkoek|IJsje|Popcorn|Chips|Snoep|Kauwgom|Hotdog|Hamburger|Appelmoes|Spruitjes|Witloof|Afstandsbediening|Stofzuiger|Wasmachine|Microgolf|Koelkast|Strijkijzer|Haardroger|Zetel|Hangmat|Trampoline|Glijbaan|Schommel|Step|Skateboard|Brommer|Tractor|Ambulance|Helikopter|Duikboot|Raket|Luchtballon|Cruiseschip|Jetski|Caravan|Tram|Giraf|Zebra|Krokodil|Kangoeroe|Koala|Panda|Leeuw|Tijger|Aap|Papegaai|Uil|Vleermuis|Egel|Eekhoorn|Konijn|Hamster|Goudvis|Kwal|Octopus|Dolfijn|Walvis|Slang|Schildpad|Kikker|Mug|Bij|Vlinder|Lieveheersbeestje|Slak|Varken|Schaap|Geit|Kip|Ezel|Lama|Pinguïn|Loodgieter|Bouwvakker|Postbode|Verpleegster|Advocaat|Rechter|Kassierster|Barman|DJ|Influencer|Youtuber|Goochelaar|Clown|Piraat|Ridder|Prinses|Heks|Vampier|Zombie|Spook|Alien|Robot|Ninja|Cowboy|Tandarts|Kapper|Bakker|Slager|Brandweerman|Politieagent|Leerkracht|Padel|Wielrennen|Zwemmen|Skiën|Snowboarden|Surfen|Paardrijden|Boksen|Judo|Formule 1|Tour de France|Olympische Spelen|WK voetbal|Champions League|Penalty|Rode kaart|Buitenspel|Scheidsrechter|Doelman|Rode Duivels|Darts|Bowling|Minigolf|Biljart|Rapport|Spieken|Huiswerk|Speeltijd|Turnles|Studentenkot|Diploma|Stage|Sollicitatie|Rijbewijs|Flitspaal|Parkeerboete|File|Rotonde|Tankstation|Carwash|Lift|Roltrap|WhatsApp|Snapchat|Instagram|TikTok|YouTube|Netflix|Spotify|Wifi|Oplader|Powerbank|Selfie|Emoji|Wachtwoord|Printer|AirPods|Drone|ChatGPT|PlayStation|FIFA|Fortnite|Minecraft|Kerstboom|Paaseieren|Valentijn|Oudejaarsavond|Vuurwerk|Verjaardagstaart|Cadeau|Confetti|Polonaise|Limbo|Stoelendans|Karaoke|Kermis|Botsauto\'s|Spookhuis|Achtbaan|Suikerspin|Carnaval|Halloween|Bruiloft|Doop|Communie|Begrafenis|Verhuis|Ikea|Delhaize|Colruyt|Aldi|Lidl|Action|Kruidvat|McDonald\'s|Starbucks|Coca-Cola|Apple|Google|Samsung|Tesla|Ferrari|Lamborghini|Vespa|Paraplu|Zonnebril|Horloge|Rugzak|Kussen|Wekker|Tandenborstel|Spiegel|Kaars|Sleutel|Portefeuille|Bankkaart|Paspoort|Koffer|Tent|Slaapzak|Kampvuur|Zandkasteel|Parasol|Zonnecrème|Zwembroek|Badmuts|Duikbril|Sneeuwman|IJspiste|Schaatsen|Slee|Iglo|Vulkaan|Regenboog|Bliksem|Tornado|Aardbeving|Volle maan|Vallende ster|Zonsondergang|Waterval|Woestijn|Oerwoud|Eiland|Vuurtoren|Kasteel|Kerk|Ziekenhuis|Gevangenis|Bibliotheek|Museum|Zoo|Bioscoop|Casino|Disco|Café|Frituur|Markt|Rommelmarkt|Camping|Hotel|Jeugdbeweging|Chiro|Scouts|Voetbalkantine|Fitness|Sauna|Kapsalon|Tatoeage|Piercing|Snor|Baard|Pruik|Bril|Beugel|Kunstgebit|Rollator|Kinderwagen|Luier|Speen|Tweeling|Schoonmoeder|Opa|Oma|Peter en meter|Buurman|Huisdier|Kat|Hond'.split('|');
+  const S30_S = 'Condoom|Ochtendwip|Quickie|Trio|Vibrator|Dildo|Handboeien|Zweepje|Lingerie|String|Tepel|Tieten|Poep|Billen|Piemel|Naakt|Naaktstrand|Nudistencamping|Nudes|Sexting|Tinder|One night stand|Walk of shame|Seksshop|Stripclub|Striptease|Paaldansen|Lapdance|Rode lampjes|Pornoster|Playboy|OnlyFans|Fifty Shades of Grey|Kamasutra|Seksstandje|Missionaris|Doggy style|69|Orgasme|Fake orgasme|Voorspel|Tongzoen|Zuigzoen|Lebberen|Erectie|Viagra|Ochtendlat|Maagd|De eerste keer|Scharrel|Friends with benefits|Vreemdgaan|Minnaar|Ex|Huwelijksnacht|Huwelijksreis|Vrijgezellenfeest|Stripper|Penisrietje|Glijmiddel|Morning-afterpil|Zwangerschapstest|Babymaken|Kater|Zat|Lazarus|Kotsen|Bak bier|Ad fundum|Drinkspel|Beerpong|Kroegentocht|Cantus|Studentendoop|Kotfeest|Afterparty|Zuipen|Shotje|Tequila|Jägerbomb|Black-out|Flirten|Versieren|Openingszin|Blauwtje lopen|Friendzone|Dick pic|Spiernaakt|Kuisheidsgordel|Latex|Rollenspel|Verpleegsterspakje|Politiepakje|Blinddoek|Massageolie|Erotische massage|Sexy onderbroek|Boxershort|Slipje|Beha|Push-up beha|Bouwvakkersdecolleté|Seks op het strand|Pornstar martini|Love Island|Temptation Island|Blind getrouwd|Boer zkt vrouw|Datingapp|Swipen|Match|Ghosting|Booty call|Eerste date|Kus onder de mistletoe|Spin the bottle|Truth or dare|Strippoker|Toyboy|Sugar daddy|Cougar|Casanova|Gigolo|Escort|Exhibitionist|Gluurder|Tramp stamp|Tepelpiercing|Brazilian wax|Bikinilijn|Sixpack|Spierballen|Siliconen|Botox|Twerken|Schuurdansen|Naakt zwemmen|Skinny dippen|Hotelkamer|Niet storen-bordje|Achterbank|Beslagen ruiten|Handje vasthouden|Lepeltje lepeltje|Knuffelen|Liefdesbeet|Smoorverliefd|Vlinders in je buik|Eerste kus|Afwijzing|Relatiebreuk|Jaloers|Player|Womanizer|Dikke nek|Pick-upline|Knipoog|Fluitconcert|Kontje knijpen|Bilnaad|Wc-bril|Scheet|Boer laten|Poepen|Plassen in het zwembad|Pukkel|Okselhaar|Neushaar|Zweetvoeten|Ochtendadem|Snurken|Slaapwandelen|Naakt slapen|Badjas|Jacuzzi|Bubbelbad|Douchen met twee|Tandpasta op het bed|Valentijnskaart|Rode rozen|Oesters|Aardbeien met slagroom|Chocoladefondue|Champagne in bed|Vlinderdas|Kousenband|Jarretelles|Netkousen|Corset|Hoge hakken|Sexy kerstpakje|Bunnypakje|Kontpiercing|Hickey verstoppen|Zwangerschapsbuik|Ooievaar|Bloemetjes en bijtjes|Seksvoorlichting|Ondeugend|Pikant|Geil|Opgewonden|Heet|Wulps|Verleidelijk|Hijgen|Kreunen|Bedveren|Ochtendgloren|Hangover-ontbijt|Kebab om 4 uur|Taxi naar huis|Sleutels kwijt|Gsm kwijt|Spijt|Vergeten wat er gebeurde|Tattoo na een feest'.split('|');
+  const S30_KEY = 'kelder-30s', S30_GOAL = 20, S30_TIME = 30;
+  const s30Prefs = () => { try { return JSON.parse(localStorage.getItem(S30_KEY + '-p')) || {}; } catch (e) { return {}; } };
+  function s30Store() { const G = ui.s30; try { if (G && G.step !== 'setup' && G.step !== 'win') localStorage.setItem(S30_KEY, JSON.stringify({ ...G, names: S.players })); else localStorage.removeItem(S30_KEY); } catch (e) {} }
+  function s30Split() {
+    const G = ui.s30, a = [...G.sel];
+    for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; }
+    G.teams = [a.filter((_, i) => i % 2 === 0), a.filter((_, i) => i % 2 === 1)]; G.split = (G.split || 0) + 1;
+  }
+  function s30Words() {
+    const G = ui.s30, P = s30Prefs(), used = new Set(P.used || []);
+    const pool = [...S30_N.map((w) => [w, 0]), ...(G.spicy ? S30_S.map((w) => [w, 1]) : [])];
+    let fresh = pool.filter((w) => !used.has(w[0])); if (fresh.length < 5) { fresh = pool; used.clear(); }
+    // bij vettig: ongeveer de helft vettige woorden per kaart
+    const pick = [], take = (arr) => { if (!arr.length) return; const k = rnd(arr.length); pick.push(arr[k]); arr.splice(k, 1); };
+    const fn = fresh.filter((w) => !w[1]), fs = fresh.filter((w) => w[1]);
+    const nS = G.spicy ? 2 + rnd(2) : 0; for (let i = 0; i < nS && fs.length; i++) take(fs);
+    while (pick.length < 5 && (fn.length || fs.length)) take(fn.length ? fn : fs);
+    for (let i = pick.length - 1; i > 0; i--) { const j = rnd(i + 1); [pick[i], pick[j]] = [pick[j], pick[i]]; }
+    pick.forEach((w) => used.add(w[0]));
+    try { localStorage.setItem(S30_KEY + '-p', JSON.stringify({ ...P, used: [...used], spicy: G.spicy })); } catch (e) {}
+    return pick.map((w) => ({ w: w[0], v: w[1], ok: false }));
+  }
+  const s30Who = (G) => { const T = G.teams[G.turn]; return T[G.idx[G.turn] % T.length]; };
+  function s30Beep(f, d, v) { const A = audioCtx(); if (!A) return; try { const o = A.createOscillator(), g = A.createGain(); o.frequency.value = f; o.connect(g); g.connect(A.destination); const t = A.currentTime; g.gain.setValueAtTime(v || 0.15, t); g.gain.exponentialRampToValueAtTime(0.001, t + d); o.start(t); o.stop(t + d); } catch (e) {} }
+  let s30T = 0;
+  function s30Tick() {
+    const G = ui.s30; if (!G || G.step !== 'turn') { clearInterval(s30T); return; }
+    const left = Math.max(0, S30_TIME - (Date.now() - G.t0) / 1000), sec = Math.ceil(left);
+    const r = document.getElementById('s30Ring'), b = document.getElementById('s30Sec'), w = document.getElementById('s30Tm');
+    if (r) r.style.setProperty('--p', (left / S30_TIME).toFixed(3));
+    if (b && b.textContent !== String(sec)) { b.textContent = sec; if (sec <= 5 && sec > 0) s30Beep(880, 0.12); }
+    if (w) w.classList.toggle('hurry', left <= 5);
+    if (left <= 0) { clearInterval(s30T); s30Beep(220, 0.9, 0.3); try { navigator.vibrate && navigator.vibrate([300, 100, 300]); } catch (e) {} G.step = 'score'; s30Store(); render(); }
+  }
+  function renderS30() {
+    const G = ui.s30, head = (label) => `<header class="top"><button class="btn ghost sm" data-act="s30Back">← ${G.step === 'setup' || G.step === 'teams' ? 'Terug' : 'Stoppen'}</button><span class="label">${label}</span></header>`;
+    const board = () => `<div class="tscore">${[0, 1].map((t) => `<div class="tm t${t + 1} ${G.turn === t && G.step !== 'win' ? 'on' : ''}"><div class="n">Team ${t + 1}</div><div class="p">${G.pts[t]}<small> / ${S30_GOAL}</small></div><div class="who">${G.teams[t].map((k) => esc(S.players[k])).join(', ')}</div><span class="bar" style="width:${Math.min(100, G.pts[t] / S30_GOAL * 100)}%"></span></div>`).join('')}</div>`;
+    if (G.step === 'setup') {
+      const n = G.sel.length;
+      return `<div class="wrap">${head('30 Seconds')}
+        <section><h1>Wie speelt <em>mee</em>?</h1><p class="lead">Twee teams. Eén speler legt 5 woorden uit zonder ze te zeggen, zijn team raadt. Je hebt 30 seconden. Elk geraden woord is een punt. Eerst aan ${S30_GOAL} wint.</p></section>
+        <div class="chips">${S.players.map((p, i) => `<button class="chip ${G.sel.includes(i) ? 'on' : ''}" data-act="s30Sel" data-v="${i}">${esc(p)}</button>`).join('')}</div>
+        <section class="panel"><div class="pctrow"><span class="pl">Vettige woorden<small>ongeveer de helft van elke kaart</small></span><div class="seg" style="min-width:150px"><button class="opt ${G.spicy ? '' : 'on'}" type="button" data-act="s30Spicy" data-v="0">Nee</button><button class="opt ${G.spicy ? 'on' : ''}" type="button" data-act="s30Spicy" data-v="1">Ja</button></div></div></section>
+        <p class="err" style="min-height:0">${n < 4 ? 'Kies minstens 4 spelers.' : ''}</p>
+        <button class="btn primary xl" data-act="s30Split" ${n < 4 ? 'disabled' : ''}>Teams verdelen <span class="arr">→</span></button>
+      </div>`;
+    }
+    if (G.step === 'teams') {
+      return `<div class="wrap">${head('30 Seconds')}
+        <section><h1>De <em>teams</em></h1><p class="lead">Willekeurig verdeeld.</p></section>
+        <div class="tlist" data-k="${G.split}">${[0, 1].map((t) => `<div class="tm t${t + 1}"><h3>Team ${t + 1}</h3>${G.teams[t].map((k, j) => `<div style="animation-delay:${(j * 2 + t) * 0.12}s">${esc(S.players[k])}</div>`).join('')}</div>`).join('')}</div>
+        <div class="row2"><button class="btn ghost" data-act="s30Split">Opnieuw verdelen</button><button class="btn primary" data-act="s30Begin">Start het spel</button></div>
+      </div>`;
+    }
+    const tc = `t${G.turn + 1}`;
+    if (G.step === 'ready') {
+      return `<div class="wrap">${head('30 Seconds')}
+        ${board()}
+        <section class="s30who ${tc}"><p class="label">Team ${G.turn + 1} is aan de beurt</p><div class="big">${esc(S.players[s30Who(G)])}</div><p class="lead">legt de woorden uit. Geef de tablet aan ${esc(S.players[s30Who(G)])}, de rest van het team raadt.</p></section>
+        <button class="btn primary xl" data-act="s30Go">Start de 30 seconden <span class="arr">→</span></button>
+      </div>`;
+    }
+    if (G.step === 'turn') {
+      const left = Math.max(0, S30_TIME - (Date.now() - G.t0) / 1000);
+      return `<div class="wrap ${tc}">
+        <div class="s30timer ${left <= 5 ? 'hurry' : ''}" id="s30Tm"><div class="ring" id="s30Ring" style="--p:${(left / S30_TIME).toFixed(3)}"><b id="s30Sec">${Math.ceil(left)}</b></div><div><p class="label" style="margin:0">Team ${G.turn + 1}</p><div style="font:600 22px/1.2 var(--f-serif)">${esc(S.players[s30Who(G)])}</div><p class="muted" style="margin:2px 0 0;font-size:13px">Tik op een woord als het geraden is</p></div></div>
+        <div class="s30words">${G.words.map((x, i) => `<button type="button" class="${x.ok ? 'ok' : ''}" data-act="s30Hit" data-v="${i}"><i>${x.ok ? '✓' : ''}</i><span>${esc(x.w)}</span></button>`).join('')}</div>
+        <button class="btn ghost block" data-act="s30Stop">Alles geraden, stop de tijd</button>
+      </div>`;
+    }
+    if (G.step === 'score') {
+      const n = G.words.filter((x) => x.ok).length;
+      return `<div class="wrap ${tc}">${head('30 Seconds')}
+        <section class="s30who"><p class="label">Tijd!</p><div class="big">+${n} punt${n === 1 ? '' : 'en'}</div><p class="lead">voor Team ${G.turn + 1}. Klopt het niet? Tik op een woord om het aan te passen.</p></section>
+        <div class="s30words">${G.words.map((x, i) => `<button type="button" class="${x.ok ? 'ok' : ''}" data-act="s30Hit" data-v="${i}"><i>${x.ok ? '✓' : ''}</i><span>${esc(x.w)}</span></button>`).join('')}</div>
+        <button class="btn primary xl" data-act="s30Score">Punten geven <span class="arr">→</span></button>
+      </div>`;
+    }
+    // gewonnen
+    const w = G.pts[0] >= S30_GOAL ? 0 : 1;
+    return `<div class="wrap">${head('30 Seconds')}
+      <section class="s30who t${w + 1}"><p class="label">Gewonnen!</p><div class="big">Team ${w + 1}</div><p class="lead">${G.teams[w].map((k) => esc(S.players[k])).join(', ')}</p></section>
+      ${board()}
+      <div class="row2"><button class="btn ghost" data-act="s30New">Nieuwe teams</button><button class="btn primary" data-act="s30Again">Nog eens</button></div>
+    </div>`;
+  }
+
   // ---------- Start: poker of andere spellen ----------
   function renderChoose() {
     const mini = GAMES.slice(0, 8).map((g) => `<span class="${g.cls}">${GAME_ART[g.k]}</span>`).join('');
@@ -4306,6 +4429,7 @@ module.exports = QRRSBlock;
   // ---------- Nieuw rondje: 2. spel ----------
   // Een nieuw spel = één regel in GAMES + een tekening in GAME_ART.
   const GAME_ART = {
+    s30: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M30 16h36M30 80h36M34 16c0 18 28 20 28 32S34 62 34 80M62 16c0 18-28 20-28 32s28 14 28 32" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/><path d="M40 72c4-6 12-6 16 0z" fill="#fff"/><text x="74" y="50" font-family="Georgia,serif" font-weight="700" font-size="20" fill="#fff" opacity=".75">30</text></svg>`,
     song: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M34 70V26l40-8v42" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round"/><ellipse cx="26" cy="70" rx="10" ry="8" fill="#fff"/><ellipse cx="66" cy="62" rx="10" ry="8" fill="#fff"/><text x="78" y="40" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="22" fill="#fff" opacity=".7">?</text></svg>`,
     imp: `<svg viewBox="0 0 96 96" aria-hidden="true"><circle cx="30" cy="38" r="11" fill="#fff" opacity=".55"/><path d="M12 80c0-12 8-22 18-22s18 10 18 22z" fill="#fff" opacity=".55"/><circle cx="62" cy="34" r="13" fill="#fff"/><path d="M40 82c0-14 10-25 22-25s22 11 22 25z" fill="#fff"/><text x="62" y="41" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="20" fill="#c8102e">?</text></svg>`,
     troeven: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M48 14v70" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity=".55"/>${[0, 1, 2, 3, 4, 5].map((k) => `<rect x="${24 + (k % 2) * 4}" y="${70 - k * 10}" width="${44 - (k % 2) * 8 - k * 2}" height="4.5" rx="2.2" fill="currentColor" opacity="${k > 3 ? .35 : 1}"/>`).join('')}<g transform="translate(58 8) rotate(12)"><rect width="26" height="36" rx="4" fill="#fff"/><text x="13" y="24" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-weight="700" font-size="18" fill="#2b1d55">B</text></g></svg>`,
@@ -5291,8 +5415,8 @@ module.exports = QRRSBlock;
 
   function render() {
     const v = view();
-    if (!ui.idle) ui.view = ['draw', 'end', 'wround', 'hround', 'pround', 'start', 'nprice', 'npick', 'npct', 'hist', 'poker', 'choose', 'imp', 'song'].includes(v) ? v : null;
-    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound, ngame: renderNGame, lgame: renderLGame, hist: renderHist, dgame: renderDGame, poker: renderPoker, choose: renderChoose, splash: renderSplash, tv: renderTV, imp: renderImp, song: renderSong };
+    if (!ui.idle) ui.view = ['draw', 'end', 'wround', 'hround', 'pround', 'start', 'nprice', 'npick', 'npct', 'hist', 'poker', 'choose', 'imp', 'song', 's30'].includes(v) ? v : null;
+    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound, ngame: renderNGame, lgame: renderLGame, hist: renderHist, dgame: renderDGame, poker: renderPoker, choose: renderChoose, splash: renderSplash, tv: renderTV, imp: renderImp, song: renderSong, s30: renderS30 };
     const same = v === lastScreen, before = same ? numSnap() : null;
     $app.innerHTML = screens[v]();
     $app.classList.toggle('fresh', !same);
@@ -5609,6 +5733,33 @@ module.exports = QRRSBlock;
     chooseGo(b) { if (b.dataset.v === 'poker') actions.pkOpen(); else actions.newRondje(); },
     chooseBack() { if (S.ready && (owedAll().n || S.pk.on)) { ui.view = null; } else { ui.names = null; ui.view = 'start'; } render(); window.scrollTo(0, 0); },
     pkOpen() { hideToast(); ui.pkSel = null; ui.pkMode = null; ui.pkPay = null; ui.pkPayEdited = false; ui.pkUnitTxt = null; ui.pkLvl = null; ui.pkSure = false; ui.pkAdd = false; ui.view = 'poker'; render(); window.scrollTo(0, 0); },
+    s30Open() {
+      hideToast(); let G = null;
+      try { const o = JSON.parse(localStorage.getItem(S30_KEY)); if (o && Array.isArray(o.names) && o.names.join('|') === S.players.join('|')) G = o; } catch (e) {}
+      if (G && G.step === 'turn') G.step = 'ready'; // tijd liep af toen de app dicht was: beurt opnieuw
+      ui.s30 = G || { step: 'setup', sel: S.players.map((_, i) => i), spicy: s30Prefs().spicy !== false };
+      ui.view = 's30'; render(); window.scrollTo(0, 0);
+    },
+    s30Back() {
+      const G = ui.s30;
+      if (G && (G.step === 'ready' || G.step === 'turn' || G.step === 'score') && !G.stopSure) { G.stopSure = true; showToast('Tik nog eens op <b>Stoppen</b> om het spel te beëindigen', false); setTimeout(() => { if (ui.s30 === G) G.stopSure = false; }, 3000); return; }
+      if (G && G.step === 'teams') { G.step = 'setup'; render(); return; }
+      clearInterval(s30T); ui.s30 = null; try { localStorage.removeItem(S30_KEY); } catch (e) {} ui.view = null; hideToast(); render(); window.scrollTo(0, 0);
+    },
+    s30Sel(b) { const G = ui.s30, i = +b.dataset.v; G.sel = G.sel.includes(i) ? G.sel.filter((x) => x !== i) : [...G.sel, i].sort((a, c) => a - c); render(); },
+    s30Spicy(b) { ui.s30.spicy = b.dataset.v === '1'; render(); },
+    s30Split() { if (ui.s30.sel.length < 4) return; s30Split(); ui.s30.step = 'teams'; render(); window.scrollTo(0, 0); },
+    s30Begin() { const G = ui.s30; G.pts = [0, 0]; G.idx = [0, 0]; G.turn = rnd(2); G.step = 'ready'; s30Store(); render(); window.scrollTo(0, 0); },
+    s30Go() { const G = ui.s30; audioCtx(); G.words = s30Words(); G.t0 = Date.now(); G.step = 'turn'; s30Store(); render(); window.scrollTo(0, 0); clearInterval(s30T); s30T = setInterval(s30Tick, 100); try { keepAwake(); } catch (e) {} },
+    s30Hit(b) { const G = ui.s30, x = G.words[+b.dataset.v]; if (!x) return; x.ok = !x.ok; if (x.ok && G.step === 'turn') s30Beep(660, 0.08, 0.08); s30Store(); render(); },
+    s30Stop() { const G = ui.s30; clearInterval(s30T); G.step = 'score'; s30Store(); render(); },
+    s30Score() {
+      const G = ui.s30; G.pts[G.turn] += G.words.filter((x) => x.ok).length; G.idx[G.turn]++;
+      if (G.pts[G.turn] >= S30_GOAL) { G.step = 'win'; partyDue = true; } else { G.turn = 1 - G.turn; G.step = 'ready'; }
+      s30Store(); render(); window.scrollTo(0, 0);
+    },
+    s30Again() { actions.s30Begin(); },
+    s30New() { const G = ui.s30; s30Split(); G.step = 'teams'; render(); window.scrollTo(0, 0); },
     songOpen() {
       hideToast(); let G = null;
       try { const o = JSON.parse(localStorage.getItem(SONG_KEY)); if (o && Array.isArray(o.names) && o.names.every((nm, j) => S.players[o.sel[j]] === nm)) G = o; } catch (e) {}
