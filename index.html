@@ -922,6 +922,35 @@ html.tvmode, html.tvmode body { background: #020206; }
 .totbar b { display: block; font: 600 24px/1.1 var(--f-serif); font-variant-numeric: lining-nums tabular-nums; margin-top: 4px; }
 .g-imp { --tg: linear-gradient(150deg, #9aa8ff, #3b3fa8 55%, #b3123f); --tglow: #6a3fd0; }
 .seg .opt:disabled { opacity: .3; }
+.g-song { --tg: linear-gradient(150deg, #ffd27a, #e0902a 50%, #7a2f8a); --tglow: #e0902a; }
+.songov { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; text-align: center; padding: 24px; overflow: hidden;
+  background: radial-gradient(ellipse 60% 70% at 50% 35%, rgba(255,214,140,.16), transparent 70%), #04040a; animation: fadein .4s ease both; }
+.songov::before { content: ""; position: absolute; left: 50%; top: -10%; width: 70vmin; height: 120vmin; transform: translateX(-50%); background: conic-gradient(from 180deg at 50% 0%, transparent 160deg, rgba(255,226,170,.22) 175deg, rgba(255,240,210,.32) 180deg, rgba(255,226,170,.22) 185deg, transparent 200deg); pointer-events: none; animation: spotsway 6s ease-in-out infinite; transform-origin: 50% 0; }
+@keyframes spotsway { 0%, 100% { transform: translateX(-50%) rotate(-6deg); } 50% { transform: translateX(-50%) rotate(6deg); } }
+.songov .in { position: relative; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.songov .lab { font: 600 12px/1 var(--f-ui); letter-spacing: .34em; text-transform: uppercase; color: rgba(255,226,170,.75); }
+.songov .nm { font: 600 clamp(48px, 12vw, 110px)/1 var(--f-serif); color: #fff; min-height: 1.1em; transition: opacity .08s; text-shadow: 0 0 40px rgba(255,214,140,.35); }
+.songov .nm.land { animation: landpop .9s var(--ease) both; color: #ffe2a8; }
+@keyframes landpop { 0% { transform: scale(.7); filter: blur(8px); } 60% { transform: scale(1.08); filter: none; } 100% { transform: none; } }
+.songov .rule { width: 0; height: 1px; background: linear-gradient(90deg, transparent, #ffd89a, transparent); transition: width 1s var(--ease); }
+.songov .rule.on { width: min(60vw, 420px); }
+.songov .sub { font: 500 16px/1.4 var(--f-ui); color: rgba(240,235,255,.75); opacity: 0; transition: opacity .8s ease .4s; }
+.songov .sub.on, .songov .btn.on { opacity: 1; }
+.songov .btn { opacity: 0; transition: opacity .8s ease .7s; min-width: 240px; }
+.songdj { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: 18px; background: linear-gradient(150deg, rgba(255,210,122,.16), rgba(122,47,138,.18)); border: 1px solid rgba(255,214,140,.3); }
+.songdj .ic { font-size: 30px; }
+.songdj b { display: block; font: 600 26px/1.1 var(--f-serif); color: #ffe2a8; }
+.songdj span { font: 500 13px/1.3 var(--f-ui); color: var(--dim); }
+.songrow { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--hair); }
+.songrow:last-child { border-bottom: 0; }
+.songrow .who { font: 600 21px/1.1 var(--f-serif); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.songrow .dots { display: flex; gap: 5px; margin-top: 7px; }
+.songrow .dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+.songrow .dots i.off { background: var(--hair-2); box-shadow: none; }
+.songrow .pts { font: 600 30px/1 var(--f-serif); min-width: 36px; text-align: right; font-variant-numeric: tabular-nums; }
+.songrow .bt { display: flex; gap: 6px; }
+.songrow .bt button { height: 48px; border-radius: 12px; border: 1px solid var(--hair-2); background: var(--surface-2); color: var(--ivory); font: 700 14px/1 var(--f-ui); padding: 0 14px; }
+.songrow .bt .ok { background: linear-gradient(150deg, #5ef0c0, #22b8a8); color: #062a22; border: 0; min-width: 96px; }
 .impnames { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
 .impname { position: relative; min-height: 96px; border-radius: 18px; border: 1px solid var(--hair-2); background: linear-gradient(160deg, rgba(255,255,255,.08), rgba(255,255,255,.02)); font: 600 22px/1.15 var(--f-serif); color: var(--ivory); padding: 14px; }
 .impname small { display: block; margin-top: 6px; font: 600 11px/1 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
@@ -1768,7 +1797,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (TV) return 'tv';
     if (ui.idle) return 'splash';
     if (!ui.splashSeen && !ui.view && !ui.flow && !openAny() && !owedAll().n && !S.pk.on && !(S.pk.past || []).length) return 'splash';
-    if (ui.view === 'start' || ui.view === 'end' || (ui.view === 'draw' && ui.draw) || (ui.view === 'hist' && ui.hist) || ui.view === 'poker' || ui.view === 'choose' || ui.view === 'imp') return ui.view;
+    if (ui.view === 'start' || ui.view === 'end' || (ui.view === 'draw' && ui.draw) || (ui.view === 'hist' && ui.hist) || ui.view === 'poker' || ui.view === 'choose' || ui.view === 'imp' || ui.view === 'song') return ui.view;
     if (ui.flow && ['nprice', 'npick', 'npct'].includes(ui.view)) return ui.view;
     if (!S.ready) return 'start';
     const r = current();
@@ -4068,7 +4097,7 @@ module.exports = QRRSBlock;
   let lastTouch = Date.now();
   ['pointerdown', 'keydown', 'input', 'wheel', 'touchmove'].forEach((t) => document.addEventListener(t, () => { lastTouch = Date.now(); }, { passive: true, capture: true }));
   setInterval(() => {
-    if (TV || ui.idle || ui.view === 'imp' || Date.now() - lastTouch < 30000) return;
+    if (TV || ui.idle || ui.view === 'imp' || ui.view === 'song' || Date.now() - lastTouch < 30000) return;
     const v = view();
     if (v === 'splash' || ui.modal || ui.bigClock || (S.pk.on && S.pk.mode === 'tour' && S.pk.step === 'play')) return;
     const a = document.activeElement; if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
@@ -4124,7 +4153,8 @@ module.exports = QRRSBlock;
     const pkTxt = S.pk.on && S.pk.step !== 'done' ? (S.pk.mode === 'tour' ? `${nf(BL[tState(S.pk).lv][0])}/${nf(BL[tState(S.pk).lv][1])}` : 'bezig') : nPast ? `${nPast}× gespeeld` : '';
     const poker = `<button class="tile g-poker ${n >= 2 ? '' : 'off'}" data-act="pkOpen" ${n >= 2 ? '' : 'disabled'}><span class="tart">${GAME_ART.poker}</span>${pkTxt ? `<span class="tstat">${pkTxt}</span>` : ''}<span class="tname">Poker</span></button>`;
     const imp = `<button class="tile g-imp ${n >= 3 ? '' : 'off'}" data-act="impOpen" ${n >= 3 ? '' : 'disabled'}><span class="tart">${GAME_ART.imp}</span>${n >= 3 ? '' : '<span class="tstat">3+ spelers</span>'}<span class="tname">Imposter</span></button>`;
-    return `<div class="tiles">${tiles}${poker}${imp}</div>`;
+    const song = `<button class="tile g-song ${n >= 3 ? '' : 'off'}" data-act="songOpen" ${n >= 3 ? '' : 'disabled'}><span class="tart">${GAME_ART.song}</span>${n >= 3 ? '' : '<span class="tstat">3+ spelers</span>'}<span class="tname">Raad het liedje</span></button>`;
+    return `<div class="tiles">${tiles}${poker}${imp}${song}</div>`;
   }
 
   // ---------- Imposter: iedereen krijgt hetzelfde woord, behalve de imposter (die krijgt een hint) ----------
@@ -4197,6 +4227,66 @@ module.exports = QRRSBlock;
     </div>`;
   }
 
+  // ---------- Raad het liedje: één DJ zet liedjes op, de rest begint op 5; juist = -1, wie eerst op 0 staat wordt DJ ----------
+  const SONG_KEY = 'kelder-liedje';
+  function songStore() { try { if (ui.song && ui.song.step !== 'setup') localStorage.setItem(SONG_KEY, JSON.stringify({ ...ui.song, names: ui.song.sel.map((k) => S.players[k]) })); else localStorage.removeItem(SONG_KEY); } catch (e) {} }
+  function songRound(dj) { const G = ui.song; G.dj = dj; G.pts = {}; G.sel.forEach((k) => { if (k !== dj) G.pts[k] = 5; }); G.log = []; G.win = null; G.djs = [...(G.djs || []), dj]; }
+  function songSpin() {
+    const G = ui.song, ks = G.sel.filter((k) => k !== G.dj || G.sel.length < 2), pick = ks[rnd(ks.length)];
+    G.step = 'pick'; G.pick = pick; render();
+    const el = () => document.getElementById('songNm');
+    let i = rnd(ks.length), d = 60; const t0 = performance.now();
+    const tick = () => {
+      const e = el(); if (!e || ui.song !== G || G.step !== 'pick') return;
+      const el2 = performance.now() - t0;
+      if (el2 > 3400 && ks[i % ks.length] === pick) {
+        e.textContent = S.players[pick]; e.classList.add('land');
+        ['songRule', 'songSub', 'songGo'].forEach((id) => { const x = document.getElementById(id); if (x) x.classList.add('on'); });
+        return;
+      }
+      i++; e.textContent = S.players[ks[i % ks.length]]; d = Math.min(420, d * 1.12); setTimeout(tick, d);
+    };
+    setTimeout(tick, 400);
+  }
+  function renderSong() {
+    const G = ui.song, head = (label) => `<header class="top"><button class="btn ghost sm" data-act="songBack">← ${G.step === 'setup' ? 'Terug' : 'Stoppen'}</button><span class="label">${label}</span></header>`;
+    if (G.step === 'setup') {
+      const n = G.sel.length;
+      return `<div class="wrap">${head('Raad het liedje')}
+        <section><h1>Wie speelt <em>mee</em>?</h1><p class="lead">Eén iemand is de DJ en zet liedjes op. De rest begint met 5 punten. Wie een liedje juist raadt, verliest een punt. Wie eerst op 0 staat, wordt de nieuwe DJ.</p></section>
+        <div class="chips">${S.players.map((p, i) => `<button class="chip ${G.sel.includes(i) ? 'on' : ''}" data-act="songSel" data-v="${i}">${esc(p)}</button>`).join('')}</div>
+        <p class="err" style="min-height:0">${n < 3 ? 'Kies minstens 3 spelers.' : ''}</p>
+        <button class="btn primary xl" data-act="songStart" ${n < 3 ? 'disabled' : ''}>Wie mag beginnen? <span class="arr">→</span></button>
+      </div>`;
+    }
+    if (G.step === 'pick') {
+      const first = !G.djs || !G.djs.length;
+      return `<div class="wrap">${head('Raad het liedje')}</div>
+        <div class="songov"><div class="in">
+          <div class="lab">${first ? 'Wie mag beginnen' : 'Nieuwe DJ'}</div>
+          <div class="nm" id="songNm">&nbsp;</div>
+          <div class="rule" id="songRule"></div>
+          <div class="sub" id="songSub">zet het eerste liedje op</div>
+          <button class="btn primary xl" id="songGo" data-act="songGo">Start</button>
+        </div></div>`;
+    }
+    const rows = G.sel.filter((k) => k !== G.dj); // vaste volgorde, zodat je niet mis tikt
+    const win = G.win !== null && G.win !== undefined ? `<div class="songov"><div class="in">
+        <div class="lab">Op nul!</div><div class="nm land">${esc(S.players[G.win])}</div><div class="rule on"></div>
+        <div class="sub on">is de nieuwe DJ en zet nu de liedjes op</div>
+        <div class="row2" style="min-width:280px"><button class="btn ghost on" style="opacity:1;min-width:0" data-act="songUndo">Oeps, ongedaan</button><button class="btn primary on" style="opacity:1;min-width:0" data-act="songNext">Verder</button></div>
+      </div></div>` : '';
+    return `<div class="wrap">${head('Raad het liedje · ronde ' + G.djs.length)}
+      <div class="songdj" style="--pc:var(--p${G.dj})"><span class="ic">🎧</span><div><b>${esc(S.players[G.dj])}</b><span>is de DJ en zet de liedjes op</span></div></div>
+      <section class="panel"><div class="panel-head"><h2>Punten</h2><span class="label">juist = −1</span></div>
+        <div>${rows.map((k) => `<div class="songrow" style="--pc:var(--p${k})"><div style="min-width:0"><div class="who">${esc(S.players[k])}</div><div class="dots">${[1, 2, 3, 4, 5].map((j) => `<i class="${j <= G.pts[k] ? '' : 'off'}"></i>`).join('')}</div></div>
+          <span class="pts">${G.pts[k]}</span>
+          <span class="bt"><button type="button" data-act="songPt" data-v="${k}" data-d="1" aria-label="Punt erbij">+1</button><button type="button" class="ok" data-act="songPt" data-v="${k}" data-d="-1">Juist</button></span></div>`).join('')}</div>
+      </section>
+      <div class="row2"><button class="btn ghost" data-act="songUndo" ${G.log.length ? '' : 'disabled'}>Ongedaan maken</button><button class="btn ghost" data-act="songRespin">Andere DJ</button></div>
+    </div>${win}`;
+  }
+
   // ---------- Start: poker of andere spellen ----------
   function renderChoose() {
     const mini = GAMES.slice(0, 8).map((g) => `<span class="${g.cls}">${GAME_ART[g.k]}</span>`).join('');
@@ -4216,6 +4306,7 @@ module.exports = QRRSBlock;
   // ---------- Nieuw rondje: 2. spel ----------
   // Een nieuw spel = één regel in GAMES + een tekening in GAME_ART.
   const GAME_ART = {
+    song: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M34 70V26l40-8v42" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round"/><ellipse cx="26" cy="70" rx="10" ry="8" fill="#fff"/><ellipse cx="66" cy="62" rx="10" ry="8" fill="#fff"/><text x="78" y="40" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="22" fill="#fff" opacity=".7">?</text></svg>`,
     imp: `<svg viewBox="0 0 96 96" aria-hidden="true"><circle cx="30" cy="38" r="11" fill="#fff" opacity=".55"/><path d="M12 80c0-12 8-22 18-22s18 10 18 22z" fill="#fff" opacity=".55"/><circle cx="62" cy="34" r="13" fill="#fff"/><path d="M40 82c0-14 10-25 22-25s22 11 22 25z" fill="#fff"/><text x="62" y="41" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="20" fill="#c8102e">?</text></svg>`,
     troeven: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M48 14v70" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity=".55"/>${[0, 1, 2, 3, 4, 5].map((k) => `<rect x="${24 + (k % 2) * 4}" y="${70 - k * 10}" width="${44 - (k % 2) * 8 - k * 2}" height="4.5" rx="2.2" fill="currentColor" opacity="${k > 3 ? .35 : 1}"/>`).join('')}<g transform="translate(58 8) rotate(12)"><rect width="26" height="36" rx="4" fill="#fff"/><text x="13" y="24" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-weight="700" font-size="18" fill="#2b1d55">B</text></g></svg>`,
     wiezen: `<svg viewBox="0 0 96 96" aria-hidden="true">${[-20, 0, 20].map((a, k) => `<g transform="rotate(${a} 48 84)"><rect x="32" y="22" width="32" height="46" rx="5" fill="#fff" opacity="${.55 + k * .22}"/></g>`).join('')}<g transform="rotate(20 48 84)"><path d="M54 32c-5 6-11 9-11 15a5 5 0 0 0 9 3l-2 6h8l-2-6a5 5 0 0 0 9-3c0-6-6-9-11-15z" fill="#07324a"/></g></svg>`,
@@ -5200,8 +5291,8 @@ module.exports = QRRSBlock;
 
   function render() {
     const v = view();
-    if (!ui.idle) ui.view = ['draw', 'end', 'wround', 'hround', 'pround', 'start', 'nprice', 'npick', 'npct', 'hist', 'poker', 'choose', 'imp'].includes(v) ? v : null;
-    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound, ngame: renderNGame, lgame: renderLGame, hist: renderHist, dgame: renderDGame, poker: renderPoker, choose: renderChoose, splash: renderSplash, tv: renderTV, imp: renderImp };
+    if (!ui.idle) ui.view = ['draw', 'end', 'wround', 'hround', 'pround', 'start', 'nprice', 'npick', 'npct', 'hist', 'poker', 'choose', 'imp', 'song'].includes(v) ? v : null;
+    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound, ngame: renderNGame, lgame: renderLGame, hist: renderHist, dgame: renderDGame, poker: renderPoker, choose: renderChoose, splash: renderSplash, tv: renderTV, imp: renderImp, song: renderSong };
     const same = v === lastScreen, before = same ? numSnap() : null;
     $app.innerHTML = screens[v]();
     $app.classList.toggle('fresh', !same);
@@ -5518,6 +5609,27 @@ module.exports = QRRSBlock;
     chooseGo(b) { if (b.dataset.v === 'poker') actions.pkOpen(); else actions.newRondje(); },
     chooseBack() { if (S.ready && (owedAll().n || S.pk.on)) { ui.view = null; } else { ui.names = null; ui.view = 'start'; } render(); window.scrollTo(0, 0); },
     pkOpen() { hideToast(); ui.pkSel = null; ui.pkMode = null; ui.pkPay = null; ui.pkPayEdited = false; ui.pkUnitTxt = null; ui.pkLvl = null; ui.pkSure = false; ui.pkAdd = false; ui.view = 'poker'; render(); window.scrollTo(0, 0); },
+    songOpen() {
+      hideToast(); let G = null;
+      try { const o = JSON.parse(localStorage.getItem(SONG_KEY)); if (o && Array.isArray(o.names) && o.names.every((nm, j) => S.players[o.sel[j]] === nm)) G = o; } catch (e) {}
+      ui.song = G && G.step === 'play' ? G : { step: 'setup', sel: S.players.map((_, i) => i), djs: [] };
+      if (ui.song.step === 'pick') ui.song.step = 'setup';
+      ui.view = 'song'; render(); window.scrollTo(0, 0);
+    },
+    songBack() { const G = ui.song; if (G && G.step === 'play' && !G.stopSure) { G.stopSure = true; showToast('Tik nog eens op <b>Stoppen</b> om het spel te beëindigen', false); setTimeout(() => { if (ui.song === G) G.stopSure = false; }, 3000); return; } ui.song = null; try { localStorage.removeItem(SONG_KEY); } catch (e) {} ui.view = null; hideToast(); render(); window.scrollTo(0, 0); },
+    songSel(b) { const G = ui.song, i = +b.dataset.v; G.sel = G.sel.includes(i) ? G.sel.filter((x) => x !== i) : [...G.sel, i].sort((a, c) => a - c); render(); },
+    songStart() { if (ui.song.sel.length < 3) return; ui.song.djs = []; ui.song.dj = null; songSpin(); },
+    songGo() { const G = ui.song; if (G.pick === undefined || G.pick === null) return; songRound(G.pick); G.step = 'play'; songStore(); render(); window.scrollTo(0, 0); },
+    songPt(b) {
+      const G = ui.song, k = +b.dataset.v, d = +b.dataset.d; if (G.win !== null && G.win !== undefined) return;
+      const nv = Math.max(0, Math.min(9, G.pts[k] + d)); if (nv === G.pts[k]) return;
+      G.log.push([k, G.pts[k]]); G.pts[k] = nv;
+      if (nv === 0) G.win = k;
+      songStore(); render();
+    },
+    songUndo() { const G = ui.song, l = G.log.pop(); if (!l) return; G.pts[l[0]] = l[1]; if (G.win === l[0]) G.win = null; songStore(); render(); },
+    songNext() { const G = ui.song, w = G.win; songRound(w); G.step = 'play'; songStore(); render(); window.scrollTo(0, 0); },
+    songRespin() { const G = ui.song; G.djs = (G.djs || []).slice(0, -1); songSpin(); },
     impOpen() {
       hideToast(); const P = impPrefs(), all = S.players.map((_, i) => i);
       let sel = Array.isArray(P.sel) ? P.sel.map((nm) => S.players.indexOf(nm)).filter((i) => i >= 0) : all; if (sel.length < 3) sel = all;
@@ -6052,7 +6164,7 @@ module.exports = QRRSBlock;
 <script>
 // Installeerbare app: offline werken en vanzelf de nieuwste versie laden.
 (() => {
-  const APP_VERSION = '20261127-183622';
+  const APP_VERSION = '20261127-184320';
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
