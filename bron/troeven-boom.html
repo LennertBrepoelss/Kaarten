@@ -920,9 +920,9 @@ html.tvmode, html.tvmode body { background: #020206; }
 .prize .am small { display: block; font-size: 12px; margin-top: 3px; }
 .totbar { display: flex; justify-content: space-between; gap: 12px; background: var(--surface); border: 1px solid var(--hair); border-radius: 16px; padding: 14px 16px; }
 .totbar b { display: block; font: 600 24px/1.1 var(--f-serif); font-variant-numeric: lining-nums tabular-nums; margin-top: 4px; }
-.g-imp { --tg: linear-gradient(150deg, #9aa8ff, #3b3fa8 55%, #b3123f); --tglow: #6a3fd0; }
+.g-imp { --tg: linear-gradient(150deg, #ff8a80, #e53935 70%, #b71c1c); --tglow: #e53935; }
 .seg .opt:disabled { opacity: .3; }
-.g-30s { --tg: linear-gradient(150deg, #ff9fd0, #e0368a 50%, #3a2fb8); --tglow: #e0368a; }
+.g-30s { --tg: linear-gradient(150deg, #a5aeff, #5160e0 70%, #2f3a9e); --tglow: #5160e0; }
 .tscore { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .tscore .tm { border-radius: 18px; padding: 14px 16px; border: 1px solid var(--hair-2); background: var(--surface-2); position: relative; overflow: hidden; }
 .tscore .tm.on { border-color: var(--tc); box-shadow: 0 0 0 1px var(--tc), 0 10px 30px -12px var(--tc); }
@@ -954,7 +954,7 @@ html.tvmode, html.tvmode body { background: #020206; }
 .s30words button.ok span { text-decoration: line-through; text-decoration-thickness: 2px; opacity: .75; }
 .s30words button:active { transform: scale(.98); }
 .s30tag { font: 700 10px/1 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: #ff7aa8; margin-left: auto; }
-.g-rad { --tg: linear-gradient(150deg, #ffe39a, #d4a017 45%, #7a1236); --tglow: #d4a017; }
+.g-rad { --tg: linear-gradient(150deg, #f1d58a, #c99a2e 70%, #94690f); --tglow: #c99a2e; }
 .radwrap { position: relative; width: min(74vh, 92vw, 560px); aspect-ratio: 1; margin: 0 auto; }
 .radwrap svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 20px 50px rgba(0,0,0,.6)); }
 .radwrap .ptr { position: absolute; left: 50%; top: -6px; width: 34px; height: 44px; transform: translateX(-50%); z-index: 2; filter: drop-shadow(0 4px 8px rgba(0,0,0,.6)); }
@@ -974,7 +974,7 @@ html.tvmode, html.tvmode body { background: #020206; }
 .radres .t { font: 600 clamp(22px, 4.4vw, 32px)/1.2 var(--f-serif); color: #fff; }
 .radres .t.radwin { font-size: clamp(40px, 8vw, 72px); color: #ffe2a8; text-shadow: 0 0 30px rgba(255,214,140,.35); animation: landpop .9s var(--ease) both; }
 .radres .hint { font: 500 13.5px/1.4 var(--f-ui); color: var(--dim); }
-.g-song { --tg: linear-gradient(150deg, #ffd27a, #e0902a 50%, #7a2f8a); --tglow: #e0902a; }
+.g-song { --tg: linear-gradient(150deg, #ffb08a, #ff6b3d 70%, #d0441a); --tglow: #ff6b3d; }
 .songov { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; text-align: center; padding: 24px; overflow: hidden;
   background: radial-gradient(ellipse 60% 70% at 50% 35%, rgba(255,214,140,.16), transparent 70%), #04040a; animation: fadein .4s ease both; }
 .songov::before { content: ""; position: absolute; left: 50%; top: -10%; width: 70vmin; height: 120vmin; transform: translateX(-50%); background: conic-gradient(from 180deg at 50% 0%, transparent 160deg, rgba(255,226,170,.22) 175deg, rgba(255,240,210,.32) 180deg, rgba(255,226,170,.22) 185deg, transparent 200deg); pointer-events: none; animation: spotsway 6s ease-in-out infinite; transform-origin: 50% 0; }
@@ -4504,9 +4504,9 @@ module.exports = QRRSBlock;
   // ---------- Nieuw rondje: 2. spel ----------
   // Een nieuw spel = één regel in GAMES + een tekening in GAME_ART.
   const GAME_ART = {
-    rad: `<svg viewBox="0 0 96 96" aria-hidden="true"><circle cx="46" cy="52" r="32" fill="#fff" opacity=".9"/>${[0, 1, 2, 3, 4, 5, 6, 7].map((k) => `<path d="M46 52 L${46 + 32 * Math.cos(k * Math.PI / 4)} ${52 + 32 * Math.sin(k * Math.PI / 4)} A32 32 0 0 1 ${46 + 32 * Math.cos((k + 1) * Math.PI / 4)} ${52 + 32 * Math.sin((k + 1) * Math.PI / 4)}z" fill="${k % 2 ? '#7a1236' : '#d4a017'}" opacity=".85"/>`).join('')}<circle cx="46" cy="52" r="7" fill="#fff"/><path d="M40 12h12l-6 12z" fill="#fff"/></svg>`,
+    rad: `<svg viewBox="0 0 96 96" aria-hidden="true">${[0, 1, 2, 3, 4, 5, 6, 7].map((k) => `<path d="M46 52 L${46 + 32 * Math.cos(k * Math.PI / 4)} ${52 + 32 * Math.sin(k * Math.PI / 4)} A32 32 0 0 1 ${46 + 32 * Math.cos((k + 1) * Math.PI / 4)} ${52 + 32 * Math.sin((k + 1) * Math.PI / 4)}z" fill="#fff" opacity="${k % 2 ? '.45' : '.95'}"/>`).join('')}<circle cx="46" cy="52" r="7" fill="#94690f"/><path d="M40 12h12l-6 12z" fill="#fff"/></svg>`,
     s30: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M30 16h36M30 80h36M34 16c0 18 28 20 28 32S34 62 34 80M62 16c0 18-28 20-28 32s28 14 28 32" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/><path d="M40 72c4-6 12-6 16 0z" fill="#fff"/><text x="74" y="50" font-family="Georgia,serif" font-weight="700" font-size="20" fill="#fff" opacity=".75">30</text></svg>`,
-    song: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M34 70V26l40-8v42" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round"/><ellipse cx="26" cy="70" rx="10" ry="8" fill="#fff"/><ellipse cx="66" cy="62" rx="10" ry="8" fill="#fff"/><text x="78" y="40" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="22" fill="#fff" opacity=".7">?</text></svg>`,
+    song: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M34 70V26l40-8v42" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round"/><ellipse cx="26" cy="70" rx="10" ry="8" fill="#fff"/><ellipse cx="66" cy="62" rx="10" ry="8" fill="#fff"/></svg>`,
     imp: `<svg viewBox="0 0 96 96" aria-hidden="true"><circle cx="30" cy="38" r="11" fill="#fff" opacity=".55"/><path d="M12 80c0-12 8-22 18-22s18 10 18 22z" fill="#fff" opacity=".55"/><circle cx="62" cy="34" r="13" fill="#fff"/><path d="M40 82c0-14 10-25 22-25s22 11 22 25z" fill="#fff"/><text x="62" y="41" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="20" fill="#c8102e">?</text></svg>`,
     troeven: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M48 14v70" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity=".55"/>${[0, 1, 2, 3, 4, 5].map((k) => `<rect x="${24 + (k % 2) * 4}" y="${70 - k * 10}" width="${44 - (k % 2) * 8 - k * 2}" height="4.5" rx="2.2" fill="currentColor" opacity="${k > 3 ? .35 : 1}"/>`).join('')}<g transform="translate(58 8) rotate(12)"><rect width="26" height="36" rx="4" fill="#fff"/><text x="13" y="24" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-weight="700" font-size="18" fill="#2b1d55">B</text></g></svg>`,
     wiezen: `<svg viewBox="0 0 96 96" aria-hidden="true">${[-20, 0, 20].map((a, k) => `<g transform="rotate(${a} 48 84)"><rect x="32" y="22" width="32" height="46" rx="5" fill="#fff" opacity="${.55 + k * .22}"/></g>`).join('')}<g transform="rotate(20 48 84)"><path d="M54 32c-5 6-11 9-11 15a5 5 0 0 0 9 3l-2 6h8l-2-6a5 5 0 0 0 9-3c0-6-6-9-11-15z" fill="#07324a"/></g></svg>`,
