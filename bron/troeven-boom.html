@@ -954,6 +954,25 @@ html.tvmode, html.tvmode body { background: #020206; }
 .s30words button.ok span { text-decoration: line-through; text-decoration-thickness: 2px; opacity: .75; }
 .s30words button:active { transform: scale(.98); }
 .s30tag { font: 700 10px/1 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: #ff7aa8; margin-left: auto; }
+.g-rad { --tg: linear-gradient(150deg, #ffe39a, #d4a017 45%, #7a1236); --tglow: #d4a017; }
+.radwrap { position: relative; width: min(74vh, 92vw, 560px); aspect-ratio: 1; margin: 0 auto; }
+.radwrap svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 20px 50px rgba(0,0,0,.6)); }
+.radwrap .ptr { position: absolute; left: 50%; top: -6px; width: 34px; height: 44px; transform: translateX(-50%); z-index: 2; filter: drop-shadow(0 4px 8px rgba(0,0,0,.6)); }
+.radwrap .hub { position: absolute; left: 50%; top: 50%; width: 22%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; border: 0; background: radial-gradient(circle at 35% 30%, #fff3c4, #d4a017 55%, #7a5208); color: #2a1a00; font: 700 clamp(14px, 2.6vw, 20px)/1 var(--f-ui); letter-spacing: .08em; text-transform: uppercase; box-shadow: 0 0 0 4px rgba(0,0,0,.35), 0 10px 30px rgba(0,0,0,.5); }
+.radwrap .hub:disabled { opacity: 1; }
+.radturn { text-align: center; }
+.radplay { display: flex; flex-direction: column; gap: 18px; }
+.radside { display: flex; flex-direction: column; gap: 16px; }
+@media (min-width: 900px) and (min-aspect-ratio: 5/4) {
+  .wrap:has(.radplay) { max-width: 1180px; }
+  .radplay { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 40px; }
+  .radplay .radwrap { width: min(78vh, 560px); }
+}
+.radturn .big { font: 600 clamp(34px, 7vw, 56px)/1.05 var(--f-serif); color: #ffe2a8; }
+.radres { text-align: center; padding: 22px 20px; border-radius: 22px; background: linear-gradient(160deg, rgba(255,214,140,.16), rgba(122,18,54,.22)); border: 1px solid rgba(255,214,140,.35); animation: tpop .5s var(--ease) both; display: flex; flex-direction: column; gap: 10px; }
+.radres .k { font: 700 12px/1 var(--f-ui); letter-spacing: .26em; text-transform: uppercase; color: #ffd27a; }
+.radres .t { font: 600 clamp(22px, 4.4vw, 32px)/1.2 var(--f-serif); color: #fff; }
+.radres .hint { font: 500 13.5px/1.4 var(--f-ui); color: var(--dim); }
 .g-song { --tg: linear-gradient(150deg, #ffd27a, #e0902a 50%, #7a2f8a); --tglow: #e0902a; }
 .songov { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; text-align: center; padding: 24px; overflow: hidden;
   background: radial-gradient(ellipse 60% 70% at 50% 35%, rgba(255,214,140,.16), transparent 70%), #04040a; animation: fadein .4s ease both; }
@@ -1829,7 +1848,7 @@ if (typeof module !== 'undefined') module.exports = Logic;
     if (TV) return 'tv';
     if (ui.idle) return 'splash';
     if (!ui.splashSeen && !ui.view && !ui.flow && !openAny() && !owedAll().n && !S.pk.on && !(S.pk.past || []).length) return 'splash';
-    if (ui.view === 'start' || ui.view === 'end' || (ui.view === 'draw' && ui.draw) || (ui.view === 'hist' && ui.hist) || ui.view === 'poker' || ui.view === 'choose' || ui.view === 'imp' || ui.view === 'song' || ui.view === 's30') return ui.view;
+    if (ui.view === 'start' || ui.view === 'end' || (ui.view === 'draw' && ui.draw) || (ui.view === 'hist' && ui.hist) || ui.view === 'poker' || ui.view === 'choose' || ui.view === 'imp' || ui.view === 'song' || ui.view === 's30' || ui.view === 'rad') return ui.view;
     if (ui.flow && ['nprice', 'npick', 'npct'].includes(ui.view)) return ui.view;
     if (!S.ready) return 'start';
     const r = current();
@@ -4129,7 +4148,7 @@ module.exports = QRRSBlock;
   let lastTouch = Date.now();
   ['pointerdown', 'keydown', 'input', 'wheel', 'touchmove'].forEach((t) => document.addEventListener(t, () => { lastTouch = Date.now(); }, { passive: true, capture: true }));
   setInterval(() => {
-    if (TV || ui.idle || ui.view === 'imp' || ui.view === 'song' || ui.view === 's30' || Date.now() - lastTouch < 30000) return;
+    if (TV || ui.idle || ui.view === 'imp' || ui.view === 'song' || ui.view === 's30' || ui.view === 'rad' || Date.now() - lastTouch < 30000) return;
     const v = view();
     if (v === 'splash' || ui.modal || ui.bigClock || (S.pk.on && S.pk.mode === 'tour' && S.pk.step === 'play')) return;
     const a = document.activeElement; if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
@@ -4187,7 +4206,8 @@ module.exports = QRRSBlock;
     const imp = `<button class="tile g-imp ${n >= 3 ? '' : 'off'}" data-act="impOpen" ${n >= 3 ? '' : 'disabled'}><span class="tart">${GAME_ART.imp}</span>${n >= 3 ? '' : '<span class="tstat">3+ spelers</span>'}<span class="tname">Imposter</span></button>`;
     const song = `<button class="tile g-song ${n >= 3 ? '' : 'off'}" data-act="songOpen" ${n >= 3 ? '' : 'disabled'}><span class="tart">${GAME_ART.song}</span>${n >= 3 ? '' : '<span class="tstat">3+ spelers</span>'}<span class="tname">Raad het liedje</span></button>`;
     const s30 = `<button class="tile g-30s ${n >= 4 ? '' : 'off'}" data-act="s30Open" ${n >= 4 ? '' : 'disabled'}><span class="tart">${GAME_ART.s30}</span>${n >= 4 ? '' : '<span class="tstat">4+ spelers</span>'}<span class="tname">30 Seconds</span></button>`;
-    return `<div class="tiles">${tiles}${poker}${imp}${song}${s30}</div>`;
+    const rad = `<button class="tile g-rad ${n >= 2 ? '' : 'off'}" data-act="radOpen" ${n >= 2 ? '' : 'disabled'}><span class="tart">${GAME_ART.rad}</span><span class="tname">Rad van fortuin</span></button>`;
+    return `<div class="tiles">${tiles}${poker}${imp}${song}${s30}${rad}</div>`;
   }
 
   // ---------- Imposter: iedereen krijgt hetzelfde woord, behalve de imposter (die krijgt een hint) ----------
@@ -4410,6 +4430,84 @@ module.exports = QRRSBlock;
     </div>`;
   }
 
+  // ---------- Rad van fortuin ----------
+  const RAD = [
+    { l: 'Drink 2', c: '#7a1236', t: () => 'Drink 2 slokken.' },
+    { l: 'Deel 3 uit', c: '#16324f', t: () => 'Verdeel 3 slokken over wie je wil.' },
+    { l: 'Iedereen', c: '#a8740c', t: () => 'Iedereen drinkt! Proost.' },
+    { l: 'Opdracht', c: '#3a1f6e', t: (G) => radPick(G, 'o') },
+    { l: 'Maatje', c: '#0f4f47', t: () => 'Kies een drinkmaatje. Telkens jij drinkt, drinkt die mee, tot iemand anders "Maatje" draait.' },
+    { l: 'Waterval', c: '#7a1236', t: () => 'Waterval! Iedereen begint te drinken, jij eerst. Je mag pas stoppen als de persoon vóór jou stopt.' },
+    { l: 'Veilig', c: '#2c3a4f', t: () => 'Je bent veilig. Niets te doen deze keer.' },
+    { l: 'Vraag', c: '#3a1f6e', t: (G) => radPick(G, 'v') + ' Weiger je? Drink 3.' },
+    { l: 'Regel', c: '#a8740c', t: () => 'Verzin een regel voor de rest van de avond. Wie ze breekt, drinkt.' },
+    { l: 'Links', c: '#16324f', t: () => 'Je linkerbuur drinkt 2 slokken.' },
+    { l: 'Duel', c: '#0f4f47', t: (G) => `Duel met ${radOther(G)}: steen, papier, schaar. De verliezer drinkt 3.` },
+    { l: 'Jackpot', c: '#b8860b', t: () => 'Jackpot! Ad fundum. Of deel je glas uit aan wie je wil.' },
+  ];
+  const RAD_O = [["Doe 10 pompen of drink 3", "Zing het refrein van een liedje dat {ander} kiest", "Praat tot je volgende beurt met een Hollands accent", "Imiteer {ander} tot iemand raadt wie het is", "Vertel een mop. Lacht niemand? Drink 2", "Dans 20 seconden zonder muziek", "{ander} kiest een bijnaam voor jou, de rest van de avond", "Zeg het alfabet achterstevoren of drink 3", "Doe 30 seconden de plank", "Praat in de derde persoon tot je volgende beurt", "Laat {ander} je haar doen", "Doe je beste dierengeluid, de groep kiest welk dier", "Spreek tot je volgende beurt alleen in rijm", "Noem 5 Rode Duivels in 10 seconden of drink 2", "Wissel van plaats met {ander}", "Doe een catwalk door de kelder", "Hou 1 minuut je adem in of drink 2", "Doe een toast op {ander} met een speech van 20 seconden"], ["Lees je laatste WhatsApp-bericht luidop voor of drink 4", "Laat {ander} 10 seconden door je fotogalerij scrollen", "Geef {ander} een massage van 30 seconden", "Bel iemand en zing 'Happy Birthday' of drink 4", "{ander} mag een Instagram-story posten op jouw account", "Stuur 'ik mis je' naar de 3de persoon in je WhatsApp", "Laat iedereen je schermtijd van deze week zien", "Doe 30 seconden je beste flirt bij {ander}", "Laat {ander} een sms typen naar wie hij wil, jij verstuurt", "Ruil een kledingstuk met {ander}", "Toon je laatste zoekopdracht op Google", "Laat {ander} je profielfoto kiezen voor 24 uur", "Fluister iets liefs in het oor van {ander}", "Doe je beste orgasme-imitatie of drink 4"], ["Doe 30 seconden een lapdance voor {ander} of drink 5", "Doe een kledingstuk uit (geen schoenen of sokken!)", "Fluister iets ondeugends in het oor van {ander}", "Geef {ander} een zoen op de wang, of drink 4", "Toon je Tinder- of datingprofiel, of drink 5", "Lik slagroom (of iets anders) van de hand van {ander}", "Doe 20 seconden je sexyste dans", "Zit tot je volgende beurt op de schoot van {ander}", "Laat {ander} een woord op je arm schrijven met stift", "Doe een striptease-intro van 15 seconden (alleen de intro!)", "Kus {ander} op een plek die de groep kiest, of drink 5", "Beschrijf je ideale date met {ander} in 3 zinnen"]];
+  const RAD_V = [["Wat is je grootste blunder ooit?", "Wie hier zou het langst overleven op een onbewoond eiland?", "Wat is het slechtste cadeau dat je ooit kreeg?", "Wat is je meest gênante moment op school?", "Welke BV zou je willen zijn voor één dag?", "Wat is je stomste aankoop ooit?", "Wat eet je stiekem als niemand kijkt?", "Welke liedje zing je onder de douche?", "Wie hier zou je meenemen naar een quiz?", "Wat is je raarste gewoonte?", "Waar ben je bang voor?", "Wat is de grootste leugen die je ooit vertelde?"], ["Wie hier zou je het eerst kussen?", "Wat is het gênantste bericht dat je ooit stuurde?", "Op wie was je vroeger heimelijk verliefd?", "Wat is het langste dat je ooit niet douchte?", "Heb je ooit iemand geghost? Wie?", "Wat is je slechtste date ooit?", "Wie hier heeft de beste kont?", "Wat is het stoutste dat je ooit deed op een feestje?", "Heb je ooit gestolen? Wat?", "Wie van je exen zou je terug willen?", "Wat is het zatste dat je ooit was?", "Wat staat er in je zoekgeschiedenis dat niemand mag zien?"], ["Wat is de vreemdste plek waar je ooit seks had?", "Met hoeveel mensen heb je al geslapen?", "Wat is je grootste fantasie?", "Wie hier zou je meenemen voor een nacht?", "Wat was je eerste keer en hoe ging het?", "Heb je ooit een one night stand gehad?", "Wat is het ondeugendste bericht dat je ooit kreeg?", "Heb je ooit iets met twee mensen tegelijk gehad?", "Wat vind je het meest sexy aan iemand?", "Heb je ooit nudes gestuurd?", "Ooit betrapt tijdens het vrijen?", "Wat is je favoriete standje?"]];
+  const RAD_LV = ['Braaf', 'Pittig', 'Vettig'];
+  function radOther(G) { const o = G.sel.filter((k) => k !== G.sel[G.turn % G.sel.length]); return esc(S.players[o[rnd(o.length)]]); }
+  function radPick(G, kind) {
+    const src = kind === 'o' ? RAD_O : RAD_V, pool = G.lv === 0 ? src[0] : G.lv === 1 ? [...src[0], ...src[1]] : [...src[1], ...src[2], ...src[2]];
+    const fresh = pool.filter((x) => !(G.used || []).includes(x)), arr = fresh.length ? fresh : pool, x = arr[rnd(arr.length)];
+    G.used = [...(G.used || []), x].slice(-40);
+    return esc(x).replace(/\{ander\}/g, () => radOther(G));
+  }
+  function radSvg() {
+    const n = RAD.length, R = 100, seg = (2 * Math.PI) / n;
+    const parts = RAD.map((x, i) => {
+      const a0 = -Math.PI / 2 - seg / 2 + i * seg, a1 = a0 + seg, am = a0 + seg / 2;
+      const p = (a) => `${(R * Math.cos(a)).toFixed(2)} ${(R * Math.sin(a)).toFixed(2)}`;
+      const deg = (am * 180) / Math.PI;
+      return `<path d="M0 0 L${p(a0)} A${R} ${R} 0 0 1 ${p(a1)}z" fill="${x.c}"/><line x1="0" y1="0" x2="${p(a0).split(' ')[0]}" y2="${p(a0).split(' ')[1]}" stroke="#e9c46a" stroke-width=".8" opacity=".8"/>
+        <text transform="rotate(${deg.toFixed(2)}) translate(${R * 0.62} 0)" text-anchor="middle" dominant-baseline="middle" font-family="Cormorant Garamond, Georgia, serif" font-weight="700" font-size="11" fill="#fff6dc">${x.l}</text>`;
+    }).join('');
+    const dots = Array.from({ length: n * 2 }, (_, i) => { const a = (i * Math.PI) / n; return `<circle cx="${(R * 1.07 * Math.cos(a)).toFixed(2)}" cy="${(R * 1.07 * Math.sin(a)).toFixed(2)}" r="2.2" fill="${i % 2 ? '#fff3c4' : '#d4a017'}"/>`; }).join('');
+    return `<svg viewBox="-118 -118 236 236"><circle r="116" fill="#1a0a12"/><circle r="113" fill="none" stroke="#d4a017" stroke-width="3"/>${dots}<g id="radG" transform="rotate(${ui.rad ? ui.rad.ang : 0})">${parts}<circle r="${R}" fill="none" stroke="#e9c46a" stroke-width="1.5"/></g></svg>`;
+  }
+  function radSpin() {
+    const G = ui.rad; if (G.spinning) return;
+    audioCtx(); G.spinning = true; G.res = null;
+    const n = RAD.length, segD = 360 / n, target = rnd(n), start = G.ang, base = start - (start % 360);
+    // eindhoek: segment 'target' onder de wijzer bovenaan (een beetje willekeurig binnen het vak)
+    const end = base + 360 * (5 + rnd(3)) + (360 - target * segD) + (rnd(60) - 30) / 100 * segD;
+    const T = 4800 + rnd(1400), t0 = performance.now(); let lastSeg = Math.floor((start + segD / 2) / segD);
+    const btn = document.getElementById('radHub'); if (btn) btn.disabled = true;
+    const res = document.getElementById('radRes'); if (res) res.innerHTML = '';
+    const step = (now) => {
+      const u = Math.min(1, (now - t0) / T), e = 1 - Math.pow(1 - u, 4); G.ang = start + (end - start) * e;
+      const g = document.getElementById('radG'); if (g) g.setAttribute('transform', `rotate(${G.ang.toFixed(2)})`);
+      const sg = Math.floor((G.ang + segD / 2) / segD); if (sg !== lastSeg) { lastSeg = sg; s30Beep(1400, 0.025, 0.06); }
+      if (u < 1 && ui.rad === G) return requestAnimationFrame(step);
+      G.spinning = false; G.ang = end % 360;
+      const idx = ((n - Math.round(G.ang / segD)) % n + n) % n;
+      G.res = { k: idx, t: RAD[idx].t(G), who: G.sel[G.turn % G.sel.length] };
+      s30Beep(idx === 11 ? 990 : 660, 0.35, 0.12); try { navigator.vibrate && navigator.vibrate(60); } catch (x) {}
+      render();
+    };
+    requestAnimationFrame(step);
+  }
+  function renderRad() {
+    const G = ui.rad, head = `<header class="top"><button class="btn ghost sm" data-act="radBack">← ${G.step === 'setup' ? 'Terug' : 'Stoppen'}</button><span class="label">Rad van fortuin</span></header>`;
+    if (G.step === 'setup') {
+      return `<div class="wrap">${head}
+        <section><h1>Wie speelt <em>mee</em>?</h1><p class="lead">Om de beurt draait iemand aan het rad. Waar de wijzer stopt, moet je doen.</p></section>
+        <div class="chips">${S.players.map((p, i) => `<button class="chip ${G.sel.includes(i) ? 'on' : ''}" data-act="radSel" data-v="${i}">${esc(p)}</button>`).join('')}</div>
+        <section class="panel"><div class="pctrow"><span class="pl">Niveau<small>voor de opdrachten en vragen</small></span><div class="seg" style="min-width:240px">${RAD_LV.map((x, i) => `<button class="opt ${G.lv === i ? 'on' : ''}" type="button" data-act="radLv" data-v="${i}">${x}</button>`).join('')}</div></div></section>
+        <p class="err" style="min-height:0">${G.sel.length < 2 ? 'Kies minstens 2 spelers.' : ''}</p>
+        <button class="btn primary xl" data-act="radStart" ${G.sel.length < 2 ? 'disabled' : ''}>Naar het rad <span class="arr">→</span></button>
+      </div>`;
+    }
+    const who = G.sel[G.turn % G.sel.length], r = G.res;
+    return `<div class="wrap">${head}
+      <div class="radplay"><div class="radwrap"><svg class="ptr" viewBox="0 0 34 44"><path d="M17 44 2 6a16 16 0 0 1 30 0z" fill="#ffe39a" stroke="#7a5208" stroke-width="2"/><circle cx="17" cy="14" r="5" fill="#7a5208"/></svg>${radSvg()}<button class="hub" id="radHub" data-act="radGo" ${G.spinning ? 'disabled' : ''}>Draai</button></div>
+      <div class="radside"><section class="radturn"><p class="label">${r ? 'Resultaat voor' : 'Aan de beurt'}</p><div class="big">${esc(S.players[r ? r.who : who])}</div></section>
+      <div id="radRes">${r ? `<div class="radres"><div class="k">${RAD[r.k].l}</div><div class="t">${r.t}</div><button class="btn primary" data-act="radNext">Volgende: ${esc(S.players[G.sel[(G.turn + 1) % G.sel.length]])} <span class="arr">→</span></button></div>` : '<p class="muted" style="text-align:center;margin:0">Tik op het midden van het rad om te draaien.</p>'}</div></div></div>
+    </div>`;
+  }
+
   // ---------- Start: poker of andere spellen ----------
   function renderChoose() {
     const mini = GAMES.slice(0, 8).map((g) => `<span class="${g.cls}">${GAME_ART[g.k]}</span>`).join('');
@@ -4429,6 +4527,7 @@ module.exports = QRRSBlock;
   // ---------- Nieuw rondje: 2. spel ----------
   // Een nieuw spel = één regel in GAMES + een tekening in GAME_ART.
   const GAME_ART = {
+    rad: `<svg viewBox="0 0 96 96" aria-hidden="true"><circle cx="46" cy="52" r="32" fill="#fff" opacity=".9"/>${[0, 1, 2, 3, 4, 5, 6, 7].map((k) => `<path d="M46 52 L${46 + 32 * Math.cos(k * Math.PI / 4)} ${52 + 32 * Math.sin(k * Math.PI / 4)} A32 32 0 0 1 ${46 + 32 * Math.cos((k + 1) * Math.PI / 4)} ${52 + 32 * Math.sin((k + 1) * Math.PI / 4)}z" fill="${k % 2 ? '#7a1236' : '#d4a017'}" opacity=".85"/>`).join('')}<circle cx="46" cy="52" r="7" fill="#fff"/><path d="M40 12h12l-6 12z" fill="#fff"/></svg>`,
     s30: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M30 16h36M30 80h36M34 16c0 18 28 20 28 32S34 62 34 80M62 16c0 18-28 20-28 32s28 14 28 32" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/><path d="M40 72c4-6 12-6 16 0z" fill="#fff"/><text x="74" y="50" font-family="Georgia,serif" font-weight="700" font-size="20" fill="#fff" opacity=".75">30</text></svg>`,
     song: `<svg viewBox="0 0 96 96" aria-hidden="true"><path d="M34 70V26l40-8v42" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round"/><ellipse cx="26" cy="70" rx="10" ry="8" fill="#fff"/><ellipse cx="66" cy="62" rx="10" ry="8" fill="#fff"/><text x="78" y="40" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="22" fill="#fff" opacity=".7">?</text></svg>`,
     imp: `<svg viewBox="0 0 96 96" aria-hidden="true"><circle cx="30" cy="38" r="11" fill="#fff" opacity=".55"/><path d="M12 80c0-12 8-22 18-22s18 10 18 22z" fill="#fff" opacity=".55"/><circle cx="62" cy="34" r="13" fill="#fff"/><path d="M40 82c0-14 10-25 22-25s22 11 22 25z" fill="#fff"/><text x="62" y="41" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="20" fill="#c8102e">?</text></svg>`,
@@ -5415,8 +5514,8 @@ module.exports = QRRSBlock;
 
   function render() {
     const v = view();
-    if (!ui.idle) ui.view = ['draw', 'end', 'wround', 'hround', 'pround', 'start', 'nprice', 'npick', 'npct', 'hist', 'poker', 'choose', 'imp', 'song', 's30'].includes(v) ? v : null;
-    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound, ngame: renderNGame, lgame: renderLGame, hist: renderHist, dgame: renderDGame, poker: renderPoker, choose: renderChoose, splash: renderSplash, tv: renderTV, imp: renderImp, song: renderSong, s30: renderS30 };
+    if (!ui.idle) ui.view = ['draw', 'end', 'wround', 'hround', 'pround', 'start', 'nprice', 'npick', 'npct', 'hist', 'poker', 'choose', 'imp', 'song', 's30', 'rad'].includes(v) ? v : null;
+    const screens = { hub: renderHub, draw: renderDraw, price: renderPrice, game: renderGame, end: renderEnd, start: renderStart, nprice: renderNPrice, npick: renderPick, npct: renderNPct, wgame: renderWGame, wround: renderWRound, hgame: renderHGame, hround: renderHRound, pgame: renderPGame, pround: renderPRound, ngame: renderNGame, lgame: renderLGame, hist: renderHist, dgame: renderDGame, poker: renderPoker, choose: renderChoose, splash: renderSplash, tv: renderTV, imp: renderImp, song: renderSong, s30: renderS30, rad: renderRad };
     const same = v === lastScreen, before = same ? numSnap() : null;
     $app.innerHTML = screens[v]();
     $app.classList.toggle('fresh', !same);
@@ -5733,6 +5832,18 @@ module.exports = QRRSBlock;
     chooseGo(b) { if (b.dataset.v === 'poker') actions.pkOpen(); else actions.newRondje(); },
     chooseBack() { if (S.ready && (owedAll().n || S.pk.on)) { ui.view = null; } else { ui.names = null; ui.view = 'start'; } render(); window.scrollTo(0, 0); },
     pkOpen() { hideToast(); ui.pkSel = null; ui.pkMode = null; ui.pkPay = null; ui.pkPayEdited = false; ui.pkUnitTxt = null; ui.pkLvl = null; ui.pkSure = false; ui.pkAdd = false; ui.view = 'poker'; render(); window.scrollTo(0, 0); },
+    radOpen() {
+      hideToast(); let P = {}; try { P = JSON.parse(localStorage.getItem('kelder-rad')) || {}; } catch (e) {}
+      let sel = Array.isArray(P.sel) ? P.sel.map((nm) => S.players.indexOf(nm)).filter((i) => i >= 0) : []; if (sel.length < 2) sel = S.players.map((_, i) => i);
+      ui.rad = { step: 'setup', sel, lv: P.lv === 0 || P.lv === 2 ? P.lv : 1, turn: 0, ang: 0, used: [] };
+      ui.view = 'rad'; render(); window.scrollTo(0, 0);
+    },
+    radBack() { const G = ui.rad; if (G && G.step === 'play' && !G.spinning) { G.step = 'setup'; G.res = null; render(); return; } if (G && G.spinning) return; ui.rad = null; ui.view = null; render(); window.scrollTo(0, 0); },
+    radSel(b) { const G = ui.rad, i = +b.dataset.v; G.sel = G.sel.includes(i) ? G.sel.filter((x) => x !== i) : [...G.sel, i].sort((a, c) => a - c); render(); },
+    radLv(b) { ui.rad.lv = +b.dataset.v; render(); },
+    radStart() { const G = ui.rad; if (G.sel.length < 2) return; try { localStorage.setItem('kelder-rad', JSON.stringify({ sel: G.sel.map((k) => S.players[k]), lv: G.lv })); } catch (e) {} G.turn = rnd(G.sel.length); G.step = 'play'; G.res = null; render(); window.scrollTo(0, 0); },
+    radGo() { const G = ui.rad; if (G.spinning) return; if (G.res) { G.turn++; G.res = null; render(); } radSpin(); },
+    radNext() { const G = ui.rad; G.turn++; G.res = null; render(); },
     s30Open() {
       hideToast(); let G = null;
       try { const o = JSON.parse(localStorage.getItem(S30_KEY)); if (o && Array.isArray(o.names) && o.names.join('|') === S.players.join('|')) G = o; } catch (e) {}
